@@ -60,7 +60,7 @@ export function aiSection(startPolling: () => void): Section {
   let pastedFor: string | null = null;
 
   const list = h("div", { class: "access-points" });
-  const presetSelect = h("select", {}, ...PRESETS.map((preset) => option(preset.id, preset.name)));
+  const presetSelect = h("select", {}, ...PRESETS.map((preset) => option(preset.id, tCode("preset", preset.id))));
   const editor = h("div", { class: "editor" });
   const signInPanel = h("div", { class: "sign-in" });
   const prompt = h("textarea", { rows: 14, id: "prompt" });
@@ -239,7 +239,8 @@ export function aiSection(startPolling: () => void): Section {
       return;
     }
     const fixed = FIXED_ENDPOINTS[type] !== undefined;
-    const name = h("input", { type: "text", value: existing?.name ?? preset?.name ?? "" });
+    const presetName = preset === null ? "" : tCode("preset", preset.id);
+    const name = h("input", { type: "text", value: existing?.name ?? presetName });
     const endpoint = h("input", { type: "url", value: existing?.endpoint ?? preset?.endpoint ?? "", disabled: fixed });
     const modelInput = h("input", { type: "text", value: existing?.model ?? preset?.model ?? "" });
     const models = h("datalist", { id: "model-options" });
@@ -300,7 +301,7 @@ export function aiSection(startPolling: () => void): Section {
 
     replace(
       editor,
-      h("h4", { text: existing === null ? t("editorAddTitle", preset?.name ?? "") : t("editorEditTitle", existing.name) }),
+      h("h4", { text: existing === null ? t("editorAddTitle", presetName) : t("editorEditTitle", existing.name) }),
       field(t("fieldName"), name),
       type === "chatgpt" ? null : field(t("fieldEndpoint"), endpoint, fixed ? t("endpointFixed") : tCode("endpointHint", type)),
       field(t("fieldModel"), modelInput, tCode("modelHint", type)),

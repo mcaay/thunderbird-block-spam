@@ -42,13 +42,16 @@ export type SignInErrorCode =
   | "account-mismatch"
   | "plan-not-enabled";
 
+/** A failed sign-in. The code is translated for the user; the detail comes from the provider. */
 export class SignInError extends Error {
   readonly code: SignInErrorCode;
+  readonly detail: string;
 
-  constructor(code: SignInErrorCode, message: string) {
-    super(message);
+  constructor(code: SignInErrorCode, detail = "") {
+    super(detail === "" ? code : `${code}: ${detail}`);
     this.name = "SignInError";
     this.code = code;
+    this.detail = detail;
   }
 }
 
@@ -168,32 +171,32 @@ export function isCallbackUrl(candidate: string, pending: PendingSignIn): boolea
  */
 export function parseCallback(callbackUrl: string, pending: PendingSignIn): { code: string; clientId: string } {
   if (!isCallbackUrl(callbackUrl.trim(), pending)) {
-    throw new SignInError("wrong-address", "This is not the address the sign-in redirects to.");
+    throw new SignInError("wrong-address");
   }
   const params = new URL(callbackUrl.trim()).searchParams;
   if (params.get("state") !== pending.state) {
-    throw new SignInError("state-mismatch", "The address belongs to a different sign-in attempt.");
+    throw new SignInError("state-mismatch");
   }
   const error = params.get("error");
   if (error !== null) {
     if (error === "access_denied") {
-      throw new SignInError("denied", "Access was declined.");
+      throw new SignInError("denied");
     }
     throw new SignInError("provider-error", safeMessage(`${error} ${params.get("error_description") ?? ""}`));
   }
   const code = params.get("code");
   if (code === null || code === "") {
-    throw new SignInError("no-code", "The address contains no authorization code.");
+    throw new SignInError("no-code");
   }
   const issued = params.get("client_id");
   if (pending.clientId === null) {
     if (issued === null || issued === "" || issued === REGISTRATION_CLIENT_ID) {
-      throw new SignInError("registration-incomplete", "The registration did not return a client id.");
+      throw new SignInError("registration-incomplete");
     }
     return { code, clientId: issued };
   }
   if (issued !== null && issued !== pending.clientId) {
-    throw new SignInError("client-mismatch", "The sign-in returned a different client id.");
+    throw new SignInError("client-mismatch");
   }
   return { code, clientId: pending.clientId };
 }
@@ -267,7 +270,7 @@ export async function verifyIdToken(
   idToken: string,
   expected: { clientId: string; nonce: string; now: number },
 ): Promise<{ subject: string; email: string }> {
-  const invalid = (why: string): SignInError => new SignInError("invalid-token", `The ID token is not valid: ${why}.`);
+  const invalid = (why: string): SignInError => new SignInError("invalid-token", why);
   const parts = idToken.split(".");
   if (parts.length !== 3) {
     throw invalid("wrong format");
@@ -362,14 +365,14 @@ export async function completeSignIn(
   const tokens = response.ok ? readTokenResponse(response.body) : null;
   if (tokens === null || tokens.refreshToken === "" || tokens.idToken === "") {
     const reason = safeMessage(errorMessageFromBody(response.body)) || `HTTP ${response.status}`;
-    throw new SignInError("exchange-failed", `The authorization code could not be exchanged: ${reason}`);
+    throw new SignInError("exchange-failed", reason);
   }
   const identity = await verifyIdToken(fetchFn, tokens.idToken, { clientId, nonce: pending.nonce, now });
   if (pending.expectedSubject !== null && identity.subject !== pending.expectedSubject) {
-    throw new SignInError("account-mismatch", "A different ChatGPT account signed in.");
+    throw new SignInError("account-mismatch");
   }
   if (!tokens.scopes.includes(PLAN_SCOPE)) {
-    throw new SignInError("plan-not-enabled", "Permission to use the ChatGPT plan was not granted.");
+    throw new SignInError("plan-not-enabled");
   }
   return {
     clientId,

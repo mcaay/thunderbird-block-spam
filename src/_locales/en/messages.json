@@ -961,5 +961,80 @@
   },
   "notifyNoInbox": {
     "message": "The account has no Inbox folder"
+  },
+  "preset_jev": {
+    "message": "Jev (TypeSafe)"
+  },
+  "preset_openrouter_decisions": {
+    "message": "OpenRouter Decisions"
+  },
+  "preset_cloudflare_clef": {
+    "message": "Cloudflare Clef"
+  },
+  "preset_local_systemone": {
+    "message": "Local decision model (basal, Bielik-One)"
+  },
+  "preset_openai_decisions": {
+    "message": "OpenAI Decisions"
+  },
+  "preset_openai": {
+    "message": "OpenAI"
+  },
+  "preset_gemini": {
+    "message": "Gemini"
+  },
+  "preset_openrouter": {
+    "message": "OpenRouter"
+  },
+  "preset_ollama": {
+    "message": "Ollama"
+  },
+  "preset_lmstudio": {
+    "message": "LM Studio"
+  },
+  "preset_custom": {
+    "message": "Custom (OpenAI-compatible)"
+  },
+  "preset_anthropic": {
+    "message": "Claude (Anthropic API key)"
+  },
+  "preset_chatgpt": {
+    "message": "ChatGPT plan"
+  },
+  "screeningFolderName": {
+    "message": "Screening"
+  },
+  "signInError_state_mismatch": {
+    "message": "The address belongs to a different sign-in attempt."
+  },
+  "signInError_wrong_address": {
+    "message": "This is not the address the sign-in redirects to. It starts with http://127.0.0.1:1455/auth/callback."
+  },
+  "signInError_denied": {
+    "message": "Access was declined on the OpenAI page."
+  },
+  "signInError_provider_error": {
+    "message": "OpenAI reported an error: $1"
+  },
+  "signInError_no_code": {
+    "message": "The address contains no authorization code."
+  },
+  "signInError_registration_incomplete": {
+    "message": "The registration did not return a client id. Start the sign-in again."
+  },
+  "signInError_client_mismatch": {
+    "message": "The sign-in returned a different client id. Start the sign-in again."
+  },
+  "signInError_exchange_failed": {
+    "message": "The authorization code could not be exchanged: $1"
+  },
+  "signInError_invalid_token": {
+    "message": "The ID token is not valid: $1"
+  },
+  "signInError_account_mismatch": {
+    "message": "A different ChatGPT account signed in. Sign in with the account of this access point, or add a new access point."
+  },
+  "signInError_plan_not_enabled": {
+    "message": "Permission to use your ChatGPT plan was not granted, so the access point cannot be used. Start the sign-in again and allow plan use."
   }
 }

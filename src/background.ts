@@ -38,7 +38,6 @@ import { BrowserStore } from "./tb/store";
 
 const TICK_ALARM = "tick";
 const TICK_MINUTES = 5;
-const SCREENING_FOLDER_NAME = "Screening";
 const NOTIFICATION_TARGETS = 5;
 
 interface App {
@@ -354,13 +353,14 @@ async function finishSignIn(callbackUrl: string): Promise<void> {
       }
     }
   } catch (error) {
-    signInError = errorText(error);
+    const message = error instanceof SignInError ? tCode("signInError", error.code, error.detail) : errorText(error);
+    signInError = message;
     // A wrong pasted address can be corrected. Any other failure ends the attempt.
     const retryable = error instanceof SignInError && ["wrong-address", "state-mismatch", "no-code"].includes(error.code);
     if (!retryable) {
       await clearSignIn(true);
     }
-    throw error;
+    throw new Error(message);
   }
 }
 
@@ -499,8 +499,9 @@ const handlers: Handlers = {
 
   async createScreeningFolder({ accountId }) {
     const { state } = need();
+    const folderName = t("screeningFolderName");
     const folders = await browser.folders.query({ accountId });
-    let folder = folders.find((item) => item.path === `/${SCREENING_FOLDER_NAME}`);
+    let folder = folders.find((item) => item.path === `/${folderName}`);
     if (folder === undefined) {
       const create = browser.folders.create;
       if (typeof create !== "function") {
@@ -511,14 +512,14 @@ const handlers: Handlers = {
         throw new Error(t("errorAccountGone"));
       }
       try {
-        folder = await create(account.rootFolder.id, SCREENING_FOLDER_NAME);
+        folder = await create(account.rootFolder.id, folderName);
       } catch (error) {
         // Some servers only allow folders below the Inbox.
         const inbox = (await browser.folders.query({ accountId, specialUse: ["inbox"] }))[0];
         if (inbox === undefined) {
           throw error;
         }
-        folder = await create(inbox.id, SCREENING_FOLDER_NAME);
+        folder = await create(inbox.id, folderName);
       }
     }
     state.settings.screeningFolders = [
@@ -699,9 +700,14 @@ const handlers: Handlers = {
   },
 
   async resetData() {
+    if (scan !== null) {
+      scan.cancelled = true;
+    }
+    // Let running jobs finish first, so that nothing is written after the reset.
+    await queue.idle();
     scan = null;
-    signIn = null;
     signInError = "";
+    await clearSignIn(true);
     await store.clear();
     ready = start();
     await ready;

@@ -73,6 +73,20 @@ describe("strings", () => {
     outcome: ["trusted", "blocked", "spam", "passed", "no-verdict", "released", "error"],
     action: ["junk", "screening", "inbox"],
     reason: [...Object.values(REASONS), "failed"],
+    preset: PRESETS.map((preset) => preset.id),
+    signInError: [
+      "state-mismatch",
+      "wrong-address",
+      "denied",
+      "provider-error",
+      "no-code",
+      "registration-incomplete",
+      "client-mismatch",
+      "exchange-failed",
+      "invalid-token",
+      "account-mismatch",
+      "plan-not-enabled",
+    ],
   };
 
   const used = new Set<string>();

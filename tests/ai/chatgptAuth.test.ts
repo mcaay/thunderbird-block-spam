@@ -137,9 +137,9 @@ describe("parseCallback", () => {
   it("validates the state before anything else", async () => {
     const { pending } = await beginSignIn({ hostId: HOST_ID, returning: null, accessPointId: null, now: NOW });
     const url = `${REDIRECT_URI}?state=other&code=abc&client_id=oaiapp_new`;
-    expect(() => parseCallback(url, pending)).toThrowError(/different sign-in attempt/);
+    expect(() => parseCallback(url, pending)).toThrowError(/state-mismatch/);
     const denied = `${REDIRECT_URI}?state=other&error=access_denied`;
-    expect(() => parseCallback(denied, pending)).toThrowError(/different sign-in attempt/);
+    expect(() => parseCallback(denied, pending)).toThrowError(/state-mismatch/);
   });
 
   it("stops on access_denied and on other errors", async () => {
@@ -172,7 +172,7 @@ describe("parseCallback", () => {
 
   it("requires a code", async () => {
     const { pending } = await beginSignIn({ hostId: HOST_ID, returning: null, accessPointId: null, now: NOW });
-    expect(() => parseCallback(callback(pending, { client_id: "oaiapp_new" }), pending)).toThrowError(/no authorization code/);
+    expect(() => parseCallback(callback(pending, { client_id: "oaiapp_new" }), pending)).toThrowError(/no-code/);
   });
 
   it("keeps the saved client id on reauthorization and rejects a different one", async () => {
@@ -180,9 +180,7 @@ describe("parseCallback", () => {
     const { pending } = await beginSignIn({ hostId: HOST_ID, returning, accessPointId: "ap1", now: NOW });
     expect(parseCallback(callback(pending, { code: "abc" }), pending)).toEqual({ code: "abc", clientId: "oaiapp_abc" });
     expect(parseCallback(callback(pending, { code: "abc", client_id: "oaiapp_abc" }), pending).clientId).toBe("oaiapp_abc");
-    expect(() => parseCallback(callback(pending, { code: "abc", client_id: "oaiapp_other" }), pending)).toThrowError(
-      /different client id/,
-    );
+    expect(() => parseCallback(callback(pending, { code: "abc", client_id: "oaiapp_other" }), pending)).toThrowError(/client-mismatch/);
   });
 });
 
@@ -316,7 +314,9 @@ describe("completeSignIn", () => {
     const http = fakeFetch({
       [TOKEN_URL]: () => jsonResponse({ error: "invalid_grant", error_description: "code expired" }, 400),
     });
-    await expect(completeSignIn(http.fetch, url, pending, NOW)).rejects.toThrowError(/invalid_grant: code expired/);
+    await expect(completeSignIn(http.fetch, url, pending, NOW)).rejects.toSatisfy(
+      (error) => error instanceof SignInError && error.code === "exchange-failed" && error.detail === "invalid_grant: code expired",
+    );
   });
 
   it("makes no request when the callback is invalid", async () => {

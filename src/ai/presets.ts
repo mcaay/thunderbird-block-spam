@@ -7,10 +7,9 @@ import { validateEndpoint } from "./http";
 import { OPENAI_DECISIONS_URL } from "./openaiDecisions";
 
 export interface Preset {
+  /** Also the key of the display name in the locale file: preset_<id>. */
   id: string;
   type: AccessPointType;
-  /** Display name. Provider names are not translated. */
-  name: string;
   endpoint: string;
   model: string;
   /** False for local servers, which usually need no key. */
@@ -23,7 +22,6 @@ export const PRESETS: readonly Preset[] = [
   {
     id: "jev",
     type: "systemone",
-    name: "Jev (TypeSafe)",
     endpoint: "https://api.typesafe.ai/v1/systemone",
     model: "jev-latest",
     keyRequired: true,
@@ -31,7 +29,6 @@ export const PRESETS: readonly Preset[] = [
   {
     id: "openrouter-decisions",
     type: "systemone",
-    name: "OpenRouter Decisions",
     endpoint: "https://openrouter.ai/api/alpha/decisions",
     model: "~typesafe/jev-latest",
     keyRequired: true,
@@ -39,7 +36,6 @@ export const PRESETS: readonly Preset[] = [
   {
     id: "cloudflare-clef",
     type: "systemone",
-    name: "Cloudflare Clef",
     endpoint: `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_PLACEHOLDER}/ai/run/@cf/cloudflare/clef`,
     model: "clef",
     keyRequired: true,
@@ -47,7 +43,6 @@ export const PRESETS: readonly Preset[] = [
   {
     id: "local-systemone",
     type: "systemone",
-    name: "Local decision model (basal, Bielik-One)",
     endpoint: "http://localhost:8000/v1/systemone",
     model: "",
     keyRequired: false,
@@ -55,7 +50,6 @@ export const PRESETS: readonly Preset[] = [
   {
     id: "openai-decisions",
     type: "openai-decisions",
-    name: "OpenAI Decisions",
     endpoint: OPENAI_DECISIONS_URL,
     model: "gpt-6-luna",
     keyRequired: true,
@@ -63,7 +57,6 @@ export const PRESETS: readonly Preset[] = [
   {
     id: "openai",
     type: "openai-chat",
-    name: "OpenAI",
     endpoint: "https://api.openai.com/v1",
     model: "gpt-6-luna",
     keyRequired: true,
@@ -71,7 +64,6 @@ export const PRESETS: readonly Preset[] = [
   {
     id: "gemini",
     type: "openai-chat",
-    name: "Gemini",
     endpoint: "https://generativelanguage.googleapis.com/v1beta/openai",
     model: "gemini-4-hydrogen",
     keyRequired: true,
@@ -79,7 +71,6 @@ export const PRESETS: readonly Preset[] = [
   {
     id: "openrouter",
     type: "openai-chat",
-    name: "OpenRouter",
     endpoint: "https://openrouter.ai/api/v1",
     model: "openai/gpt-6-luna",
     keyRequired: true,
@@ -87,7 +78,6 @@ export const PRESETS: readonly Preset[] = [
   {
     id: "ollama",
     type: "openai-chat",
-    name: "Ollama",
     endpoint: "http://localhost:11434/v1",
     model: "qwen3:8b",
     keyRequired: false,
@@ -95,7 +85,6 @@ export const PRESETS: readonly Preset[] = [
   {
     id: "lmstudio",
     type: "openai-chat",
-    name: "LM Studio",
     endpoint: "http://localhost:1234/v1",
     model: "",
     keyRequired: false,
@@ -103,7 +92,6 @@ export const PRESETS: readonly Preset[] = [
   {
     id: "custom",
     type: "openai-chat",
-    name: "Custom (OpenAI-compatible)",
     endpoint: "",
     model: "",
     keyRequired: false,
@@ -111,7 +99,6 @@ export const PRESETS: readonly Preset[] = [
   {
     id: "anthropic",
     type: "anthropic",
-    name: "Claude (Anthropic API key)",
     endpoint: ANTHROPIC_MESSAGES_URL,
     model: "claude-opus-5-5",
     keyRequired: true,
@@ -119,7 +106,6 @@ export const PRESETS: readonly Preset[] = [
   {
     id: "chatgpt",
     type: "chatgpt",
-    name: "ChatGPT plan",
     endpoint: CHATGPT_RESPONSES_URL,
     model: "",
     keyRequired: false,
