@@ -232,6 +232,18 @@ export function aiSection(startPolling: () => void): Section {
     });
     key.autocomplete = "off";
     const problemsBox = h("p", { class: "warning" });
+    // Looked up now, because nothing may be awaited between the click on Save and a
+    // permission request.
+    let grantedPattern: string | null = null;
+    const existingPattern = existing === null ? null : patternOf(existing.endpoint);
+    if (existingPattern !== null) {
+      void browser.permissions
+        .contains({ origins: [existingPattern] })
+        .then((granted) => {
+          grantedPattern = granted ? existingPattern : null;
+        })
+        .catch(() => undefined);
+    }
 
     const save = (): void => {
       const definition = normalizeDefinition({
@@ -256,24 +268,13 @@ export function aiSection(startPolling: () => void): Section {
         toast(t("saved"));
       };
       const pattern = patternOf(definition.endpoint);
-      if (pattern === null) {
+      if (pattern === null || (pattern === grantedPattern && existing !== null)) {
+        // The host is unchanged and this computer already has the permission for it.
         void guard(finish);
         return;
       }
-      if (existing !== null && patternOf(existing.endpoint) === pattern) {
-        // A known host. The permission is asked for again without a dialog, because
-        // an imported access point never had it on this computer. Thunderbird shows
-        // no prompt when it is already granted.
-        void guard(async () => {
-          if (!(await requestAccess([pattern]))) {
-            toast(t("permissionDeclined"), "error");
-            return;
-          }
-          await finish();
-        });
-        return;
-      }
-      // A new host: explain what will be sent there and ask for the host permission.
+      // A new host, or an imported access point whose host was never allowed on this
+      // computer: explain what will be sent there and ask for the host permission.
       void dialog({
         title: t("consentTitle"),
         body: [t("consentText", hostOf(definition.endpoint)), t("consentWhat"), t("consentNever")],

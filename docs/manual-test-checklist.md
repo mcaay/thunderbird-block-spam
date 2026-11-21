@@ -154,7 +154,7 @@ Pending for every provider. One Test and one real message each:
 - [ ] Public domains: check a domain, treat a company domain as public and back.
 - [ ] AI: add, edit, reorder, disable, test and remove access points. The consent dialog and the permission prompt appear when a host is new.
 - [ ] The permission prompt for a new host appears and can be accepted. Thunderbird has data collection permissions switched off today, so the prompt shows the host only. If a later Thunderbird refuses the data collection part, the page says to press the button again and then asks for the hosts alone. Record which happened.
-- [ ] An access point that came from an import works after you open it, enter the key and save: the save asks for the host permission.
+- [ ] An access point that came from an import works after you open it, enter the key and save: the save shows the consent dialog and asks for the host permission.
 - [ ] Prompt: save a changed prompt, restore the default, try to save an empty prompt.
 - [ ] Cutoff: values outside 0.00 to 1.00 are refused.
 - [ ] Log: entries appear, the filter works, Clear empties it.
