@@ -4,8 +4,8 @@
 
 import { AccessPointError, REQUEST_TIMEOUT_MS } from "../core/chain";
 import { llmInstructions, parseLlmScore } from "../core/score";
-import type { AccessPoint } from "../core/types";
-import { needsRefresh, refreshTokens } from "./chatgptAuth";
+import type { AccessPoint, ChatGptAuth } from "../core/types";
+import { needsRefresh, refreshTokens, revokeSession } from "./chatgptAuth";
 import { errorCodeFromBody, errorMessageFromBody, parseRetryAfter, request, safeMessage, statusError, withTimeout } from "./http";
 import type { FetchLike } from "./http";
 import type { ModelOption } from "./openaiChat";
@@ -35,16 +35,24 @@ async function freshAccessToken(point: AccessPoint, deps: ChatGptDeps): Promise<
         if (current === null) {
           throw new AccessPointError("auth", "not signed in");
         }
+        let refreshed: ChatGptAuth;
         try {
-          point.auth = await refreshTokens(deps.fetch, current, deps.now());
+          refreshed = await refreshTokens(deps.fetch, current, deps.now());
         } catch (error) {
-          if (error instanceof AccessPointError && error.kind === "auth") {
+          if (error instanceof AccessPointError && error.kind === "auth" && point.auth === current) {
             // The refresh token is unusable. Clear it and ask for a new sign-in.
             point.auth = { ...current, accessToken: "", refreshToken: "", expiresAt: 0 };
             await deps.persist();
           }
           throw error;
         }
+        if (point.auth !== current) {
+          // Signed out, signed in again or removed while the refresh ran: the session it
+          // renewed is over, so the new tokens are never used and their session is ended.
+          await revokeSession(deps.fetch, refreshed);
+          throw new AccessPointError("auth", "not signed in");
+        }
+        point.auth = refreshed;
         // Refresh tokens rotate: the replacement is stored before it is used.
         await deps.persist();
       })().finally(() => refreshes.delete(point.id));

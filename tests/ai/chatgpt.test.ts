@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CHATGPT_MODELS_URL, CHATGPT_RESPONSES_URL, listChatGptModels, readEventStream, scoreChatGpt } from "../../src/ai/chatgpt";
-import { TOKEN_URL } from "../../src/ai/chatgptAuth";
+import { DISCOVERY_URL, signedOut, TOKEN_URL } from "../../src/ai/chatgptAuth";
 import { AccessPointError } from "../../src/core/chain";
 import { OUTPUT_LINE } from "../../src/core/score";
 import type { AccessPoint, ChatGptAuth } from "../../src/core/types";
@@ -192,6 +192,34 @@ describe("ChatGPT plan adapter", () => {
     await Promise.all([scoreChatGpt(expiring, PROMPT, PAYLOAD, deps), scoreChatGpt(expiring, PROMPT, PAYLOAD, deps)]);
     expect(http.requests.filter((request) => request.url === TOKEN_URL)).toHaveLength(1);
     expect(http.requests.filter((request) => request.url === CHATGPT_RESPONSES_URL)).toHaveLength(2);
+  });
+
+  it("drops and revokes a refresh that finishes after the session was ended", async () => {
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((done) => {
+      release = done;
+    });
+    const { http, deps, persisted, target } = setup({
+      [TOKEN_URL]: async () => {
+        await gate;
+        return jsonResponse({ access_token: "access-2", refresh_token: "refresh-2", expires_in: 3600 });
+      },
+      [DISCOVERY_URL]: () => jsonResponse({ revocation_endpoint: "https://auth.openai.com/oauth/revoke" }),
+      "https://auth.openai.com/oauth/revoke": () => new Response("", { status: 200 }),
+      [CHATGPT_RESPONSES_URL]: completed("0.5"),
+    });
+    const expired = point({ auth: auth({ expiresAt: NOW - 1 }) });
+    target.current = expired;
+    const scoring = failure(scoreChatGpt(expired, PROMPT, PAYLOAD, deps));
+    await new Promise((done) => setTimeout(done, 1));
+    // Sign out while the refresh runs.
+    expired.auth = signedOut(expired.auth as ChatGptAuth);
+    release();
+    expect(await scoring).toMatchObject({ kind: "auth", message: "not signed in" });
+    expect(expired.auth).toMatchObject({ refreshToken: "", accessToken: "" });
+    expect(persisted).toEqual([]);
+    expect(http.requests.some((request) => request.url === CHATGPT_RESPONSES_URL)).toBe(false);
+    expect(http.requests.find((request) => request.url === "https://auth.openai.com/oauth/revoke")?.form.token).toBe("refresh-2");
   });
 
   it("clears unusable tokens and asks for a new sign-in", async () => {

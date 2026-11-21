@@ -92,6 +92,7 @@ Where the documentation left a question open, the source code of Thunderbird (`t
 - **Each ChatGPT access point is one registration** with its own issued client id. Adding another ChatGPT access point registers a new client; signing in again on an existing one reuses its client id and sends `id_token_hint` and `login_hint`.
 - **The redirect port is always 1455.** Nothing listens on it; the add-on reads the address of the navigation.
 - **A started sign-in is kept for 15 minutes** in storage, so it survives a restart of the background page. The background page is kept awake while a sign-in is pending.
+- **Ending a session wins over a token refresh in progress.** Sign out, Remove and a Replace import clear the tokens before they revoke them. A refresh that finishes afterwards is not installed, its new refresh token is revoked, and the request that needed it is not sent.
 - **A sign-in attempt is completed once.** A second callback for the attempt being completed (the captured redirect and a pasted address) waits for the first, so a code is never exchanged twice. When the attempt was cancelled or replaced while its code was exchanged, the new session is revoked and no access point is created, and a failure of an old attempt never ends a newer one.
 - **The sign-in button is a plain text button.** The official ChatGPT logo asset is not bundled.
 

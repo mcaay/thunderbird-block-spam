@@ -176,4 +176,40 @@ describe("ChatGPT sign-in", () => {
     expect(status).toMatchObject({ ok: true, result: { signIn: { error: "" } } });
     expect(status.ok && status.result.signIn.url).not.toBeNull();
   });
+
+  it("ends both sessions when Sign out comes while a token refresh is running", async () => {
+    const signedIn = accessPoint({
+      id: "plan",
+      type: "chatgpt",
+      endpoint: "https://api.openai.com/v1/responses",
+      model: "gpt-6-luna",
+      apiKey: "",
+      auth: {
+        clientId: "oaiapp_1",
+        subject: "user-1",
+        email: "user@example.com",
+        idToken: "id-1",
+        accessToken: "access-1",
+        refreshToken: "refresh-1",
+        expiresAt: Date.now() - 1,
+        earliestRefreshAt: 0,
+        scopes: PLAN_SCOPES.split(" "),
+      },
+    });
+    const fake = new FakeBrowser({ [KEY_SETTINGS]: defaultSettings(Date.now()), [KEY_ACCESS_POINTS]: [signedIn] });
+    for (const origin of CHATGPT_ORIGINS) {
+      fake.granted.add(origin);
+    }
+    const openai = await fakeOpenAi();
+    const background = await loadBackground(fake, openai.http.fetch);
+    const test = background.send("testAccessPoint", { id: "plan" });
+    await settle();
+    expect(await background.send("signOut", { id: "plan" })).toEqual({ ok: true, result: { revocationConfirmed: true } });
+    openai.release();
+    expect(await test).toMatchObject({ ok: true, result: { ok: false } });
+    await settle();
+    expect(chatgptPoints(fake)[0]?.auth).toMatchObject({ refreshToken: "", accessToken: "" });
+    expect(openai.revoked().sort()).toEqual(["refresh-1", "refresh-2"]);
+    expect(openai.http.requests.some((request) => request.url.endsWith("/v1/responses"))).toBe(false);
+  });
 });

@@ -599,9 +599,12 @@ const handlers: Handlers = {
   async removeAccessPoint({ id }) {
     const { state } = need();
     const point = findPoint(state, id);
-    const revocationConfirmed = await revoke(point.auth);
+    // Cleared before revoking, so that a token refresh still running is not installed.
+    const auth = point.auth;
+    point.auth = null;
     state.accessPoints = state.accessPoints.filter((item) => item.id !== id);
     await state.saveAccessPoints();
+    const revocationConfirmed = await revoke(auth);
     return { revocationConfirmed };
   },
 
@@ -681,13 +684,15 @@ const handlers: Handlers = {
   async signOut({ id }) {
     const { state } = need();
     const point = findPoint(state, id);
-    const revocationConfirmed = await revoke(point.auth);
-    if (point.auth !== null) {
-      point.auth = signedOut(point.auth);
+    // Cleared before revoking, so that a token refresh still running is not installed.
+    const auth = point.auth;
+    if (auth !== null) {
+      point.auth = signedOut(auth);
     }
     point.needsAttention = true;
     point.lastError = "";
     await state.saveAccessPoints();
+    const revocationConfirmed = await revoke(auth);
     return { revocationConfirmed };
   },
 
@@ -710,7 +715,7 @@ const handlers: Handlers = {
         folders.add(folderKey({ accountId: account.id, path: folder.path }));
       }
     }
-    const sessions = state.accessPoints.map((point) => point.auth);
+    const previous = [...state.accessPoints];
     const report = applyImport(state, file, mode === "replace" ? "replace" : "merge", {
       accounts,
       folders,
@@ -729,7 +734,12 @@ const handlers: Handlers = {
     await state.saveEntries();
     await state.saveAccessPoints();
     if (report.mode === "replace") {
-      // The replaced ChatGPT sign-ins are gone: end their sessions.
+      // The replaced ChatGPT sign-ins are gone: end their sessions. Their tokens are
+      // cleared first, so that a token refresh still running is not installed.
+      const sessions = previous.map((point) => point.auth);
+      for (const point of previous) {
+        point.auth = null;
+      }
       await Promise.all(sessions.map((auth) => revoke(auth).catch(() => false)));
     }
     mail.resetCache();
