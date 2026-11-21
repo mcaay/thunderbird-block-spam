@@ -21,6 +21,7 @@ import type { AccessPoint, FolderRef, LogEntry, MessageInfo } from "./types";
 /** Queries reach back this far before the previous tick, to catch late arrivals. */
 export const WINDOW_MS = 48 * 60 * 60 * 1000;
 const MOVE_BATCH = 100;
+const RECIPIENT_CACHE_LIMIT = 5000;
 
 export interface EngineDeps {
   state: AppState;
@@ -76,6 +77,8 @@ export type AccessPointTestResult = { ok: true; score: number } | { ok: false; e
 export class Engine {
   private sweeping = false;
   private sweepAgain = false;
+  /** Parsed recipient header values, to spare one parser call per repeated recipient. */
+  private readonly parsedRecipients = new Map<string, string[]>();
 
   constructor(private readonly deps: EngineDeps) {}
 
@@ -187,7 +190,16 @@ export class Engine {
         continue;
       }
       try {
-        addresses.push(...(await mail.parseAddresses(raw)));
+        // The same recipients appear again and again in a Sent folder.
+        let parsed = this.parsedRecipients.get(raw);
+        if (parsed === undefined) {
+          parsed = await mail.parseAddresses(raw);
+          if (this.parsedRecipients.size >= RECIPIENT_CACHE_LIMIT) {
+            this.parsedRecipients.clear();
+          }
+          this.parsedRecipients.set(raw, parsed);
+        }
+        addresses.push(...parsed);
       } catch (error) {
         this.warn("A recipient could not be parsed", error);
       }

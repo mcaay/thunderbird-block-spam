@@ -20,7 +20,7 @@ Pending. This is also the decision gate of specification section 8.6: the sign-i
 Also check:
 
 - [ ] The permission prompt appears and lists `auth.openai.com`, `api.openai.com` and `127.0.0.1`.
-- [ ] Thunderbird accepts `webRequest` as an optional permission. Its documentation does not list it among optional permissions. If the request is refused, the sign-in panel says to paste the address. Record this.
+- [ ] Thunderbird accepts `webRequest` as an optional permission. Its documentation does not list it among optional permissions. If it is refused, the page may ask you to press the button again, and the sign-in panel then says to paste the address. Record this.
 - [ ] The OpenAI page works inside a Thunderbird tab (no blocked page, no endless bot check).
 - [ ] The paste fallback: start a sign-in, press "Open in my browser instead", finish in the browser, copy the address that starts with `http://127.0.0.1:1455/auth/callback` from the error page and paste it. Expected: the sign-in completes.
 - [ ] "Choose model" lists the models of the account and saving another model works.
@@ -153,7 +153,8 @@ Pending for every provider. One Test and one real message each:
 - [ ] Lists: add, search and remove entries, with scope "All accounts" and with one account.
 - [ ] Public domains: check a domain, treat a company domain as public and back.
 - [ ] AI: add, edit, reorder, disable, test and remove access points. The consent dialog and the permission prompt appear when a host is new.
-- [ ] Thunderbird accepts the data collection permission in the permission request. If the request is refused because of it, the add-on asks for the hosts alone. Record which happened.
+- [ ] Thunderbird accepts the data collection permission in the permission request. If it refuses that part, the page says to press the button again and then asks for the hosts alone. Record which happened.
+- [ ] An access point that came from an import works after you open it, enter the key and save: the save asks for the host permission.
 - [ ] Prompt: save a changed prompt, restore the default, try to save an empty prompt.
 - [ ] Cutoff: values outside 0.00 to 1.00 are refused.
 - [ ] Log: entries appear, the filter works, Clear empties it.

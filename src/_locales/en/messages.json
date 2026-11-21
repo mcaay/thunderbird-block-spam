@@ -1036,5 +1036,8 @@
   },
   "signInError_plan_not_enabled": {
     "message": "Permission to use your ChatGPT plan was not granted, so the access point cannot be used. Start the sign-in again and allow plan use."
+  },
+  "permissionTryAgain": {
+    "message": "Thunderbird refused part of the permission request. Press the button again: Block Spam will then ask for less."
   }
 }

@@ -192,6 +192,7 @@ declare namespace tb {
     permissions: {
       request(permissions: PermissionSet): Promise<boolean>;
       contains(permissions: PermissionSet): Promise<boolean>;
+      getAll(): Promise<PermissionSet>;
       onAdded: WebExtEvent<(permissions: PermissionSet) => void>;
     };
     /** Present only after the optional webRequest permission was granted. */
@@ -210,7 +211,7 @@ declare namespace tb {
     runtime: {
       id: string;
       getURL(path: string): string;
-      getManifest(): { version: string; name: string };
+      getManifest(): { version: string; name: string; optional_permissions?: string[] };
       getPlatformInfo(): Promise<{ os: string }>;
       openOptionsPage(): Promise<void>;
       sendMessage(message: unknown): Promise<unknown>;

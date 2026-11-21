@@ -76,6 +76,7 @@ export class FakeMail implements MailPort {
   pageSize = 2;
   bodyReads = 0;
   headerReads = 0;
+  parseCalls = 0;
 
   addAccount(id: string, email: string | null, name = id): this {
     this.accountList.push({ id, name, email });
@@ -156,6 +157,7 @@ export class FakeMail implements MailPort {
   }
 
   async parseAddresses(raw: string): Promise<string[]> {
+    this.parseCalls += 1;
     return fakeParseAddresses(raw);
   }
 

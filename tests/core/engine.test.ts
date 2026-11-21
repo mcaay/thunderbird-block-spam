@@ -432,6 +432,16 @@ describe("manual scan", () => {
     expect(h.mail.moves).toHaveLength(1);
   });
 
+  it("parses each distinct recipient value once", async () => {
+    const h = await harness();
+    for (let index = 0; index < 30; index += 1) {
+      h.mail.put(SENT1, { recipients: ["Anna <anna@customer.example>"], ccList: index % 2 === 0 ? ["bob@partner.example"] : [], date: h.clock.now - index * DAY });
+    }
+    const result = await h.engine.scan({ from: null, to: null }, () => undefined, () => false);
+    expect(result).toMatchObject({ scanned: 30, added: 2 });
+    expect(h.mail.parseCalls).toBe(2);
+  });
+
   it("reports a folder that cannot be read and continues", async () => {
     const h = await harness();
     h.state.settings.sentFoldersAdded = [{ accountId: "account1", path: "/Gone" }];

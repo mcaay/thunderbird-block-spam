@@ -12,25 +12,11 @@ import type { AccessPoint } from "../../core/types";
 import { t, tCode } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
 import { button, byId, dialog, formatScore, formatTime, guard, h, option, replace, toast } from "../dom";
+import { LOOPBACK_ORIGIN, requestAccess } from "../permissions";
 import type { Model } from "../model";
 import type { Section } from "../section";
 
-const DATA_COLLECTION = ["personalCommunications", "personallyIdentifyingInfo"];
 const CHATGPT_ORIGINS = ["https://auth.openai.com/*", "https://api.openai.com/*"];
-const LOOPBACK_ORIGIN = "http://127.0.0.1/*";
-
-/**
- * Requests host permissions together with the data collection permission. Must be
- * called from a click handler. A Thunderbird that does not know data collection
- * permissions is asked for the hosts alone.
- */
-async function requestAccess(origins: string[], permissions: string[] = []): Promise<boolean> {
-  try {
-    return await browser.permissions.request({ origins, permissions, data_collection: DATA_COLLECTION });
-  } catch {
-    return browser.permissions.request({ origins, permissions });
-  }
-}
 
 function hostOf(endpoint: string): string {
   const checked = validateEndpoint(endpoint);
@@ -150,14 +136,9 @@ export function aiSection(startPolling: () => void): Section {
       body: [t("chatgptConsentText"), t("consentWhat"), t("consentNever"), t("chatgptConsentManage")],
       confirmLabel: t("chatgptContinue"),
       onConfirm: async () => {
-        let granted: boolean;
-        try {
-          // webRequest on the loopback address lets the add-on read the sign-in redirect.
-          granted = await requestAccess([...CHATGPT_ORIGINS, LOOPBACK_ORIGIN], ["webRequest"]);
-        } catch {
-          // Without it the user pastes the address by hand.
-          granted = await requestAccess(CHATGPT_ORIGINS);
-        }
+        // webRequest on the loopback address lets the add-on read the sign-in redirect.
+        // Where Thunderbird does not offer it, the user pastes the address by hand.
+        const granted = await requestAccess([...CHATGPT_ORIGINS, LOOPBACK_ORIGIN], ["webRequest"]);
         if (!granted) {
           toast(t("permissionDeclined"), "error");
           return false;
@@ -275,9 +256,21 @@ export function aiSection(startPolling: () => void): Section {
         toast(t("saved"));
       };
       const pattern = patternOf(definition.endpoint);
-      const sameHost = existing !== null && patternOf(existing.endpoint) === pattern;
-      if (sameHost || pattern === null) {
+      if (pattern === null) {
         void guard(finish);
+        return;
+      }
+      if (existing !== null && patternOf(existing.endpoint) === pattern) {
+        // A known host. The permission is asked for again without a dialog, because
+        // an imported access point never had it on this computer. Thunderbird shows
+        // no prompt when it is already granted.
+        void guard(async () => {
+          if (!(await requestAccess([pattern]))) {
+            toast(t("permissionDeclined"), "error");
+            return;
+          }
+          await finish();
+        });
         return;
       }
       // A new host: explain what will be sent there and ask for the host permission.

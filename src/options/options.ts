@@ -6,6 +6,7 @@ import { send } from "../tb/protocol";
 import { toast } from "./dom";
 import { loadModel } from "./model";
 import type { Model } from "./model";
+import { detectPermissionSupport } from "./permissions";
 import type { Section } from "./section";
 import { aiSection } from "./sections/ai";
 import { forwardingSection, publicDomainsSection } from "./sections/domains";
@@ -118,4 +119,5 @@ browser.storage.onChanged.addListener((_changes, area) => {
   }
 });
 
+void detectPermissionSupport();
 void refresh();
