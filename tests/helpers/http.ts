@@ -9,6 +9,7 @@ export interface RecordedRequest {
   body: string;
   json: unknown;
   form: Record<string, string>;
+  redirect: RequestRedirect | undefined;
 }
 
 export type Handler = (request: RecordedRequest) => Response | Promise<Response>;
@@ -46,6 +47,7 @@ export function fakeFetch(handlers: Record<string, Handler> | Handler): { fetch:
       body,
       json,
       form: Object.fromEntries(new URLSearchParams(body)),
+      redirect: init.redirect,
     };
     requests.push(recorded);
     const handler = typeof handlers === "function" ? handlers : handlers[url];

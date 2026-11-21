@@ -8,6 +8,7 @@ import {
   isLoopbackHost,
   originPattern,
   parseRetryAfter,
+  postForm,
   request,
   safeMessage,
   statusError,
@@ -64,6 +65,18 @@ describe("HTTP helpers", () => {
     expect(parseRetryAfter(null, NOW)).toBeNull();
     expect(parseRetryAfter("soon", NOW)).toBeNull();
     expect(parseRetryAfter("-5", NOW)).toBeNull();
+  });
+
+  it("refuses redirects for every POST, which carries the mail or a token", async () => {
+    const { http, deps: context } = deps(() => jsonResponse({ answers: { spam: { type: "noul", noul: 0.4 } } }));
+    await scoreSystemOne(accessPoint({ type: "systemone", endpoint: "http://localhost:8000/v1/systemone" }), PROMPT, PAYLOAD, context);
+    await postForm(http.fetch, "https://auth.example/token", { grant_type: "refresh_token" });
+    await request(http.fetch, "https://api.example.com/v1/models", { method: "GET" });
+    expect(http.requests.map((sent) => [sent.method, sent.redirect])).toEqual([
+      ["POST", "error"],
+      ["POST", "error"],
+      ["GET", undefined],
+    ]);
   });
 
   it("caps Retry-After at a day, also when the number of seconds overflows", () => {

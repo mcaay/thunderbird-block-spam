@@ -73,6 +73,7 @@ describe("ChatGPT plan adapter", () => {
     const sent = http.requests[0];
     expect(sent?.url).toBe("https://api.openai.com/v1/responses");
     expect(sent?.method).toBe("POST");
+    expect(sent?.redirect).toBe("error");
     expect(sent?.headers.authorization).toBe("Bearer access-1");
     expect(sent?.json).toEqual({
       model: "gpt-6.2-sol",

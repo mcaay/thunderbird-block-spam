@@ -173,6 +173,13 @@ export async function withTimeout<T>(timeoutMs: number, run: (signal: AbortSigna
   }
 }
 
+/**
+ * A POST carries the mail payload or a token. A redirect would send it again to an
+ * address that was never checked against the https rule, the consent or the host
+ * permission, so it fails as a network error instead.
+ */
+export const NO_REDIRECT: RequestRedirect = "error";
+
 export function postJson(
   fetchFn: FetchLike,
   url: string,
@@ -183,7 +190,12 @@ export function postJson(
   return request(
     fetchFn,
     url,
-    { method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify(body) },
+    {
+      method: "POST",
+      headers: { "content-type": "application/json", ...headers },
+      body: JSON.stringify(body),
+      redirect: NO_REDIRECT,
+    },
     timeoutMs,
   );
 }
@@ -201,6 +213,7 @@ export function postForm(
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded", accept: "application/json" },
       body: new URLSearchParams(fields).toString(),
+      redirect: NO_REDIRECT,
     },
     timeoutMs,
   );

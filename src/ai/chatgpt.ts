@@ -6,7 +6,16 @@ import { AccessPointError, REQUEST_TIMEOUT_MS } from "../core/chain";
 import { llmInstructions, parseLlmScore } from "../core/score";
 import type { AccessPoint, ChatGptAuth } from "../core/types";
 import { needsRefresh, refreshTokens, revokeSession } from "./chatgptAuth";
-import { errorCodeFromBody, errorMessageFromBody, parseRetryAfter, request, safeMessage, statusError, withTimeout } from "./http";
+import {
+  errorCodeFromBody,
+  errorMessageFromBody,
+  NO_REDIRECT,
+  parseRetryAfter,
+  request,
+  safeMessage,
+  statusError,
+  withTimeout,
+} from "./http";
 import type { FetchLike } from "./http";
 import type { ModelOption } from "./openaiChat";
 
@@ -152,6 +161,7 @@ export async function scoreChatGpt(point: AccessPoint, prompt: string, payload: 
         store: false,
         stream: true,
       }),
+      redirect: NO_REDIRECT,
       signal,
     });
     if (!response.ok) {
