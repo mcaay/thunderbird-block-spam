@@ -1,6 +1,6 @@
 # Block Spam for Thunderbird: design specification
 
-Status: approved 2026-11-21
+Status: approved 2026-11-21. Revised the same day after the code review and the practical test, see section 17; the revisions await the owner's confirmation.
 Name: Block Spam
 License: MIT
 Target: Thunderbird 153 and newer, Manifest V3 MailExtension
@@ -112,7 +112,7 @@ The alarm always runs, because learning (section 4.5) does not depend on protect
 
 Monitored folders default to the Inbox of every account; the user can add folders per account.
 
-The job queries each monitored folder for messages dated after the later of two moments: the time protection was last switched on, and the previous tick minus 48 hours. It handles every returned message that is not in the processed set. Read status is ignored, so mail opened on a phone before Thunderbird saw it is still handled. Messages are handled one at a time through a single queue shared by all triggers.
+The job queries each monitored folder for messages dated after the later of two moments: the time protection was last switched on, and the previous tick minus 48 hours. Moments are compared by whole seconds, the precision of mail dates, so mail from the very second protection was switched on is handled. The job handles every returned message that is not in the processed set. Read status is ignored, so mail opened on a phone before Thunderbird saw it is still handled. Messages are handled one at a time through a single queue shared by all triggers.
 
 The processed set stores the account id plus the `Message-ID` header for 30 days, in per-day buckets. A message without a `Message-ID` is identified by a hash of its date, author and subject. It is the only pipeline state. There is no stored queue and no move record: an interrupted run simply continues on the next tick.
 
@@ -145,8 +145,10 @@ Requirement: spam that reaches the user through another mailbox's automatic forw
 For a message whose `From` address is a forwarding mailbox, the effective sender is the first of:
 
 1. the address in the `X-Original-From` header, then `X-Original-Sender`;
-2. the `From` of the first attached message (`message/rfc822`);
-3. the address on the first line of the plain-text body that starts with a forwarded-header label. The label table contains `From:`, `Od:` and `Nadawca:` and can be extended.
+2. the address on the first line of the plain-text body that starts with a forwarded-header label. The label table contains `From:`, `Od:` and `Nadawca:` and can be extended;
+3. the `From` of the first attached message (`message/rfc822`).
+
+The body line comes before the attached message because the forwarding mailbox writes it, while an inline forward carries along whatever the original sender attached.
 
 If none is found, the sender is treated as unknown. The forwarding mailbox's own list status is never used for such a message, so nothing passes on the forwarder's reputation. When such a message is spam, the black list entry is written for the original sender when it is known, and never for the forwarding mailbox. Shortcuts act on the effective sender as well; when it cannot be determined they only move the message and add no entry.
 
@@ -427,6 +429,19 @@ The README is updated in step 9 to match:
 - New features: trust shortcuts, Smart setting, forwarded mail handling, observation mode, log, export and import.
 - "Use your AI subscriptions" means ChatGPT sign-in, Claude plan API credits, or a local bridge.
 - Decision models limit the AI to a score but are not immune to manipulation of that score (section 8.1). In the only benchmark found (Polish and English, published by the author of basal) decision models reached 62 to 85 percent accuracy and LLMs 98 to 99 percent, so observation mode is the recommended first step.
+
+## 17. Revisions after review
+
+The code review and the practical test in Thunderbird 153.7 changed the behavior below. The first two are already reflected in the text above. The others are recorded in `docs/implementation-notes.md`, and the sections named here still carry their original wording.
+
+| Section | Revision |
+|---|---|
+| 6 | The forwarder's labelled body line is read before an attached message. An attached message from a trusted address could otherwise decide the sender of an inline forward. |
+| 5.1 | Moments are compared by whole seconds. Mail from the second protection was switched on was otherwise skipped. |
+| 5.1 | A processed message is identified by account, `Message-ID`, author and date, so a reused `Message-ID` no longer hides later mail. The fast path also reads the newest `Received` header, so backdated mail is still handled. |
+| 8.2 | HTTP 401 or 403 while scoring is confirmed with the built-in sample before an access point is marked "needs attention", so one refused message cannot switch it off. A cool-down lasts at most 24 hours. |
+| 4.5 | After learning, black list entries with source `ai` that would still decide the recipient are removed, also when their key differs. |
+| 8.8 | "Score selected messages" shows how many messages will be sent and refuses more than 50. |
 
 ## Appendix A: minimum public domain list
 

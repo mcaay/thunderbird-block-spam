@@ -129,12 +129,13 @@ Pending for every provider. One Test and one real message each:
 
 ### B7. Transparent and wrapped forwards
 
-Practical result: `messages.listInlineTextParts` returned exactly `[{"contentType":"text/plain","content":"OUTER_BODY_SENTINEL"}]` for the attached-message fixture. The attached body was absent. The S5 trusted-decoy bypass was also reproduced. The approved source order was not changed; the owner must decide.
+Practical result: `messages.listInlineTextParts` returned exactly `[{"contentType":"text/plain","content":"OUTER_BODY_SENTINEL"}]` for the attached-message fixture. The attached body was absent. The S5 trusted-decoy bypass was also reproduced and then fixed: the forwarder's labelled body line is now read before an attached message.
 
 - [ ] Transparent forward (alias or server redirect): the message shows the original author. It is handled like direct mail, without configuration.
 - [ ] Wrapped forward (for example an Outlook or Exchange "Forward" rule, or Google Groups): the message shows the forwarding mailbox. Add that mailbox under Forwarding mailboxes. Expected: the log shows the original sender "forwarded by" the mailbox, a spam forward goes to Junk, the black list gets the original sender and never the forwarding mailbox.
 - [ ] Check each source of the original sender if you can produce it: the `X-Original-From` header, an attached message, a "From:" line in the text.
-- [ ] Select a message that was forwarded as an attachment. In the background page's console (Tools, Developer Tools, Debug Add-ons, Block Spam, Inspect) run `const [m] = (await browser.mailTabs.getSelectedMessages()).messages; await browser.messages.listInlineTextParts(m.id)` and note whether the text of the attached message is part of the result. This decides review finding S5 (an attached message decides the sender of an inline forward): reading the forwarder's "From:" line before the attached message is safe only if that text is not included.
+- [ ] Select a message that was forwarded as an attachment. In the background page's console (Tools, Developer Tools, Debug Add-ons, Block Spam, Inspect) run `const [m] = (await browser.mailTabs.getSelectedMessages()).messages; await browser.messages.listInlineTextParts(m.id)` and check that the text of the attached message is not part of the result. The fix for review finding S5 relies on this: the forwarder's "From:" line is read before an attached message, which is safe only while an attached message cannot add text to the body. Repeat this check on a new Thunderbird version.
+- [ ] A wrapped forward that carries an attached message from a trusted address is still judged by the sender named in the forwarder's "From:" line.
 - [ ] A wrapped forward whose original sender cannot be found is scored by the AI and never trusted because of the forwarding mailbox.
 
 ### B8. Shortcuts
