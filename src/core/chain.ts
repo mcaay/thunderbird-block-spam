@@ -44,6 +44,21 @@ export function isAvailable(point: AccessPoint, now: number): boolean {
   return point.enabled && !point.needsAttention && point.cooldownUntil <= now;
 }
 
+export interface ChainOptions {
+  /**
+   * Scores the built-in sample email. Some services answer 401 or 403 because of the
+   * content of one request (a moderation filter), so an access point needs attention
+   * only when it refuses the sample as well.
+   */
+  probe?: (point: AccessPoint) => Promise<number>;
+}
+
+function asFailure(error: unknown): AccessPointError {
+  return error instanceof AccessPointError
+    ? error
+    : new AccessPointError("transient", error instanceof Error ? error.message : String(error));
+}
+
 /**
  * Runs the chain. Mutates cooldownUntil, needsAttention and lastError of the given
  * access points; the caller stores them when stateChanged is true.
@@ -52,6 +67,7 @@ export async function runChain(
   points: AccessPoint[],
   score: (point: AccessPoint) => Promise<number>,
   now: () => number,
+  options: ChainOptions = {},
 ): Promise<ChainResult> {
   const result: ChainResult = {
     verdict: null,
@@ -76,12 +92,16 @@ export async function runChain(
       result.verdict = { score: value, accessPoint: point.name };
       return result;
     } catch (error) {
-      const failure =
-        error instanceof AccessPointError
-          ? error
-          : new AccessPointError("transient", error instanceof Error ? error.message : String(error));
+      let failure = asFailure(error);
       result.attempts.push({ accessPoint: point.name, error: failure.message });
       point.lastError = failure.message;
+      if (failure.kind === "auth" && options.probe !== undefined) {
+        // The failure counts for this message only, unless the sample is refused too.
+        failure = await options.probe(point).then(
+          () => new AccessPointError("transient", failure.message),
+          (probeError: unknown) => asFailure(probeError),
+        );
+      }
       if (failure.kind === "quota") {
         point.cooldownUntil = now() + (failure.retryAfterMs ?? DEFAULT_COOLDOWN_MS);
       } else if (failure.kind === "auth") {

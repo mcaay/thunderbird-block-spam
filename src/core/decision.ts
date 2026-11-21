@@ -6,7 +6,7 @@ import type { ChainResult } from "./chain";
 import { resolveEffectiveSender } from "./forward";
 import type { EffectiveSender } from "./forward";
 import { matchSender } from "./lists";
-import { buildPayload, MAX_BODY_MESSAGE_SIZE } from "./payload";
+import { buildPayload, MAX_BODY_MESSAGE_SIZE, SAMPLE_PAYLOAD } from "./payload";
 import type { AiPort, MailPort } from "./ports";
 import { sameFolder } from "./ports";
 import { isSpam } from "./score";
@@ -98,7 +98,9 @@ export interface DecisionDeps {
 /** Runs the chain with the current prompt and stores changed access point state. */
 export async function scorePayload(deps: Pick<DecisionDeps, "state" | "ai" | "now">, payload: string): Promise<ChainResult> {
   const { state, ai, now } = deps;
-  const result = await runChain(state.accessPoints, (point) => ai.score(point, state.settings.prompt, payload), now);
+  const result = await runChain(state.accessPoints, (point) => ai.score(point, state.settings.prompt, payload), now, {
+    probe: (point) => ai.score(point, state.settings.prompt, SAMPLE_PAYLOAD),
+  });
   if (result.stateChanged) {
     await state.saveAccessPoints();
   }

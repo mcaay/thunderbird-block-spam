@@ -82,6 +82,7 @@ Pending for every provider. One Test and one real message each:
 - [ ] Gemini, `gemini-4-hydrogen`
 - [ ] OpenRouter chat, `openai/gpt-6-luna`
 - [ ] A wrong key gives "Needs attention" and the next access point takes over.
+- [ ] OpenRouter chat with a moderated model: a message the moderation flags (HTTP 403) gets no verdict from that access point, the access point does not need attention, and the next message is scored by it again.
 - [ ] A rate limit (HTTP 429) pauses the access point ("Paused until ...") and the next one takes over.
 
 ## B. Manual checklist in a real Thunderbird (specification section 13)

@@ -111,6 +111,32 @@ describe("chain", () => {
     expect((await runChain(list, edited.score, () => NOW)).verdict?.accessPoint).toBe("A");
   });
 
+  it("needs attention after 401 or 403 only when the built-in sample is refused as well", async () => {
+    const list = points();
+    const probed: string[] = [];
+    // B refuses the content of this one message (a moderation filter), C refuses everything (a revoked key).
+    const probe = async (point: AccessPoint): Promise<number> => {
+      probed.push(point.id);
+      if (point.id === "c") {
+        throw unauthorized();
+      }
+      return 0.9;
+    };
+    const flagged = new AccessPointError("auth", "HTTP 403: input flagged");
+    const result = await runChain(list, scorer({ a: transient(), b: flagged, c: unauthorized() }).score, () => NOW, { probe });
+    expect(result.verdict).toBeNull();
+    expect(probed).toEqual(["b", "c"]);
+    expect(list[1]).toMatchObject({ needsAttention: false, cooldownUntil: 0, lastError: "HTTP 403: input flagged" });
+    expect(isAvailable(list[1] as AccessPoint, NOW)).toBe(true);
+    expect(list[2]).toMatchObject({ needsAttention: true, lastError: "HTTP 401" });
+  });
+
+  it("applies the quota of a refused sample instead of needing attention", async () => {
+    const list = points();
+    await runChain(list, scorer({ a: unauthorized(), b: 0.6 }).score, () => NOW, { probe: async () => Promise.reject(quota(60_000)) });
+    expect(list[0]).toMatchObject({ needsAttention: false, cooldownUntil: NOW + 60_000 });
+  });
+
   it("skips disabled access points", async () => {
     const list = [accessPoint({ id: "a", name: "A", enabled: false }), accessPoint({ id: "b", name: "B" })];
     const { calls, score } = scorer({ b: 0.6 });
@@ -149,5 +175,25 @@ describe("chain in the pipeline", () => {
     const stored = h.store.data.accessPoints as AccessPoint[];
     expect(stored[0]?.cooldownUntil).toBe(h.clock.now + DEFAULT_COOLDOWN_MS);
     expect(stored[0]?.lastError).toBe("HTTP 429");
+  });
+
+  it("keeps an access point that refuses the content of one message and scores the next one with it", async () => {
+    const h = await harness();
+    h.protect();
+    h.state.accessPoints = [accessPoint({ id: "main", name: "Main" })];
+    h.ai.replies = {
+      main: (_point, payload) => {
+        if (payload.includes("explicit")) {
+          throw new AccessPointError("auth", "HTTP 403: input flagged");
+        }
+        return 0.95;
+      },
+    };
+    h.clock.now += HOUR;
+    h.mail.put(INBOX1, { author: "a@one.example", date: h.clock.now - 60_000, body: "explicit content" });
+    h.mail.put(INBOX1, { author: "b@two.example", date: h.clock.now - 60_000, body: "We sell SEO" });
+    await h.engine.tick();
+    expect(h.log().map((entry) => entry.outcome)).toEqual(["no-verdict", "spam"]);
+    expect(h.state.accessPoints[0]?.needsAttention).toBe(false);
   });
 });
