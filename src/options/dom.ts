@@ -160,7 +160,7 @@ export function externalLink(label: string, url: string): HTMLAnchorElement {
     text: label,
     onclick: (event) => {
       event.preventDefault();
-      void browser.windows.openDefaultBrowser(url).catch((error: unknown) => toast(errorText(error), { kind: "error" }));
+      void browser.windows.openDefaultBrowser(url).catch((error: unknown) => reportError(errorText(error)));
     },
   });
 }
@@ -349,109 +349,170 @@ export function reconcile(container: Element, items: readonly Keyed[]): void {
 }
 
 // ---------------------------------------------------------------------------
-// Toasts: confirmations of actions that have no visible result on the page, with
-// Undo where undoing is possible, and failures that belong to no field.
+// Confirmations in place. An action that changes something says so where it happened:
+// as an information bar in the group it belongs to, with Undo where the action can be
+// taken back. Nothing floats over the page and nothing leaves by itself.
 
-export interface ToastOptions {
-  kind?: "info" | "error";
-  /** Offers Undo. The toast then stays longer, and Ctrl+Z or Command+Z does the same. */
-  undo?: () => Promise<unknown> | void;
+const ON_MAC = typeof navigator !== "undefined" && navigator.platform.startsWith("Mac");
+
+/** "Undo" with the shortcut that does the same, as the platform writes it. */
+export function undoLabel(): string {
+  return t("undoKey", ON_MAC ? "\u2318Z" : "Ctrl+Z");
 }
 
-const TOAST_MS = 5000;
-const TOAST_UNDO_MS = 10000;
-
-let currentToast: { box: HTMLElement; timer: ReturnType<typeof setTimeout> | null; undo: (() => void) | null } | null = null;
-
-function closeToast(): void {
-  if (currentToast === null) {
-    return;
-  }
-  if (currentToast.timer !== null) {
-    clearTimeout(currentToast.timer);
-  }
-  currentToast.box.remove();
-  currentToast = null;
+export interface Notice {
+  element: HTMLElement;
+  /**
+   * Shows a confirmation. It stays until the next action here. With `undo` it carries
+   * an Undo button, and Ctrl+Z or Command+Z does the same; `undone` is what it says
+   * once the action was taken back.
+   */
+  show(message: string, undo?: () => Promise<unknown> | void, undone?: string): void;
+  clear(): void;
 }
+
+/** The notice whose Undo the keyboard shortcut runs: the last one that was shown with Undo. */
+let undoOwner: { notice: Notice; run: () => void } | null = null;
+let undoKeyBound = false;
 
 function onUndoKey(event: KeyboardEvent): void {
   const target = event.target;
   const typing =
     target instanceof HTMLElement && (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName));
-  if (currentToast?.undo != null && !typing && (event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === "z") {
+  if (undoOwner !== null && !typing && (event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === "z") {
     event.preventDefault();
-    currentToast.undo();
+    undoOwner.run();
   }
 }
 
-export function toast(message: string, options: ToastOptions = {}): void {
-  closeToast();
-  const isError = options.kind === "error";
-  let host = document.getElementById("toasts");
-  if (host === null) {
-    host = h("div", { id: "toasts" });
-    document.body.appendChild(host);
-    document.addEventListener("keydown", onUndoKey);
-  }
-  const box = h("div", { class: `toast${isError ? " error" : ""}`, attrs: { role: isError ? "alert" : "status" } });
-  const undoAction = options.undo;
-  const undo =
-    undoAction === undefined
-      ? null
-      : (): void => {
-          closeToast();
+/** The place of a group where its confirmations appear. Put its element where the result of the action is seen. */
+export function notice(): Notice {
+  // It can take the focus, for when the button that was pressed is gone: then it reads its text.
+  const element = h("div", { class: "notice", tabIndex: -1, attrs: { role: "group" } });
+  const self: Notice = {
+    element,
+    show(message, undo, undone) {
+      // One level of Undo: a confirmation that offered it gives way to the next one.
+      if (undoOwner !== null && undoOwner.notice !== self) {
+        undoOwner.notice.clear();
+      }
+      undoOwner = null;
+      let undoButton: HTMLButtonElement | null = null;
+      if (undo !== undefined) {
+        const run = (): void => {
+          self.clear();
           void guard(async () => {
-            await undoAction();
+            await undo();
+            if (undone !== undefined) {
+              self.show(undone);
+              // The button that was pressed is gone: the confirmation takes the focus, so that the keyboard stays here.
+              element.focus({ preventScroll: true });
+            }
           });
         };
-  append(box, [
-    isError ? icon("critical") : null,
-    h("span", { class: "toast-text", text: message }),
-    undo === null ? null : button(t("undo"), undo),
-    iconButton("close", t("dismiss"), () => closeToast()),
-  ]);
-  host.appendChild(box);
-  const state: NonNullable<typeof currentToast> = { box, timer: null, undo };
-  currentToast = state;
-  // A failure stays until it is dismissed. Everything else leaves by itself, but not
-  // while the pointer or the keyboard focus rests on it.
-  if (!isError) {
-    const arm = (): void => {
-      state.timer = setTimeout(
-        () => {
-          if (currentToast === state) {
-            closeToast();
-          }
-        },
-        undo === null ? TOAST_MS : TOAST_UNDO_MS,
-      );
-    };
-    const hold = (): void => {
-      if (state.timer !== null) {
-        clearTimeout(state.timer);
-        state.timer = null;
+        undoButton = button(undoLabel(), run);
+        undoButton.dataset.focus = "undo";
+        undoOwner = { notice: self, run };
+        if (!undoKeyBound) {
+          undoKeyBound = true;
+          document.addEventListener("keydown", onUndoKey);
+        }
       }
-    };
-    box.addEventListener("mouseenter", hold);
-    box.addEventListener("focusin", hold);
-    box.addEventListener("mouseleave", arm);
-    box.addEventListener("focusout", arm);
-    arm();
-  }
+      const box = bar("information", [message], [undoButton]);
+      box.setAttribute("role", "status");
+      element.setAttribute("aria-label", message);
+      replace(element, box);
+    },
+    clear() {
+      if (undoOwner?.notice === self) {
+        undoOwner = null;
+      }
+      element.removeAttribute("aria-label");
+      replace(element);
+    },
+  };
+  return self;
 }
 
-/** Runs an action. A failure is shown where the caller wants it, or else as a toast. */
+/**
+ * Before a row of a list is removed: moves the keyboard focus to the remove button of
+ * the row after it, or else of the row before it, or else to the given control, so
+ * that the focus does not vanish with the row.
+ */
+export function focusNeighbor(row: Element, fallback: HTMLElement | null): void {
+  const find = (start: Element | null, step: (element: Element) => Element | null): HTMLElement | null => {
+    for (let sibling = start; sibling !== null; sibling = step(sibling)) {
+      const candidate = sibling.querySelector<HTMLElement>("button.remove");
+      if (candidate !== null) {
+        return candidate;
+      }
+    }
+    return null;
+  };
+  const target =
+    find(row.nextElementSibling, (element) => element.nextElementSibling) ??
+    find(row.previousElementSibling, (element) => element.previousElementSibling) ??
+    fallback;
+  target?.focus();
+}
+
+/** The remove button of a row: one icon everywhere, a trash can. */
+export function removeButton(label: string, onclick: (event: MouseEvent) => void): HTMLButtonElement {
+  const element = iconButton("trash", label, onclick, "quiet remove");
+  element.dataset.focus = "remove";
+  return element;
+}
+
+/**
+ * A failure that belongs to no field: a bar at the top of the pane that is open, kept
+ * until it is dismissed or replaced by the next one.
+ */
+export function reportError(message: string): void {
+  const pane = document.querySelector<HTMLElement>("section.pane:not([hidden])");
+  if (pane === null) {
+    console.error(`Block Spam: ${message}`);
+    return;
+  }
+  let host = pane.querySelector<HTMLElement>(":scope > .pane-error");
+  if (host === null) {
+    host = h("div", { class: "pane-error" });
+    const title = pane.querySelector(":scope > h1");
+    if (title === null) {
+      pane.prepend(host);
+    } else {
+      title.after(host);
+    }
+  }
+  const holder = host;
+  const box = bar("critical", [message], [iconButton("close", t("dismiss"), () => holder.remove())]);
+  box.setAttribute("role", "alert");
+  replace(holder, box);
+}
+
+/** Runs an action. A failure is shown where the caller wants it, or else at the top of the pane. */
 export async function guard(action: () => Promise<unknown>, onError?: (message: string) => void): Promise<void> {
   try {
     await action();
   } catch (error) {
     const message = errorText(error);
     if (onError === undefined) {
-      toast(message, { kind: "error" });
+      reportError(message);
     } else {
       onError(message);
     }
   }
+}
+
+/**
+ * A localized sentence with elements in the places of its placeholders: $1 is the
+ * first part, $2 the second. For a key, a link or an address inside a sentence.
+ */
+export function tNodes(key: string, ...parts: (Node | string)[]): Child[] {
+  const text = t(key, ...parts.map((_, index) => `\uE000${index}\uE001`));
+  return text
+    .split(/\uE000(\d+)\uE001/)
+    .map((piece, index): Child => (index % 2 === 0 ? piece : (parts[Number(piece)] ?? "")))
+    .filter((piece) => piece !== "");
 }
 
 // ---------------------------------------------------------------------------
@@ -547,6 +608,15 @@ export function dialog(options: DialogOptions): Promise<DialogResult> {
     box.showModal();
     (options.focus === "confirm" || cancel === null ? confirm : cancel).focus();
   });
+}
+
+/** Offers a file that is packaged with the add-on for saving, under the given name. */
+export function savePackaged(path: string, filename: string): void {
+  const link = h("a", { href: browser.runtime.getURL(path) });
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
 }
 
 /** Offers a text file for download. */

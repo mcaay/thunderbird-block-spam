@@ -7,11 +7,11 @@
 import { localizePage, t } from "../tb/i18n";
 import { isPageEvent, send } from "../tb/protocol";
 import type { SettingsTarget } from "../tb/protocol";
-import { byId, errorText, toast } from "./dom";
+import { byId, errorText, reportError } from "./dom";
 import { loadModel } from "./model";
 import type { Model } from "./model";
 import { detectPermissionSupport } from "./permissions";
-import { isPaneId, PANES } from "./section";
+import { paneOf, PANES } from "./section";
 import type { Intent, PaneId, Section, Shell } from "./section";
 import { advancedSection } from "./sections/advanced";
 import { aiSection } from "./sections/ai";
@@ -21,7 +21,7 @@ import { learningSection } from "./sections/learning";
 import { listsSection } from "./sections/lists";
 import { logSection } from "./sections/log";
 import { overviewSection } from "./sections/overview";
-import { shortcutsSection } from "./sections/shortcuts";
+import { blockAndTrustSection } from "./sections/blockAndTrust";
 
 const POLL_MS = 1000;
 /** Storage changes arrive in bursts, for example during a scan. They are drawn at most this often. */
@@ -42,15 +42,14 @@ document.title = t("optionsTitle");
 const nav = byId("categories");
 const links = new Map<PaneId, HTMLAnchorElement>();
 for (const link of nav.querySelectorAll<HTMLAnchorElement>("a.category")) {
-  const pane = link.hash.slice(1);
-  if (isPaneId(pane)) {
+  const pane = paneOf(link.hash.slice(1));
+  if (pane !== null) {
     links.set(pane, link);
   }
 }
 
 function paneOfAddress(): PaneId {
-  const pane = location.hash.slice(1);
-  return isPaneId(pane) ? pane : "overview";
+  return paneOf(location.hash.slice(1)) ?? "overview";
 }
 
 function isFatal(): boolean {
@@ -102,7 +101,7 @@ const sections: Record<PaneId, Section> = {
   learning: learningSection(shell),
   incoming: incomingSection(shell),
   ai: aiSection(shell),
-  shortcuts: shortcutsSection(shell),
+  "block-and-trust": blockAndTrustSection(shell),
   advanced: advancedSection(),
   backup: backupSection(),
 };
@@ -174,7 +173,7 @@ async function refresh(): Promise<void> {
     try {
       renderAll(await loadModel());
     } catch (error) {
-      toast(errorText(error), { kind: "error" });
+      reportError(errorText(error));
     }
   })();
   await refreshing;
@@ -236,10 +235,11 @@ browser.storage.onChanged.addListener((_changes, area) => {
 // The popup asks for a pane, and in the log for one entry, to be shown: at once when
 // this page is open, through the background when the page is only now being opened.
 function showTarget(target: SettingsTarget): void {
-  if (!isPaneId(target.pane)) {
+  const pane = paneOf(target.pane);
+  if (pane === null) {
     return;
   }
-  shell.go(target.pane, target.pane === "log" && target.logKey !== null ? { kind: "log-entry", key: target.logKey } : undefined);
+  shell.go(pane, pane === "log" && target.logKey !== null ? { kind: "log-entry", key: target.logKey } : undefined);
 }
 
 browser.runtime.onMessage.addListener((message) => {

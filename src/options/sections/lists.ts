@@ -6,7 +6,24 @@ import { SCOPE_ALL } from "../../core/types";
 import type { Entry, Settings } from "../../core/types";
 import { t, tCode, tn } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
-import { address, button, byId, description, errorText, fieldError, guard, h, iconButton, inlineStatus, learnMore, option, reconcile, replace, toast } from "../dom";
+import {
+  address,
+  button,
+  byId,
+  description,
+  errorText,
+  fieldError,
+  focusNeighbor,
+  guard,
+  h,
+  inlineStatus,
+  learnMore,
+  notice,
+  option,
+  reconcile,
+  removeButton,
+  replace,
+} from "../dom";
 import { formatDate, formatFullTime } from "../format";
 import { accountName } from "../model";
 import type { Model } from "../model";
@@ -18,8 +35,8 @@ export function listsSection(): Section {
   const root = byId("lists");
   let model: Model | null = null;
   let limit = PAGE;
-  /** A removal that is not drawn yet, and the row whose remove button gets the focus once it is. */
-  let pendingRemoval: { key: string; neighbor: string | null } | null = null;
+  /** What the last removal did, with Undo. It stands between the filter and the table. */
+  const removed = notice();
 
   const counts = h("p", { class: "counts" });
   const filter = h(
@@ -65,6 +82,7 @@ export function listsSection(): Section {
           addValue.focus();
           return;
         }
+        removed.clear();
         void (async () => {
           try {
             const reply = await send("addEntry", { list: addList.value, value: addValue.value, scope: addScope.value });
@@ -107,14 +125,19 @@ export function listsSection(): Section {
   replace(
     root,
     h("h1", { text: t("catLists"), tabIndex: -1 }),
-    description(t("listsHint"), learnMore(t("catLists"), t("listsMore"))),
+    h("p", { class: "lead" }, t("listsHint"), " ", learnMore(t("catLists"), t("listsMore"))),
     counts,
     h("h2", { text: t("listsAddTitle") }),
     addForm,
     valueError.element,
     addStatus.element,
+    // What applies to every future entry stands before the table, which can be hundreds of rows long.
+    h("h2", { text: t("newEntriesTitle") }),
+    h("div", { class: "row" }, h("label", { for: "new-scope", text: t("newEntriesLabel") }), newScope),
+    description(t("newEntriesHint")),
     h("h2", { text: t("listsEntriesTitle") }),
     h("div", { class: "row filters" }, h("label", { for: "entries-filter", text: t("listsFilterLabel") }), filter, search),
+    removed.element,
     h(
       "table",
       { class: "entries" },
@@ -145,9 +168,6 @@ export function listsSection(): Section {
       rows,
     ),
     more,
-    h("h2", { text: t("newEntriesTitle") }),
-    h("div", { class: "row" }, h("label", { for: "new-scope", text: t("newEntriesLabel") }), newScope),
-    description(t("newEntriesHint")),
   );
 
   function reset(): void {
@@ -160,16 +180,14 @@ export function listsSection(): Section {
   }
 
   function remove(entry: Entry, row: HTMLElement): void {
-    const neighbor = row.nextElementSibling ?? row.previousElementSibling;
-    pendingRemoval = { key: keyOf(entry), neighbor: neighbor instanceof HTMLElement ? (neighbor.dataset.key ?? null) : null };
+    // The row is about to go: the keyboard goes on with the row next to it, or with the field for a new entry.
+    focusNeighbor(row, addValue);
     // What the form said about its last entry is history once the list is changed again.
     addStatus.clear();
     void guard(async () => {
       await send("removeEntries", { keys: [keyOf(entry)] });
-      toast(t("listsRemoved", entry.value), {
-        // Undo puts the entry back exactly as it was, with its source and its date.
-        undo: () => send("restoreEntries", { entries: [entry] }),
-      });
+      // Undo puts the entry back exactly as it was, with its source and its date.
+      removed.show(t("listsRemoved", entry.value), () => send("restoreEntries", { entries: [entry] }), t("listsRestored", entry.value));
     });
   }
 
@@ -184,9 +202,7 @@ export function listsSection(): Section {
       h("td", { class: "nowrap", text: formatDate(entry.addedAt), title: formatFullTime(entry.addedAt) }),
       h("td", { class: "action" }),
     );
-    const removeButton = iconButton("close", t("removeNamed", entry.value), () => remove(entry, element), "quiet");
-    removeButton.dataset.focus = "remove";
-    element.lastElementChild?.appendChild(removeButton);
+    element.lastElementChild?.appendChild(removeButton(t("removeNamed", entry.value), () => remove(entry, element)));
     return element;
   }
 
@@ -216,19 +232,10 @@ export function listsSection(): Section {
             build: () => row(entry),
           })),
     );
-    const removal = pendingRemoval;
-    if (removal !== null && !model.entries.some((entry) => keyOf(entry) === removal.key)) {
-      // The row that had the focus is gone: the keyboard goes on with its neighbor.
-      pendingRemoval = null;
-      if (document.activeElement === document.body || document.activeElement === null) {
-        const target = [...rows.querySelectorAll<HTMLElement>("tr")].find((candidate) => candidate.dataset.key === removal.neighbor);
-        (target?.querySelector<HTMLElement>("button") ?? addValue).focus();
-      }
-    }
     replace(
       more,
       matching.length > limit
-        ? button(t("showMore", matching.length - limit), () => {
+        ? button(t("showMore", Math.min(PAGE, matching.length - limit), matching.length - limit), () => {
             limit += PAGE;
             draw();
           })
@@ -258,6 +265,9 @@ export function listsSection(): Section {
         );
       }
       draw();
+    },
+    leave() {
+      removed.clear();
     },
   };
 }

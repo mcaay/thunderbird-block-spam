@@ -13,6 +13,7 @@ import type { LogEntry, Outcome } from "../../core/types";
 import { BUNDLED_PUBLIC_DOMAINS } from "../../data/publicDomains";
 import { stringsLocale, t, tCode } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
+import { attemptsLines } from "../diagnostic";
 import { address, button, byId, dialog, errorText, guard, h, option, reconcile, replace, setUnavailable } from "../dom";
 import type { Child } from "../dom";
 import { formatFullTime, formatLogTime, formatScore, matchesSearch, parseEntryDetail } from "../format";
@@ -51,6 +52,8 @@ export function logSection(): Section {
   let highlighted: string | null = null;
   const results = new Map<string, RowResult>();
   const busy = new Set<string>();
+  /** Rows whose message was looked for and is gone. */
+  const gone = new Set<string>();
 
   const undoHint = h("span");
   const filter = h(
@@ -87,7 +90,8 @@ export function logSection(): Section {
   replace(
     root,
     h("h1", { text: t("catLog"), tabIndex: -1 }),
-    h("div", { class: "description" }, t("logHint"), " ", undoHint),
+    h("p", { class: "lead", text: t("logHint") }),
+    h("div", { class: "description" }, undoHint),
     h(
       "div",
       { class: "row filters" },
@@ -103,6 +107,7 @@ export function logSection(): Section {
           onConfirm: async () => {
             await send("clearLog", {});
             results.clear();
+            gone.clear();
           },
         }),
       ),
@@ -129,25 +134,28 @@ export function logSection(): Section {
     more,
   );
 
-  function scopeText(scope: string): string {
-    return scope === SCOPE_ALL || model === null ? t("scopeAllLower") : t("scopeOnlyAccount", accountName(model, scope));
-  }
-
-  /** The lines under the reason: what was added to a list, the entry that decided, who scored. */
+  /**
+   * What stands under the outcome. A decision of the lists names the entry that
+   * decided in one line. A decision of the AI gives the reason and, when the sender was
+   * added to the black list, the entry. The scope is said only for an entry that is
+   * limited to one account. Who scored stands under the score.
+   */
   function detailLines(entry: LogEntry): string[] {
-    const lines: string[] = [];
+    const reason = tCode("reason", entry.reason);
     const listed = parseEntryDetail(entry.detail);
-    if (listed !== null) {
-      lines.push(
-        t(entry.reason === "ai-above" ? (entry.observed ? "logWouldAdd" : "logAdded") : "logEntryLine", listed.value, scopeText(listed.scope)),
-      );
-    } else if (entry.detail !== "") {
-      lines.push(entry.detail);
+    if (listed === null) {
+      return entry.detail === "" ? [reason] : [reason, ...attemptsLines(entry.detail)];
     }
-    if (entry.accessPoint !== "") {
-      lines.push(t("logScoredBy", entry.accessPoint));
+    const only = listed.scope === SCOPE_ALL || model === null ? null : t("scopeOnlyAccount", accountName(model, listed.scope));
+    if (entry.reason === "ai-above") {
+      const added =
+        only === null
+          ? t(entry.observed ? "logWouldAdd" : "logAdded", listed.value)
+          : t(entry.observed ? "logWouldAddScoped" : "logAddedScoped", listed.value, only);
+      return [reason, added];
     }
-    return lines;
+    const white = entry.outcome === "trusted" || entry.outcome === "released";
+    return [only === null ? t(white ? "logWhiteEntry" : "logBlackEntry", listed.value) : t(white ? "logWhiteEntryScoped" : "logBlackEntryScoped", listed.value, only)];
   }
 
   function outcomeText(outcome: LogActionOutcome): string {
@@ -242,18 +250,23 @@ export function logSection(): Section {
           ? { label: t("logMoveInbox"), title: t("logMoveInboxTitle", deciding.value), action: "trust" }
           : { label: t("logTrustedNow"), title: t("logTrustedNowTitle", deciding.value), action: null };
       }
-      return { label: t("logTrust"), title: t(moves ? "logTrustMoveTitle" : "logTrustTitle", target.value), action: "trust" };
+      // The label says what goes on the list: a whole domain, or one address.
+      return {
+        label: t(target.kind === "domain" ? "logTrustDomain" : "logTrustAddress"),
+        title: t(moves ? "logTrustMoveTitle" : "logTrustTitle", target.value),
+        action: "trust",
+      };
     }
     if (deciding?.list === "black") {
       return { label: t("logMoveJunk"), title: t("logMoveJunkTitle", deciding.value), action: "block" };
     }
-    return { label: t("logBlock"), title: t("logBlockTitle", target.value), action: "block" };
+    return { label: t(target.kind === "domain" ? "logBlockDomain" : "logBlockAddress"), title: t("logBlockTitle", target.value), action: "block" };
   }
 
   /**
    * What a row offers and what its last action did. The button stands at the end of
    * the row. The result of an action is said in the row itself, under the decision it
-   * changed, together with Undo.
+   * changed, and Undo takes the place of the button that was pressed.
    */
   function rowControls(entry: LogEntry, key: string, current: Offer | null): { control: Child; feedback: Child } {
     const result = results.get(key);
@@ -263,7 +276,7 @@ export function logSection(): Section {
       const data = result.undo;
       const undoButton = setUnavailable(button(t("undo"), () => undo(key, data), "small"), working);
       undoButton.dataset.focus = "act";
-      return { control: null, feedback: h("div", { class: `row-feedback ${result.kind}` }, text, undoButton) };
+      return { control: undoButton, feedback: h("div", { class: `row-feedback ${result.kind}` }, text) };
     }
     const feedback = result === undefined ? null : h("div", { class: `row-feedback ${result.kind}` }, text);
     if (current === null) {
@@ -273,14 +286,40 @@ export function logSection(): Section {
     if (action === null) {
       return { control: h("span", { class: "row-note", text: current.label, title: current.title }), feedback };
     }
-    const actButton = setUnavailable(button(current.label, () => act(entry, key, action), "small outline"), working);
+    const actButton = setUnavailable(button(current.label, () => act(entry, key, action), "small"), working);
     actButton.title = current.title;
     actButton.setAttribute("aria-label", current.title);
     actButton.dataset.focus = "act";
     return { control: actButton, feedback };
   }
 
+  /** Opens the message of a row in a tab, so that the decision can be judged against the message itself. */
+  function showMessage(entry: LogEntry, key: string): void {
+    void guard(async () => {
+      const { found } = await send("showMessage", { accountId: entry.accountId, messageId: entry.messageId });
+      if (!found) {
+        gone.add(key);
+        draw();
+      }
+    });
+  }
+
+  function messageLink(entry: LogEntry, key: string): Child {
+    if (entry.messageId === "") {
+      return null;
+    }
+    if (gone.has(key)) {
+      return h("span", { class: "description", text: t("logMessageGone"), attrs: { role: "status" } });
+    }
+    const link = button(t("logShowMessage"), () => showMessage(entry, key), "link show-message");
+    link.dataset.focus = "show";
+    link.setAttribute("aria-label", t("logShowMessageNamed", entry.subject === "" ? t("logNoSubject") : entry.subject));
+    return link;
+  }
+
   function row(entry: LogEntry, key: string, current: Offer | null, now: number): HTMLElement {
+    const score = entry.score === null ? "" : formatScore(entry.score, stringsLocale());
+    const subject = entry.subject === "" ? t("logNoSubject") : entry.subject;
     const sender = entry.sender === "" ? t("logUnknownSender") : entry.sender;
     const actionText = entry.action === "none" ? "" : entry.observed ? tCode("actionObserved", entry.action) : tCode("action", entry.action);
     const showAccount = (model?.accounts.length ?? 0) > 1;
@@ -289,7 +328,12 @@ export function logSection(): Section {
     return h(
       "tr",
       { class: key === highlighted ? "highlight" : "", tabIndex: -1, attrs: { role: "row" } },
-      cell("col-time", h("span", { text: formatLogTime(entry.time, now), title: formatFullTime(entry.time) })),
+      cell(
+        "col-time",
+        h("span", { text: formatLogTime(entry.time, now), title: formatFullTime(entry.time) }),
+        // With several accounts, the account stands under the time: when and where.
+        showAccount ? h("div", { class: "account description", text: entry.account, title: entry.account }) : null,
+      ),
       cell(
         "col-message",
         h(
@@ -298,8 +342,8 @@ export function logSection(): Section {
           entry.sender === "" ? sender : address(sender),
           entry.via === "" ? null : h("span", { class: "via" }, " ", t("logForwardedBy"), " ", address(entry.via)),
         ),
-        h("div", { class: "subject", text: entry.subject === "" ? t("logNoSubject") : entry.subject }),
-        showAccount ? h("div", { class: "account description", text: entry.account }) : null,
+        // One line: a long subject is cut, and the tooltip has all of it.
+        h("div", { class: "subject", text: subject, title: subject }),
       ),
       cell(
         "col-outcome",
@@ -312,14 +356,21 @@ export function logSection(): Section {
           entry.observed ? h("span", { class: "badge", text: t("logObservedBadge") }) : null,
           entry.test ? " " : null,
           entry.test ? h("span", { class: "badge", text: t("logTestBadge") }) : null,
-          entry.score === null ? null : h("span", { class: "score-inline", text: formatScore(entry.score, stringsLocale()), title: t("logScoreTitle", formatScore(entry.score, stringsLocale())) }),
+          entry.score === null
+            ? null
+            : h("span", { class: "score-inline", text: entry.accessPoint === "" ? score : `${score} (${entry.accessPoint})`, title: t("logScoreTitle", score) }),
         ),
-        h("div", { class: "reason description", text: tCode("reason", entry.reason) }),
         ...detailLines(entry).map((line) => h("div", { class: "detail description", text: line })),
         controls.feedback,
       ),
-      cell("col-score", entry.score === null ? null : h("span", { text: formatScore(entry.score, stringsLocale()), title: t("logScoreTitle", formatScore(entry.score, stringsLocale())) })),
-      cell("col-action", controls.control),
+      cell(
+        "col-score",
+        entry.score === null ? null : h("span", { text: score, title: t("logScoreTitle", score) }),
+        // Who scored, under the number.
+        entry.score === null || entry.accessPoint === "" ? null : h("div", { class: "scorer description", text: entry.accessPoint, title: t("logScoredBy", entry.accessPoint) }),
+      ),
+      // What can be done with the row: the action that undoes the decision, and under it the way to the message itself.
+      cell("col-action", controls.control, h("div", { class: "show-message-line" }, messageLink(entry, key))),
     );
   }
 
@@ -366,7 +417,7 @@ export function logSection(): Section {
             const current = offer(entry);
             return {
               key,
-              signature: JSON.stringify([current, results.get(key) ?? null, busy.has(key), key === highlighted, today, model?.accounts.length ?? 0]),
+              signature: JSON.stringify([current, results.get(key) ?? null, busy.has(key), gone.has(key), key === highlighted, today, model?.accounts.length ?? 0]),
               build: () => row(entry, key, current, now),
             };
           }),
@@ -374,7 +425,7 @@ export function logSection(): Section {
     replace(
       more,
       matching.length > limit
-        ? button(t("showMore", matching.length - limit), () => {
+        ? button(t("showMore", Math.min(LOG_PAGE, matching.length - limit), matching.length - limit), () => {
             limit += LOG_PAGE;
             draw();
           })

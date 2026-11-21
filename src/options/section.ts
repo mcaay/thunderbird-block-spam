@@ -1,11 +1,19 @@
 import type { Model } from "./model";
 
 /** The panes of the settings page. Each is one category of the list on the left. */
-export const PANES = ["overview", "lists", "log", "learning", "incoming", "ai", "shortcuts", "advanced", "backup"] as const;
+export const PANES = ["overview", "lists", "log", "learning", "incoming", "ai", "block-and-trust", "advanced", "backup"] as const;
 export type PaneId = (typeof PANES)[number];
 
 export function isPaneId(value: string): value is PaneId {
   return (PANES as readonly string[]).includes(value);
+}
+
+/** Addresses of panes under names they had before: links and bookmarks to them keep working. */
+const FORMER_NAMES: Record<string, PaneId> = { shortcuts: "block-and-trust" };
+
+/** The pane a fragment of the address names, or null when it names none. */
+export function paneOf(fragment: string): PaneId | null {
+  return isPaneId(fragment) ? fragment : (FORMER_NAMES[fragment] ?? null);
 }
 
 /** What a link into a pane wants to be shown there. */

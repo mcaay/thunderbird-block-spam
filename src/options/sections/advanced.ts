@@ -6,7 +6,7 @@ import type { SettingsPatch } from "../../core/edit";
 import { BUNDLED_PUBLIC_DOMAINS } from "../../data/publicDomains";
 import { stringsLocale, t, tCode } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
-import { address, button, byId, description, fieldError, guard, h, iconButton, inlineStatus, learnMore, reconcile, replace } from "../dom";
+import { address, button, byId, description, fieldError, focusNeighbor, guard, h, inlineStatus, learnMore, notice, reconcile, removeButton, replace } from "../dom";
 import type { Keyed } from "../dom";
 import { mayRedraw, sameLabels } from "../fields";
 import type { Model } from "../model";
@@ -19,20 +19,47 @@ async function update(patch: SettingsPatch): Promise<string[]> {
   return (await send("updateSettings", { patch })).invalid;
 }
 
-/** The rows of a list box: one per item with a remove button, or one line saying that there is none. */
-function listRows(items: readonly string[], onRemove: (item: string) => void): Keyed[] {
-  if (items.length === 0) {
-    return [{ key: "empty", signature: "", build: () => h("li", { class: "empty", text: t("noneYet") }) }];
-  }
-  return items.map((item) => ({
-    key: item,
-    signature: "",
-    build: () => {
-      const remove = iconButton("close", t("removeNamed", item), () => onRemove(item), "quiet");
-      remove.dataset.focus = "remove";
-      return h("li", {}, h("span", { class: "name" }, address(item)), remove);
+/** A list of domains or addresses: plain rows with a remove button each, or one line saying that there is none. */
+interface PlainList {
+  element: HTMLElement;
+  /** Draws the items. `onRemove` gets the item whose remove button was pressed. */
+  draw(items: readonly string[], onRemove: (item: string) => void): void;
+}
+
+/** `labelledBy` names the heading of the list, `fallback` takes the focus when the last row is removed. */
+function plainList(label: { labelledBy: string } | { label: string }, fallback: HTMLElement): PlainList {
+  const list = h("ul", {
+    class: "plain-list",
+    attrs: "labelledBy" in label ? { "aria-labelledby": label.labelledBy } : { "aria-label": label.label },
+  });
+  const empty = description(t("noneYet"));
+  return {
+    element: h("div", {}, empty, list),
+    draw(items, onRemove) {
+      list.hidden = items.length === 0;
+      empty.hidden = items.length > 0;
+      reconcile(
+        list,
+        items.map(
+          (item): Keyed => ({
+            key: item,
+            signature: "",
+            build: () => {
+              const row = h("li", {}, h("span", { class: "name" }, address(item)));
+              row.appendChild(
+                removeButton(t("removeNamed", item), () => {
+                  // The row is about to go: the keyboard goes on with the row next to it, or with the field for adding.
+                  focusNeighbor(row, fallback);
+                  onRemove(item);
+                }),
+              );
+              return row;
+            },
+          }),
+        ),
+      );
     },
-  }));
+  };
 }
 
 export function advancedSection(): Section {
@@ -45,8 +72,10 @@ export function advancedSection(): Section {
   const verdict = h("p", { class: "verdict", attrs: { role: "status" } });
   const makePublic = button(t("publicMakePublic"), () => change(true));
   const makeCustom = button(t("publicMakeCustom"), () => change(false));
-  const added = h("ul", { class: "listbox", attrs: { "aria-labelledby": "public-added-title" } });
-  const removed = h("ul", { class: "listbox", attrs: { "aria-labelledby": "public-removed-title" } });
+  const added = plainList({ labelledBy: "public-added-title" }, domain);
+  const removed = plainList({ labelledBy: "public-removed-title" }, domain);
+  /** What the last removal from the lists of this group did, with Undo. */
+  const domainNotice = notice();
 
   function current(): { domain: string | null; isPublic: boolean } {
     const value = normalizeDomain(domain.value);
@@ -76,6 +105,7 @@ export function advancedSection(): Section {
       return;
     }
     const value = state.domain;
+    domainNotice.clear();
     void guard(
       async () => {
         if (toPublic) {
@@ -99,7 +129,9 @@ export function advancedSection(): Section {
   // Forwarding mailboxes.
   const mailbox = h("input", { type: "email", id: "forward-mailbox", placeholder: "office@example.com", oninput: () => mailboxError.set(null), attrs: { spellcheck: "false", autocomplete: "off" } });
   const mailboxError = fieldError(mailbox, "forward-mailbox-error");
-  const mailboxes = h("ul", { class: "listbox", attrs: { "aria-label": t("forwardingTitle") } });
+  const mailboxes = plainList({ label: t("forwardingTitle") }, mailbox);
+  /** What the last removal of a mailbox did, with Undo. */
+  const mailboxNotice = notice();
   const labels = h("input", { type: "text", id: "forward-labels", oninput: () => drawLabelsState(), attrs: { spellcheck: "false", autocomplete: "off" } });
   const labelsError = fieldError(labels, "forward-labels-error");
   const labelsStatus = inlineStatus();
@@ -111,8 +143,9 @@ export function advancedSection(): Section {
       async () => {
         const invalid = await update({ forwardLabels: labels.value.split(",") });
         labelsError.set(invalid.length > 0 ? t("invalidItems", invalid.join(", ")) : null);
+        labelsStored = labels.value;
+        drawLabelsState();
         labelsStatus.flash(t("saved"));
-        saveLabels.disabled = true;
       },
       (message) => labelsError.set(message),
     ),
@@ -125,6 +158,8 @@ export function advancedSection(): Section {
   function drawLabelsState(): void {
     const dirty = labelsDirty();
     saveLabels.disabled = !dirty;
+    // Save stands out only while there is something to save.
+    saveLabels.classList.toggle("primary", dirty);
     if (dirty) {
       labelsStatus.set(t("unsavedChanges"));
     } else if (labelsStatus.element.textContent === t("unsavedChanges")) {
@@ -143,6 +178,7 @@ export function advancedSection(): Section {
       mailbox.focus();
       return;
     }
+    mailboxNotice.clear();
     void guard(
       async () => {
         await update({ forwardingMailboxes: [...settings.forwardingMailboxes, value] });
@@ -157,16 +193,17 @@ export function advancedSection(): Section {
   replace(
     root,
     h("h1", { text: t("catAdvanced"), tabIndex: -1 }),
+    h("p", { class: "lead", text: t("advancedLead") }),
     h("h2", { text: t("publicTitle") }),
     description(t("publicHint"), learnMore(t("publicTitle"), t("publicMore", BUNDLED.size.toLocaleString(stringsLocale())))),
     h("div", { class: "row" }, h("label", { for: "public-domain", text: t("publicDomainLabel") }), domain, makePublic, makeCustom),
     domainError.element,
     verdict,
+    domainNotice.element,
     h("h3", { text: t("publicAddedTitle"), id: "public-added-title" }),
-    added,
+    added.element,
     h("h3", { text: t("publicRemovedTitle"), id: "public-removed-title" }),
-    removed,
-    h("hr", {}),
+    removed.element,
     h("h2", { text: t("forwardingTitle") }),
     description(t("forwardingHint"), learnMore(t("forwardingTitle"), t("forwardingHowTo"), t("forwardingMore"))),
     h(
@@ -184,7 +221,8 @@ export function advancedSection(): Section {
       h("button", { type: "submit", text: t("add") }),
     ),
     mailboxError.element,
-    mailboxes,
+    mailboxNotice.element,
+    mailboxes.element,
     h("h3", { text: t("forwardLabelsTitle") }),
     description(t("forwardLabelsHint"), learnMore(t("forwardLabelsTitle"), t("forwardLabelsMore"))),
     h("div", { class: "row" }, h("label", { for: "forward-labels", class: "visually-hidden", text: t("forwardLabelsTitle") }), labels, saveLabels, labelsStatus.element),
@@ -199,18 +237,24 @@ export function advancedSection(): Section {
       if (settings === null) {
         return;
       }
-      reconcile(
-        added,
-        listRows(settings.publicDomainsAdded, (item) => void guard(() => update({ publicDomainsAdded: settings.publicDomainsAdded.filter((other) => other !== item) }))),
-      );
-      reconcile(
-        removed,
-        listRows(settings.publicDomainsRemoved, (item) => void guard(() => update({ publicDomainsRemoved: settings.publicDomainsRemoved.filter((other) => other !== item) }))),
-      );
-      reconcile(
-        mailboxes,
-        listRows(settings.forwardingMailboxes, (item) => void guard(() => update({ forwardingMailboxes: settings.forwardingMailboxes.filter((other) => other !== item) }))),
-      );
+      // Removing gives a confirmation with Undo. Undo applies to the list as it is then, not as it was.
+      const removable = (name: "publicDomainsAdded" | "publicDomainsRemoved" | "forwardingMailboxes", where: typeof domainNotice) => (item: string) =>
+        void guard(async () => {
+          await update({ [name]: settings[name].filter((other) => other !== item) });
+          where.show(
+            t("listsRemoved", item),
+            async () => {
+              const current = model?.settings;
+              if (current !== null && current !== undefined) {
+                await update({ [name]: [...current[name].filter((other) => other !== item), item] });
+              }
+            },
+            t("listsRestored", item),
+          );
+        });
+      added.draw(settings.publicDomainsAdded, removable("publicDomainsAdded", domainNotice));
+      removed.draw(settings.publicDomainsRemoved, removable("publicDomainsRemoved", domainNotice));
+      mailboxes.draw(settings.forwardingMailboxes, removable("forwardingMailboxes", mailboxNotice));
       describe();
       const stored = settings.forwardLabels.join(", ");
       labelsStored = stored;
@@ -222,6 +266,10 @@ export function advancedSection(): Section {
     },
     unsaved() {
       return labelsDirty();
+    },
+    leave() {
+      domainNotice.clear();
+      mailboxNotice.clear();
     },
   };
 }

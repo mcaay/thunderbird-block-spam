@@ -1,15 +1,16 @@
 // Learning: the Sent folders per account and the manual scan of sent mail.
 
 import type { SettingsPatch } from "../../core/edit";
+import type { FolderRef, Settings } from "../../core/types";
 import { t } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
-import { byId, description, fieldError, guard, h, learnMore, reconcile, replace } from "../dom";
+import { byId, description, fieldError, guard, h, learnMore, notice, reconcile, replace } from "../dom";
 import { endOfLocalDay } from "../fields";
 import { hasFolder, sentFolders, withoutFolder } from "../model";
-import type { Model } from "../model";
+import type { AccountView, Model } from "../model";
 import type { Section, Shell } from "../section";
 import { folderEditors } from "./folderEditor";
-import { scanText } from "./scanText";
+import { scanStatusView } from "./scanStatus";
 
 function update(patch: SettingsPatch): Promise<unknown> {
   return send("updateSettings", { patch });
@@ -24,13 +25,31 @@ function dayStart(value: string): number | null {
   return new Date(year, month - 1, day).getTime();
 }
 
+/** A Sent folder of the account itself is taken off by listing it as removed, any other folder by not listing it as added. */
+function removePatch(account: AccountView, folder: FolderRef, settings: Settings): SettingsPatch {
+  return hasFolder(account.sentDefaults, folder)
+    ? { sentFoldersRemoved: [...withoutFolder(settings.sentFoldersRemoved, folder), folder] }
+    : { sentFoldersAdded: withoutFolder(settings.sentFoldersAdded, folder) };
+}
+
+function addPatch(account: AccountView, folder: FolderRef, settings: Settings): SettingsPatch {
+  return hasFolder(account.sentDefaults, folder)
+    ? { sentFoldersRemoved: withoutFolder(settings.sentFoldersRemoved, folder) }
+    : { sentFoldersAdded: [...withoutFolder(settings.sentFoldersAdded, folder), folder] };
+}
+
 export function learningSection(shell: Shell): Section {
   const root = byId("learning");
+  /** The settings as last drawn. An Undo applies to them, not to what they were when the folder was removed. */
+  let latest: Settings | null = null;
   const folders = h("div", { class: "accounts" });
-  const from = h("input", { type: "date", id: "scan-from", oninput: () => rangeError.set(null) });
-  const to = h("input", { type: "date", id: "scan-to", oninput: () => rangeError.set(null) });
+  /** What the last change of the Sent folders did, with Undo. */
+  const changed = notice();
+  // The field itself is Thunderbird's own date control. What it expects and what an empty field means is said under it.
+  const from = h("input", { type: "date", id: "scan-from", oninput: () => rangeError.set(null), attrs: { "aria-describedby": "scan-dates-hint" } });
+  const to = h("input", { type: "date", id: "scan-to", oninput: () => rangeError.set(null), attrs: { "aria-describedby": "scan-dates-hint" } });
   const rangeError = fieldError(to, "scan-range-error");
-  const progress = h("p", { class: "progress", attrs: { role: "status" } });
+  const status = scanStatusView();
   const start = h("button", {
     type: "button",
     text: t("scanStart"),
@@ -56,9 +75,10 @@ export function learningSection(shell: Shell): Section {
   replace(
     root,
     h("h1", { text: t("catLearning"), tabIndex: -1 }),
-    description(t("learningHint"), learnMore(t("catLearning"), t("learningMore"))),
+    h("p", { class: "lead" }, t("learningHint"), " ", learnMore(t("catLearning"), t("learningMore"))),
     h("h2", { text: t("sentFoldersTitle") }),
     description(t("sentFoldersHint")),
+    changed.element,
     folders,
     h("h2", { text: t("scanTitle") }),
     description(t("scanHint")),
@@ -72,8 +92,9 @@ export function learningSection(shell: Shell): Section {
       start,
       cancel,
     ),
+    h("div", { class: "description", id: "scan-dates-hint", text: t("scanDatesHint") }),
     rangeError.element,
-    progress,
+    status.element,
   );
 
   return {
@@ -82,6 +103,7 @@ export function learningSection(shell: Shell): Section {
       if (settings === null) {
         return;
       }
+      latest = settings;
       reconcile(
         folders,
         folderEditors(model.accounts, {
@@ -90,30 +112,32 @@ export function learningSection(shell: Shell): Section {
           removable: () => true,
           fixedNote: "",
           onRemove: (account, folder) =>
-            void guard(() =>
-              update(
-                hasFolder(account.sentDefaults, folder)
-                  ? { sentFoldersRemoved: [...settings.sentFoldersRemoved, folder] }
-                  : { sentFoldersAdded: withoutFolder(settings.sentFoldersAdded, folder) },
-              ),
-            ),
-          onAdd: (account, folder) =>
-            void guard(() =>
-              update(
-                hasFolder(account.sentDefaults, folder)
-                  ? { sentFoldersRemoved: withoutFolder(settings.sentFoldersRemoved, folder) }
-                  : { sentFoldersAdded: [...settings.sentFoldersAdded, folder] },
-              ),
-            ),
+            void guard(async () => {
+              await update(removePatch(account, folder, settings));
+              changed.show(
+                t("folderRemoved", folder.name, account.name),
+                async () => {
+                  if (latest !== null) {
+                    await update(addPatch(account, folder, latest));
+                  }
+                },
+                t("listsRestored", folder.name),
+              );
+            }),
+          onAdd: (account, folder) => {
+            changed.clear();
+            void guard(() => update(addPatch(account, folder, settings)));
+          },
         }),
       );
 
-      const scan = scanText(model);
-      start.disabled = scan.running;
-      cancel.hidden = !scan.running;
-      if (progress.textContent !== scan.text) {
-        progress.textContent = scan.text;
-      }
+      const running = model.status.scan?.running === true;
+      start.disabled = running;
+      cancel.hidden = !running;
+      status.update(model);
+    },
+    leave() {
+      changed.clear();
     },
   };
 }

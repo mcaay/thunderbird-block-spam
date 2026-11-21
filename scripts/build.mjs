@@ -1,8 +1,8 @@
 // Builds both add-ons into dist/:
-//   dist/main/                         the unpacked main add-on
-//   dist/block-spam-<version>.xpi      the main add-on
 //   dist/companion/                    the unpacked companion add-on
 //   dist/block-spam-keys-<version>.xpi the optional bare-key companion
+//   dist/main/                         the unpacked main add-on, with the packed companion in companion/
+//   dist/block-spam-<version>.xpi      the main add-on
 //
 // Usage: npm run build
 
@@ -47,6 +47,18 @@ async function pack(directory, name) {
 
 await rm(dist, { recursive: true, force: true });
 
+// Companion add-on first: plain files, no bundling. Its packed file is also shipped
+// inside the main add-on, which offers it for saving (it never loads or installs it).
+const companion = path.join(dist, "companion");
+const companionFile = `block-spam-keys-${version}.xpi`;
+await cp(path.join(root, "companion"), companion, {
+  recursive: true,
+  filter: (source) => !source.endsWith(".md") && !source.endsWith(".DS_Store"),
+});
+await writeManifest(path.join(root, "companion/manifest.json"), path.join(companion, "manifest.json"));
+await cp(path.join(root, "LICENSE"), path.join(companion, "LICENSE"));
+await pack(companion, companionFile);
+
 // Main add-on.
 const main = path.join(dist, "main");
 await mkdir(main, { recursive: true });
@@ -74,14 +86,7 @@ for (const file of ["common.css", "options/options.html", "options/options.css",
 for (const file of ["LICENSE", "THIRD_PARTY_LICENSES.md"]) {
   await cp(path.join(root, file), path.join(main, file));
 }
+// The settings page saves this file to the user's computer on request, see "Block and trust".
+await mkdir(path.join(main, "companion"), { recursive: true });
+await cp(path.join(dist, companionFile), path.join(main, "companion", companionFile));
 await pack(main, `block-spam-${version}.xpi`);
-
-// Companion add-on: plain files, no bundling.
-const companion = path.join(dist, "companion");
-await cp(path.join(root, "companion"), companion, {
-  recursive: true,
-  filter: (source) => !source.endsWith(".md") && !source.endsWith(".DS_Store"),
-});
-await writeManifest(path.join(root, "companion/manifest.json"), path.join(companion, "manifest.json"));
-await cp(path.join(root, "LICENSE"), path.join(companion, "LICENSE"));
-await pack(companion, `block-spam-keys-${version}.xpi`);

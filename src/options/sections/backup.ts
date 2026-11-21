@@ -89,6 +89,7 @@ export function backupSection(): Section {
   replace(
     root,
     h("h1", { text: t("catBackup"), tabIndex: -1 }),
+    h("p", { class: "lead", text: t("backupLead") }),
     h("h2", { text: t("exportTitle") }),
     description(t("exportHint")),
     h(

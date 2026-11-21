@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 import { PRESET_GROUPS, PRESETS } from "../src/ai/presets";
 import { COMMANDS } from "../src/core/commands";
 import { REASONS } from "../src/core/decision";
+import { DIAGNOSTIC_CODES } from "../src/core/diagnostics";
 import { ACCESS_POINT_TYPES, DEFAULT_PROMPT } from "../src/core/settings";
 // @ts-expect-error The build scripts are plain JavaScript modules.
 import { crc32, createZip } from "../scripts/zip.mjs";
@@ -33,10 +34,10 @@ const messages = JSON.parse(read("src/_locales/en/messages.json")) as Record<str
 const manifest = JSON.parse(read("src/manifest.json")) as Record<string, unknown>;
 
 describe("strings", () => {
-  /** String literals passed as the first argument of t(...), including both branches of a ternary. */
+  /** String literals passed as the first argument of t(...) or tNodes(...), including both branches of a ternary. */
   function literalKeys(source: string): string[] {
     const keys: string[] = [];
-    for (const match of source.matchAll(/\bt\(/g)) {
+    for (const match of source.matchAll(/\bt(?:Nodes)?\(/g)) {
       let depth = 0;
       let end = match.index + match[0].length;
       for (; end < source.length; end += 1) {
@@ -70,6 +71,8 @@ describe("strings", () => {
     // Mistakes a user can make: the codes of ValidationError that the pages translate.
     invalid: ["entry-invalid", "address-invalid", "account-unknown", "cutoff-range", "prompt-empty", "own-address", "no-sender", "import-invalid", "undo-gone"],
     remedy: ["sign-in", "permission", "key-missing", "key-rejected", "plan-refused"],
+    // What went wrong with a request to an AI service, see core/diagnostics.
+    diag: DIAGNOSTIC_CODES,
     endpointHint: ["systemone", "openai-chat"],
     modelHint: ACCESS_POINT_TYPES,
     type: ACCESS_POINT_TYPES,

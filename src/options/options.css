@@ -138,13 +138,6 @@ main {
   margin: 0 0 4px;
 }
 
-hr {
-  height: 0;
-  margin: 26px 0 0;
-  border: 0;
-  border-top: 1px solid var(--separator);
-}
-
 /* "Learn more": the rest of a description, opened in place. */
 
 details.more {
@@ -156,12 +149,11 @@ details.more > summary {
   white-space: nowrap;
   color: var(--link);
   text-decoration: underline;
-  cursor: pointer;
-  list-style: none;
 }
 
-details.more > summary::-moz-list-bullet {
-  display: none;
+/* The marker is not part of the underlined words. */
+details.more > summary::before {
+  margin-inline-end: 1px;
 }
 
 details.more > .more-body {
@@ -186,6 +178,39 @@ details.more > .more-body p {
   margin-inline-start: 21.5px;
 }
 
+/* An option of the checkbox above it: indented under its label, as dependent options are in Thunderbird's Settings. */
+.sub-option {
+  margin-inline-start: 21.5px;
+}
+
+.sub-option > .check {
+  margin-top: 4px;
+}
+
+.option-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin: 2px 0 6px;
+  color: var(--warning);
+}
+
+/* Confirmations and failures that appear in place. An empty holder takes no room. */
+.notice:empty,
+.pane-error:empty {
+  display: none;
+}
+
+.notice:focus-visible {
+  outline-offset: 0;
+  border-radius: 4px;
+}
+
+.notice .bar {
+  margin: 6px 0;
+}
+
 .status-line {
   margin-top: 6px;
   margin-bottom: 6px;
@@ -194,65 +219,6 @@ details.more > .more-body p {
 h2 > .state {
   margin-inline-start: 6px;
   vertical-align: middle;
-}
-
-/* Message bars. */
-
-.bar {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin: 8px 0;
-  padding: 7px 10px;
-  border: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
-  border-radius: 4px;
-  background-color: var(--bar-information);
-}
-
-.bar > .icon {
-  margin-top: 1px;
-  color: var(--icon-information);
-}
-
-.bar.warning {
-  background-color: var(--bar-warning);
-}
-
-.bar.warning > .icon {
-  color: var(--icon-warning);
-}
-
-.bar.success {
-  background-color: var(--bar-success);
-}
-
-.bar.success > .icon {
-  color: var(--icon-success);
-}
-
-.bar.critical {
-  background-color: var(--bar-critical);
-}
-
-.bar.critical > .icon {
-  color: var(--icon-critical);
-}
-
-.bar-text {
-  flex: 1;
-  min-width: 0;
-}
-
-.bar-text ul {
-  margin: 4px 0 0;
-  padding-inline-start: 18px;
-}
-
-.bar-actions {
-  display: flex;
-  flex: none;
-  gap: 6px;
-  align-self: center;
 }
 
 .code-block {
@@ -309,6 +275,23 @@ h2 > .state {
   border-color: var(--icon-success);
 }
 
+/* While the scan of the step runs, a spinner stands in for the number. */
+.step.running .step-mark {
+  border-color: transparent;
+}
+
+.step.running .step-mark::before {
+  content: none;
+}
+
+.step-status a {
+  white-space: nowrap;
+}
+
+.step-status progress {
+  margin-top: 4px;
+}
+
 .step-title {
   font-weight: 600;
 }
@@ -323,7 +306,7 @@ h2 > .state {
 }
 
 .setup-complete > summary {
-  cursor: pointer;
+  width: fit-content;
 }
 
 .setup-complete > summary > * {
@@ -331,47 +314,51 @@ h2 > .state {
 }
 
 .setup-complete > summary > .icon {
-  margin: 0 4px 0 2px;
+  margin: 0 4px 0 1px;
   color: var(--icon-success);
 }
 
-/* Lists of things that can be removed: one row per item, a remove button at its end. */
+.ways-short {
+  margin: 4px 0;
+}
 
-.listbox {
+/*
+ * Lists of things that can be removed (folders, mailboxes, domains): plain rows with
+ * separator lines, like the rows of a table, and a remove button at the end of each.
+ * No box around them. An empty list is one description line instead.
+ */
+
+.plain-list {
   max-width: 440px;
   margin: 6px 0;
   padding: 0;
   list-style: none;
-  border: 1px solid var(--border);
-  border-radius: 3px;
-}
-
-.listbox li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 28px;
-  padding: 1px 3px 1px 8px;
-}
-
-.listbox li + li {
   border-top: 1px solid var(--separator);
 }
 
-.listbox .name {
+.plain-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding: 2px 2px 2px 8px;
+  border-bottom: 1px solid var(--separator);
+}
+
+.plain-list li:hover {
+  background-color: var(--row-hover);
+}
+
+.plain-list .name {
   flex: 1;
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
-.listbox .note,
-.listbox .empty {
+.plain-list .note {
+  padding-inline-end: 6px;
   font-size: 0.9em;
   color: var(--description);
-}
-
-.listbox .note {
-  padding-inline-end: 5px;
 }
 
 .account-block + .account-block {
@@ -413,7 +400,8 @@ h2 > .state {
   margin: 0;
 }
 
-.field .row > input {
+.field .row > input,
+.field .row > select {
   flex: 1;
   min-width: 200px;
 }
@@ -481,13 +469,18 @@ textarea {
 }
 
 .verdict:empty,
-.progress:empty,
+.scan-status:empty,
 .inline-status:empty {
   display: none;
 }
 
-.progress {
+.scan-status {
+  margin: 6px 0;
   font-variant-numeric: tabular-nums;
+}
+
+.scan-status p {
+  margin: 0;
 }
 
 /* Tables. */
@@ -585,17 +578,79 @@ table.log .col-time {
 }
 
 table.log .col-outcome {
-  width: 304px;
+  width: 252px;
 }
 
 table.log .col-score {
-  width: 58px;
+  width: 72px;
   font-variant-numeric: tabular-nums;
 }
 
+table.log .account {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The subject takes one line and is cut when it is long. */
+table.log .subject {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+table.log .show-message-line {
+  line-height: 1.5;
+}
+
+table.log .show-message-line:empty {
+  display: none;
+}
+
+table.log .col-action button.small + .show-message-line {
+  margin-top: 2px;
+}
+
+/* Who scored: under the number, in one line. */
+table.log .scorer {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 table.log .col-action {
-  width: 112px;
+  width: 136px;
   text-align: end;
+}
+
+table.log .col-action button {
+  max-width: 100%;
+}
+
+table.log .show-message {
+  font-size: 0.9em;
+  white-space: nowrap;
+}
+
+/* The link is a button underneath, so that it does not navigate. */
+button.link {
+  min-height: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--link);
+  text-decoration: underline;
+  border: 0;
+  border-radius: 2px;
+  background: none;
+}
+
+button.link:hover:not(:disabled, [aria-disabled="true"]) {
+  background: none;
+}
+
+button.link:active:not(:disabled, [aria-disabled="true"]) {
+  color: var(--link-active);
+  background: none;
 }
 
 table.log td.col-action {
@@ -664,10 +719,6 @@ table.log .detail {
 
 .row-feedback.error {
   color: var(--error);
-}
-
-.row-feedback button {
-  color: var(--button-text);
 }
 
 table.log tr.highlight {
@@ -784,7 +835,8 @@ table.log tr:focus-visible {
 }
 
 .editor .field > input,
-.editor .field .row > input {
+.editor .field .row > input,
+.editor .field .row > select {
   max-width: 520px;
 }
 
@@ -836,7 +888,7 @@ table.log tr:focus-visible {
   margin: 3px 0;
 }
 
-/* Dialogs and toasts. */
+/* Dialogs. */
 
 dialog.modal {
   width: min(520px, calc(100vw - 32px));
@@ -868,39 +920,7 @@ dialog.modal p {
   margin-top: 16px;
 }
 
-#toasts {
-  position: fixed;
-  right: 0;
-  bottom: 20px;
-  left: 0;
-  z-index: 10;
-  display: flex;
-  justify-content: center;
-  pointer-events: none;
-}
-
-.toast {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  max-width: min(640px, calc(100vw - 32px));
-  padding: 6px 6px 6px 12px;
-  color: light-dark(#fbfbfe, #15141a);
-  border-radius: 4px;
-  background-color: light-dark(#27272a, #e4e4e7);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-  pointer-events: auto;
-}
-
-.toast-text {
-  overflow-wrap: anywhere;
-}
-
-.toast.error > .icon {
-  color: light-dark(oklch(83% 0.14 15), #b91c1c);
-}
-
-/* Narrow windows: the categories become one row that stays at the top. */
+/* Narrow windows: the categories become a row at the top that wraps, so that every category stays in view. */
 
 @media (max-width: 759px) {
   body,
@@ -911,15 +931,20 @@ dialog.modal p {
 
   #categories {
     z-index: 5;
-    flex-direction: row;
+    flex-flow: row wrap;
     width: auto;
     height: auto;
     padding: 4px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scrollbar-width: thin;
+    overflow: visible;
     border-bottom: 1px solid var(--separator);
     background-color: var(--page);
+  }
+
+  /* Where the rows would take too much of a small or strongly zoomed window, they scroll away with the page. */
+  @media (max-width: 519px), (max-height: 519px) {
+    #categories {
+      position: static;
+    }
   }
 
   .brand {
@@ -928,7 +953,7 @@ dialog.modal p {
 
   .category-list {
     display: flex;
-    flex: none;
+    flex-wrap: wrap;
   }
 
   .category,
@@ -1092,9 +1117,28 @@ dialog.modal p {
   }
 
   tbody tr:hover,
+  .plain-list li:hover,
   table.log tr.highlight {
     outline: 1px solid CanvasText;
     outline-offset: -1px;
+  }
+
+  /* The progress bar and the spinner keep a visible moving part. */
+  progress {
+    border: 1px solid CanvasText;
+  }
+
+  progress::-moz-progress-bar {
+    background-color: Highlight;
+  }
+
+  .spinner {
+    border-color: GrayText;
+    border-top-color: Highlight;
+  }
+
+  button.link {
+    color: LinkText;
   }
 
   /* "Learn more" looks like the links next to it. */

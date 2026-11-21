@@ -11,6 +11,7 @@ import type { AccessPoint } from "../../core/types";
 import { stringsLocale, t, tCode } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
 import { hostGranted, refreshGrants, remedyOf, signedIn } from "../aiState";
+import { diagnosticSentence } from "../diagnostic";
 import {
   button,
   byId,
@@ -29,7 +30,7 @@ import {
   replace,
   setUnavailable,
 } from "../dom";
-import type { Child, FieldError, Keyed } from "../dom";
+import type { Child, DialogResult, FieldError, Keyed } from "../dom";
 import { mayRedraw, sameNumber } from "../fields";
 import { formatLogTime, formatScore } from "../format";
 import { LOOPBACK_ORIGIN, requestAccess } from "../permissions";
@@ -54,6 +55,9 @@ function isLocal(endpoint: string): boolean {
 function definitionOf(point: AccessPoint, changes: Partial<AccessPointDefinition> = {}): AccessPointDefinition {
   return { type: point.type, name: point.name, enabled: point.enabled, endpoint: point.endpoint, model: point.model, ...changes };
 }
+
+/** The item of the model menu that leads back to the text field. No model has this name. */
+const OTHER_MODEL = "\u0000other";
 
 /** The editor of one service. Its element lives inside the row that is being edited. */
 interface Editor {
@@ -182,9 +186,12 @@ export function aiSection(shell: Shell): Section {
     h("div", { class: "description", id: "prompt-hint", text: t("promptHint") }),
     prompt,
     promptError.element,
+    // The default prompt is English in every language of the interface: it is what the model reads.
+    description(t("promptLanguage")),
     description(t("outputLineLabel")),
     h("pre", { class: "code-block", text: OUTPUT_LINE }),
-    h("div", { class: "row" }, savePromptButton, discardPromptButton, restorePromptButton, promptStatus.element),
+    // "Unsaved changes" stands right after the button that saves them.
+    h("div", { class: "row" }, savePromptButton, promptStatus.element, discardPromptButton, restorePromptButton),
   );
 
   function drawPresetHint(): void {
@@ -231,6 +238,8 @@ export function aiSection(shell: Shell): Section {
   function drawPromptState(): void {
     const dirty = promptDirty();
     savePromptButton.disabled = !dirty;
+    // Save stands out only while there is something to save.
+    savePromptButton.classList.toggle("primary", dirty);
     discardPromptButton.hidden = !dirty;
     restorePromptButton.disabled = prompt.value === DEFAULT_PROMPT;
     if (dirty) {
@@ -376,8 +385,34 @@ export function aiSection(shell: Shell): Section {
       },
       attrs: { spellcheck: "false" },
     });
-    const modelInput = h("input", { type: "text", id: `${prefix}-model`, value: existing?.model ?? preset?.model ?? "", attrs: { list: `${prefix}-models`, spellcheck: "false", autocomplete: "off" } });
-    const models = h("datalist", { id: `${prefix}-models` });
+    const modelInput = h("input", { type: "text", id: `${prefix}-model`, value: existing?.model ?? preset?.model ?? "", attrs: { spellcheck: "false", autocomplete: "off" } });
+    const modelLabel = h("label", { for: modelInput.id, text: t("fieldModel") });
+    /** The loaded models as a menu. It takes the place of the text field until "Other…" is chosen. */
+    const modelMenu = h("select", {
+      id: `${prefix}-model-menu`,
+      hidden: true,
+      onchange: () => {
+        if (modelMenu.value === OTHER_MODEL) {
+          showModelField();
+          return;
+        }
+        modelInput.value = modelMenu.value;
+        errors.model.set(null);
+        modelMenu.removeAttribute("aria-invalid");
+      },
+    });
+    const modelControl = (): HTMLElement => (modelMenu.hidden ? modelInput : modelMenu);
+
+    /** Back to the text field, for a model the service did not list. */
+    function showModelField(): void {
+      modelMenu.hidden = true;
+      modelMenu.removeAttribute("aria-invalid");
+      modelInput.hidden = false;
+      modelLabel.htmlFor = modelInput.id;
+      modelStatus.clear();
+      modelInput.focus();
+      modelInput.select();
+    }
     const key = h("input", {
       type: "password",
       id: `${prefix}-key`,
@@ -390,7 +425,7 @@ export function aiSection(shell: Shell): Section {
       model: fieldError(modelInput, `${prefix}-model-error`),
       key: fieldError(key, `${prefix}-key-error`),
     };
-    const fields = { name, endpoint, model: modelInput, key };
+    const fields = { name, endpoint, key };
     const modelStatus = inlineStatus();
     const saveStatus = inlineStatus();
     const localNote = h("div", { class: "local-note" });
@@ -464,8 +499,17 @@ export function aiSection(shell: Shell): Section {
       for (const field of ["name", "endpoint", "model", "key"] as const) {
         const problem = byField[field];
         errors[field].set(problem === undefined ? null : tCode("problem", problem));
+        if (field === "model" && !modelMenu.hidden) {
+          // The menu stands in for the field: it carries the mark of the error and takes the focus.
+          if (problem === undefined) {
+            modelMenu.removeAttribute("aria-invalid");
+          } else {
+            modelMenu.setAttribute("aria-invalid", "true");
+            modelMenu.setAttribute("aria-describedby", errors.model.element.id);
+          }
+        }
         if (problem !== undefined && first === null) {
-          first = fields[field];
+          first = field === "model" ? modelControl() : fields[field];
         }
       }
       first?.focus();
@@ -482,7 +526,13 @@ export function aiSection(shell: Shell): Section {
      * A new host, or an imported service whose host was never allowed on this
      * computer: explain what will be sent there and ask for the host permission.
      */
-    function withConsent(definition: AccessPointDefinition, confirmLabel: string, run: () => Promise<void>, onError: (message: string) => void): void {
+    function withConsent(
+      definition: AccessPointDefinition,
+      confirmLabel: string,
+      run: () => Promise<void>,
+      onError: (message: string) => void,
+      onClosed: (result: DialogResult) => void = () => undefined,
+    ): void {
       const pattern = patternOf(definition.endpoint);
       if (pattern === null || alreadyAllowed(pattern)) {
         void guard(run, onError);
@@ -501,7 +551,7 @@ export function aiSection(shell: Shell): Section {
           await run();
           return true;
         },
-      });
+      }).then(onClosed);
     }
 
     const save = (): void => {
@@ -532,7 +582,10 @@ export function aiSection(shell: Shell): Section {
           return;
         }
         void guard(
-          async () => showModels(await send("listModels", { id: existing.id })),
+          async () => {
+            modelStatus.set(t("loadModelsBusy"));
+            showModels(await send("listModels", { id: existing.id }));
+          },
           (message) => modelStatus.set(message, "error"),
         );
         return;
@@ -544,30 +597,73 @@ export function aiSection(shell: Shell): Section {
         endpoint.focus();
         return;
       }
-      modelStatus.set(t("loadModelsBusy"));
       withConsent(
         definition,
         t("consentAgreeLoad"),
-        async () => showModels(await send("listModelsFor", { id: existing?.id ?? null, definition, apiKey: newKey })),
+        async () => {
+          // Said only once the question about the host is answered, and taken back when the request fails.
+          modelStatus.set(t("loadModelsBusy"));
+          try {
+            showModels(await send("listModelsFor", { id: existing?.id ?? null, definition, apiKey: newKey }));
+          } catch (error) {
+            modelStatus.clear();
+            throw error;
+          }
+        },
         (message) => modelStatus.set(message, "error"),
+        (result) => {
+          if (result === "cancel") {
+            modelStatus.clear();
+          } else {
+            // The dialog gave the focus back to the button. The models are what the user asked for.
+            modelControl().focus();
+          }
+        },
       );
     };
 
+    /** Shows the loaded models as a menu, with the model that is set selected and "Other…" as the way back to typing. */
     function showModels(options: { id: string; label: string }[]): void {
-      replace(models, ...options.map((item) => option(item.id, item.label)));
-      modelStatus.set(options.length === 0 ? t("loadModelsNone") : t("loadModelsDone", options.length), options.length === 0 ? "plain" : "ok");
-      modelInput.focus();
+      if (options.length === 0) {
+        modelStatus.set(t("loadModelsNone"));
+        modelControl().focus();
+        return;
+      }
+      const current = modelInput.value.trim();
+      const listed = options.some((item) => item.id === current);
+      replace(
+        modelMenu,
+        current === "" ? option("", t("modelChoose"), true) : null,
+        // A model the service did not list stays selected: loading the list changes nothing by itself.
+        current !== "" && !listed ? option(current, current, true) : null,
+        ...options.map((item) => option(item.id, item.label, item.id === current)),
+        option(OTHER_MODEL, t("modelOther")),
+      );
+      modelInput.hidden = true;
+      modelMenu.hidden = false;
+      modelLabel.htmlFor = modelMenu.id;
+      modelStatus.set(t("loadModelsDone", options.length), "ok");
+      modelMenu.focus();
     }
 
-    const field = (label: string, control: HTMLElement, error: FieldError, hint: string, ...extra: Child[]): HTMLElement =>
+    const field = (label: string | HTMLElement, control: HTMLElement, error: FieldError, hint: Child[], ...extra: Child[]): HTMLElement =>
       h(
         "div",
         { class: "field" },
-        h("label", { for: control.id, text: label }),
+        typeof label === "string" ? h("label", { for: control.id, text: label }) : label,
         extra.length === 0 ? control : h("div", { class: "row tight" }, control, ...extra),
         error.element,
-        hint === "" ? null : description(hint),
+        hint.length === 0 ? null : h("div", { class: "description" }, ...hint),
       );
+
+    // Where the key comes from: the link of the preset, also for a service that was added from it earlier.
+    const source = preset ?? PRESETS.find((item) => item.type === type && item.endpoint !== "" && item.endpoint === existing?.endpoint) ?? null;
+    const keyLink =
+      source?.keyUrl !== undefined
+        ? externalLink(t("getKey"), source.keyUrl)
+        : source?.docsUrl !== undefined
+          ? externalLink(t("documentation"), source.docsUrl)
+          : null;
 
     const titleId = `${prefix}-title`;
     const element = h(
@@ -587,18 +683,18 @@ export function aiSection(shell: Shell): Section {
         },
       },
       h("h3", { id: titleId, text: existing === null ? t("editorAddTitle", presetName) : t("editorEditTitle", existing.name) }),
-      field(t("fieldName"), name, errors.name, ""),
-      type === "chatgpt" ? null : field(t("fieldEndpoint"), endpoint, errors.endpoint, fixed ? t("endpointFixed") : tCode("endpointHint", type)),
+      field(t("fieldName"), name, errors.name, []),
+      type === "chatgpt" ? null : field(t("fieldEndpoint"), endpoint, errors.endpoint, [fixed ? t("endpointFixed") : tCode("endpointHint", type)]),
       field(
-        t("fieldModel"),
+        modelLabel,
         modelInput,
         errors.model,
-        tCode("modelHint", type),
+        [tCode("modelHint", type)],
+        modelMenu,
         canLoadModels ? button(t("loadModels"), loadModels) : null,
         canLoadModels ? modelStatus.element : null,
       ),
-      models,
-      type === "chatgpt" ? null : field(t("fieldKey"), key, errors.key, t("keyHint")),
+      type === "chatgpt" ? null : field(t("fieldKey"), key, errors.key, [t("keyHint"), keyLink === null ? null : " ", keyLink]),
       localNote,
       h(
         "div",
@@ -629,9 +725,9 @@ export function aiSection(shell: Shell): Section {
         const outcome = await send("testAccessPoint", { id });
         result = outcome.ok
           ? { text: t("apTestScore", formatScore(outcome.score, stringsLocale())), kind: "ok" }
-          : { text: t("apTestFailed", outcome.error), kind: "error" };
+          : { text: t("apTestFailed", diagnosticSentence(outcome.error)), kind: "error" };
       } catch (error) {
-        result = { text: t("apTestFailed", errorText(error)), kind: "error" };
+        result = { text: t("apTestFailed", diagnosticSentence(errorText(error))), kind: "error" };
       }
       // A successful test clears the problems of the service: read that first, so the result is tied to the state it left.
       await shell.refresh().catch(() => undefined);
@@ -684,7 +780,7 @@ export function aiSection(shell: Shell): Section {
     if (point.lastError !== "") {
       // A failure that neither paused the service nor needs the user: say that it simply is tried again.
       const retried = point.enabled && !point.needsAttention && point.cooldownUntil <= now;
-      lines.push(h("div", { class: "service-state detail", text: t(retried ? "apLastErrorRetry" : "apLastError", point.lastError) }));
+      lines.push(h("div", { class: "service-state detail", text: t(retried ? "apLastErrorRetry" : "apLastError", diagnosticSentence(point.lastError)) }));
     }
     const test = tests.get(point.id);
     if (test !== undefined) {

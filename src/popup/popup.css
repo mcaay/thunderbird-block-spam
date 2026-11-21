@@ -1,6 +1,16 @@
 /* The toolbar popup, in the look of a Thunderbird panel. */
 
 /*
+ * The document takes the background and the text color of the panel Thunderbird draws
+ * around it, so that no seam shows between the two. Everything that is derived from
+ * the text color (descriptions, separators, borders) follows.
+ */
+:root {
+  --text: var(--panel-text);
+  --page: var(--panel);
+}
+
+/*
  * Thunderbird shows at most 600 pixels of a popup. When there is more to show than
  * that, only the list of the last decisions scrolls: the state, the buttons for the
  * selected message and the footer stay where they are.
@@ -10,6 +20,7 @@ body {
   flex-direction: column;
   width: 380px;
   max-height: 600px;
+  color: var(--panel-text);
   background-color: var(--panel);
 }
 
@@ -113,8 +124,31 @@ section > p:last-child {
 }
 
 .sender {
-  margin-bottom: 6px;
+  margin-bottom: 2px;
   overflow-wrap: anywhere;
+}
+
+/* What the lists say about the sender, and what was decided about this message. */
+.on-list {
+  margin: 0 0 4px;
+  font-size: 0.9em;
+  color: var(--description);
+  overflow-wrap: anywhere;
+}
+
+.selection > .decision.own {
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+  width: calc(100% + 12px);
+  margin: 0 -6px 4px;
+}
+
+.selection > .decision.own .what {
+  font-size: 1em;
+  color: inherit;
+}
+
+.selection > .row {
+  margin-top: 8px;
 }
 
 .selection button {
@@ -149,8 +183,31 @@ section > p:last-child {
   align-items: flex-start;
   margin: 0 0 8px;
   padding: 6px 8px;
+  border: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
   border-radius: 4px;
   background-color: var(--bar-success);
+}
+
+/* The last command stands alone in its section. */
+.last-command > .result {
+  margin: 0;
+}
+
+.result-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.result-text .description {
+  margin: 0;
+}
+
+.result-actions {
+  display: flex;
+  flex: none;
+  gap: 4px;
+  align-items: center;
 }
 
 .result > .icon {
@@ -180,7 +237,11 @@ p.result {
 
 .decision {
   display: grid;
-  grid-template-columns: 8px minmax(0, 1fr) auto auto;
+  /*
+   * The sender identifies the row: it gets all the room the outcome leaves and never
+   * less than 45 percent of the row. Only an outcome longer than the rest is cut.
+   */
+  grid-template-columns: 8px minmax(45%, 1fr) minmax(0, auto) auto;
   gap: 0 7px;
   align-items: center;
   width: 100%;
@@ -212,6 +273,20 @@ p.result {
   font-size: 0.9em;
   white-space: nowrap;
   color: var(--deemphasized);
+}
+
+.decision .what {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: end;
+}
+
+.decision.own .what {
+  text-align: start;
+}
+
+.spinner {
+  vertical-align: -2px;
 }
 
 .decision .when {
@@ -247,16 +322,29 @@ p.result {
   background-color: transparent;
 }
 
+/*
+ * The footer: the AI test and the protection switch. They share one row when their
+ * labels fit, and take a row each when they do not, as in the longer languages. Either
+ * way the buttons fill their row, so the footer has straight edges.
+ */
 .footer {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
-  gap: 8px;
+  gap: 6px 8px;
 }
 
-.footer .score {
-  flex: 1;
+.footer .score,
+.footer .row.end {
+  flex: 1 1 auto;
   min-width: 0;
+  margin: 0;
+}
+
+.footer .score > button,
+.footer .row.end > button {
+  width: 100%;
+  white-space: nowrap;
 }
 
 .footer .score p {
@@ -268,16 +356,8 @@ p.result {
   flex-basis: 100%;
 }
 
-.footer .row {
-  margin: 0;
-}
-
-.footer .score:not([hidden]) + .row.end {
-  flex: none;
-}
-
-.footer .row.end {
-  flex: 1;
+.footer .score:has(p) > button {
+  width: auto;
 }
 
 /* High contrast (forced colors): the colors of the dots are gone, the difference between filled and hollow stays. */

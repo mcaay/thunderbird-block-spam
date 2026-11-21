@@ -44,6 +44,9 @@
   "undo": {
     "message": "Undo"
   },
+  "undoKey": {
+    "message": "Undo ($1)"
+  },
   "dismiss": {
     "message": "Dismiss"
   },
@@ -51,7 +54,7 @@
     "message": "None yet."
   },
   "showMore": {
-    "message": "Show $1 more"
+    "message": "Show $1 more ($2 left)"
   },
   "invalidItems": {
     "message": "Not valid and left out: $1"
@@ -158,14 +161,23 @@
   "catAi": {
     "message": "AI"
   },
-  "catShortcuts": {
-    "message": "Shortcuts"
+  "catBlockAndTrust": {
+    "message": "Block and trust"
+  },
+  "blockAndTrustLead": {
+    "message": "Block or trust the sender of the selected messages with a shortcut, the Block Spam button in the toolbar or the context menu."
   },
   "catAdvanced": {
     "message": "Advanced"
   },
+  "advancedLead": {
+    "message": "Settings that rarely need a change: which domains count as public mail providers, and which mailboxes forward mail in their own name."
+  },
   "catBackup": {
     "message": "Export and import"
+  },
+  "backupLead": {
+    "message": "Save the lists, the settings and the AI services to a file, or load them from one."
   },
   "overviewLead": {
     "message": "Block Spam moves mail from blocked senders to Junk, never touches mail from people you write to, and can ask an AI about everyone else."
@@ -174,7 +186,7 @@
     "message": "Protection"
   },
   "protectionLabel": {
-    "message": "Check incoming mail"
+    "message": "Protect incoming mail"
   },
   "protectionHint": {
     "message": "New mail in monitored folders is checked against the lists, and mail from blocked senders goes to Junk. Mail that arrived before protection was switched on is never touched."
@@ -248,6 +260,9 @@
   "warnAiBeforeScan": {
     "message": "An AI service is switched on, but the white list holds only your own addresses. Mail from people you already write to would be sent to the AI."
   },
+  "warnAiBeforeScanFix": {
+    "message": "Scan your sent mail first: step 1 of Setup below."
+  },
   "warnNoJunk": {
     "message": "$1 has no Junk folder, so spam in this account stays where it is. Enable junk handling for the account in Thunderbird, or create a Junk folder."
   },
@@ -290,6 +305,9 @@
   "stepDone": {
     "message": "done"
   },
+  "stepRunning": {
+    "message": "in progress"
+  },
   "step1Title": {
     "message": "Scan your sent mail"
   },
@@ -329,11 +347,62 @@
   "observationHint": {
     "message": "No message is moved and the AI adds nothing to the black list. The log shows what would have happened. Use it to try a model, a prompt or a cutoff before you trust them."
   },
+  "observationOff": {
+    "message": "Protection is off, so nothing is observed yet."
+  },
+  "byHandTitle": {
+    "message": "Block and trust by hand"
+  },
+  "byHandKeys": {
+    "message": "Select a message and press $1 to block or $2 to trust its sender, or use the Block Spam button in the toolbar or the context menu of the message."
+  },
+  "byHandNoKeys": {
+    "message": "Select a message and use the Block Spam button in the toolbar, or the context menu of the message, to block or trust its sender."
+  },
+  "byHandAll": {
+    "message": "All ways to block and trust"
+  },
   "fatalTitle": {
     "message": "Stored data is not valid."
   },
   "fatalText": {
     "message": "Block Spam could not read its stored data. Protection is off and nothing is written until this is resolved. Nothing is repaired automatically."
+  },
+  "fatalRepairLead": {
+    "message": "Only stored settings are wrong. You can set each of them back to its default on its own, and everything else stays as it is:"
+  },
+  "fatalRepairText": {
+    "message": "$1: the stored value is not valid. Default: $2."
+  },
+  "fatalRepair": {
+    "message": "Reset only this setting"
+  },
+  "fatalRepairNamed": {
+    "message": "Reset only this setting: $1"
+  },
+  "fatalRepaired": {
+    "message": "The setting “$1” was set back to its default: $2."
+  },
+  "fatalLastResort": {
+    "message": "If that does not help, the last resort is to reset everything:"
+  },
+  "settingInternal": {
+    "message": "An internal value"
+  },
+  "settingDefaultInternal": {
+    "message": "its initial value"
+  },
+  "settingDefaultPrompt": {
+    "message": "the default prompt"
+  },
+  "settingDefaultList": {
+    "message": "an empty list"
+  },
+  "settingOn": {
+    "message": "on"
+  },
+  "settingOff": {
+    "message": "off"
   },
   "fatalDownload": {
     "message": "Download the raw data"
@@ -342,7 +411,7 @@
     "message": "The raw data contains your API keys and sign-in tokens. Keep the file private."
   },
   "fatalReset": {
-    "message": "Reset…"
+    "message": "Reset everything…"
   },
   "fatalResetTitle": {
     "message": "Reset all Block Spam data?"
@@ -357,13 +426,16 @@
     "message": "Scan sent mail"
   },
   "scanHint": {
-    "message": "Reads the recipients of the mail in the Sent folders above and adds them to the white list. Leave the dates empty to scan everything. Running it again is harmless."
+    "message": "Reads the recipients of the mail in the Sent folders above and adds them to the white list. Running it again is harmless."
   },
   "scanFrom": {
-    "message": "From:"
+    "message": "Sent on or after:"
   },
   "scanTo": {
-    "message": "To:"
+    "message": "Sent on or before:"
+  },
+  "scanDatesHint": {
+    "message": "Both dates are optional. Type the day, month and year in the order the field shows, or pick a day from its calendar. An empty field sets no limit on that side."
   },
   "scanStart": {
     "message": "Scan sent mail"
@@ -383,8 +455,20 @@
   "scanRunning": {
     "message": "Scanning folder $1 of $2 ($3). Messages read: $4. Entries added: $5."
   },
+  "scanRunningOf": {
+    "message": "Scanning folder $1 of $2 ($3). Messages read: $4 of $6. Entries added: $5."
+  },
   "scanDone": {
     "message": "Scan finished. Messages read: $1. Entries added: $2."
+  },
+  "scanDoneEmpty": {
+    "message": "Scan finished. No sent mail was found in the Sent folders."
+  },
+  "scanCheckFolders": {
+    "message": "Check the Sent folders"
+  },
+  "scanProgressLabel": {
+    "message": "Progress of the scan"
   },
   "scanCancelled": {
     "message": "Scan cancelled. Messages read: $1. Entries added: $2. The entries learned so far are kept."
@@ -476,6 +560,12 @@
   "listsRemoved": {
     "message": "Removed $1."
   },
+  "listsRestored": {
+    "message": "Put back $1."
+  },
+  "folderRemoved": {
+    "message": "Removed $1 ($2)."
+  },
   "listsEmpty": {
     "message": "No entries yet."
   },
@@ -528,7 +618,7 @@
     "message": "Changing this affects future entries only. Entries you add by hand above choose for themselves."
   },
   "logHint": {
-    "message": "The last 5000 decisions. Message texts are never stored."
+    "message": "The last 5000 decisions of Block Spam, without the text of any message."
   },
   "logUndoHint": {
     "message": "To undo a decision, use the button in its row."
@@ -684,13 +774,28 @@
     "message": "The message could not be handled"
   },
   "logAdded": {
+    "message": "Added to the black list: $1"
+  },
+  "logAddedScoped": {
     "message": "Added to the black list: $1 ($2)"
   },
   "logWouldAdd": {
+    "message": "Would be added to the black list: $1"
+  },
+  "logWouldAddScoped": {
     "message": "Would be added to the black list: $1 ($2)"
   },
-  "logEntryLine": {
-    "message": "Entry: $1 ($2)"
+  "logWhiteEntry": {
+    "message": "On the white list: $1"
+  },
+  "logWhiteEntryScoped": {
+    "message": "On the white list: $1 ($2)"
+  },
+  "logBlackEntry": {
+    "message": "On the black list: $1"
+  },
+  "logBlackEntryScoped": {
+    "message": "On the black list: $1 ($2)"
   },
   "logScoredBy": {
     "message": "Scored by $1"
@@ -698,17 +803,20 @@
   "logScoreTitle": {
     "message": "Spam probability $1"
   },
-  "scopeAllLower": {
-    "message": "all accounts"
-  },
   "scopeOnlyAccount": {
     "message": "only $1"
   },
-  "logTrust": {
-    "message": "Trust"
+  "logTrustDomain": {
+    "message": "Trust domain"
   },
-  "logBlock": {
-    "message": "Block"
+  "logTrustAddress": {
+    "message": "Trust address"
+  },
+  "logBlockDomain": {
+    "message": "Block domain"
+  },
+  "logBlockAddress": {
+    "message": "Block address"
   },
   "logMoveInbox": {
     "message": "Move to Inbox"
@@ -775,6 +883,15 @@
   },
   "logUndone": {
     "message": "Undone."
+  },
+  "logShowMessage": {
+    "message": "Show message"
+  },
+  "logShowMessageNamed": {
+    "message": "Show the message: $1"
+  },
+  "logMessageGone": {
+    "message": "The message was not found."
   },
   "learningHint": {
     "message": "Everyone you write to goes on the white list: the whole domain for a company, the single address at a public mail provider."
@@ -852,7 +969,7 @@
     "message": "Screening"
   },
   "aiLead": {
-    "message": "Only mail from senders who are on neither list is sent to an AI service. Mail from senders on your white list is never sent anywhere."
+    "message": "Only mail from senders who are on neither list is sent to an AI service, and mail from senders on your white list is never sent anywhere."
   },
   "aiLeadTopic": {
     "message": "what is sent"
@@ -990,7 +1107,7 @@
     "message": "Last problem: $1"
   },
   "apLastErrorRetry": {
-    "message": "The last request failed: $1. It is tried again when needed."
+    "message": "The last request failed. $1 It is tried again when needed."
   },
   "apNoModel": {
     "message": "no model"
@@ -1008,7 +1125,58 @@
     "message": "Works: the sample spam email scored $1."
   },
   "apTestFailed": {
-    "message": "Test failed: $1"
+    "message": "The test failed. $1"
+  },
+  "diag_http": {
+    "message": "The service answered with error $1."
+  },
+  "diag_timeout": {
+    "message": "The service did not answer within $1 seconds."
+  },
+  "diag_network": {
+    "message": "The service could not be reached."
+  },
+  "diag_usage_limit": {
+    "message": "The usage limit of the plan is reached."
+  },
+  "diag_renew_failed": {
+    "message": "The sign-in could not be renewed."
+  },
+  "diag_no_permission": {
+    "message": "This computer has not allowed the host $1 yet. Edit the service and press Save."
+  },
+  "diag_service": {
+    "message": "The service refused the request."
+  },
+  "diag_answer_missing": {
+    "message": "The answer of the service held no score."
+  },
+  "diag_refused": {
+    "message": "The model refused to answer."
+  },
+  "diag_not_number": {
+    "message": "The answer was not a number from 0.00 to 1.00."
+  },
+  "diag_cut_off": {
+    "message": "The answer was cut off."
+  },
+  "diag_too_large": {
+    "message": "The answer was too large."
+  },
+  "diag_no_model": {
+    "message": "No model is set."
+  },
+  "diag_not_signed_in": {
+    "message": "There is no sign-in."
+  },
+  "diag_endpoint_invalid": {
+    "message": "The address of the service is not valid."
+  },
+  "diagServiceSaid": {
+    "message": "Its message: “$1”."
+  },
+  "diagPlatformSaid": {
+    "message": "Technical detail: $1"
   },
   "apRemoveTitle": {
     "message": "Remove $1?"
@@ -1080,10 +1248,16 @@
     "message": "Loading…"
   },
   "loadModelsDone": {
-    "message": "Models loaded: $1. Type or pick one in the Model field."
+    "message": "Models loaded: $1. Choose one from the menu."
   },
   "loadModelsNone": {
     "message": "The server listed no models."
+  },
+  "modelChoose": {
+    "message": "Choose a model"
+  },
+  "modelOther": {
+    "message": "Other…"
   },
   "problem_name_missing": {
     "message": "Give the service a name."
@@ -1156,6 +1330,9 @@
   },
   "promptHint": {
     "message": "The question the AI answers about each email. Decision models get it as their instructions, chat models as their system prompt."
+  },
+  "promptLanguage": {
+    "message": "The default prompt is in English because that is what the model reads, and you can write yours in any language."
   },
   "outputLineLabel": {
     "message": "For chat models this line is always added. It cannot be changed:"
@@ -1289,8 +1466,11 @@
   "shortcutsHint": {
     "message": "The shortcuts act on the selected messages, or on the message shown in a tab or window. Block moves the messages to Junk. Trust moves them back to the Inbox from Junk or from a screening folder."
   },
+  "shortcutsTitle": {
+    "message": "Keyboard shortcuts"
+  },
   "shortcutsMore": {
-    "message": "Your own messages are ignored. The shortcuts also work in observation mode and while protection is off. A desktop notification says what was added."
+    "message": "Your own messages are ignored. Blocking and trusting by hand work in observation mode and while protection is off. After a shortcut or the context menu, a desktop notification says what was done, and the Block Spam panel in the toolbar offers Undo."
   },
   "cmdBlockAddress": {
     "message": "Block the sender's address"
@@ -1329,13 +1509,13 @@
     "message": "With Smart on, the domain shortcuts block or trust a company as a whole domain and a sender at a provider such as gmail.com by address. With Smart off they always use the domain."
   },
   "otherWaysTitle": {
-    "message": "Without shortcuts"
+    "message": "Toolbar button, context menu and log"
   },
   "otherWaysPopupName": {
     "message": "Toolbar button."
   },
   "otherWaysPopup": {
-    "message": "Select one or more messages and click the Block Spam button in the toolbar. The panel shows the sender with buttons to block and to trust."
+    "message": "Select one or more messages and click the Block Spam button in the toolbar. The panel says what the lists hold about the sender, offers buttons to block and to trust, and Undo for the last command."
   },
   "otherWaysMenuName": {
     "message": "Context menu."
@@ -1358,11 +1538,20 @@
   "bareKeysHint": {
     "message": "Thunderbird lets an add-on capture keys without a modifier only through an Experiment, and an add-on with an Experiment must ask for full access to Thunderbird and your computer. Block Spam never does."
   },
-  "bareKeysFile": {
-    "message": "If you accept that permission, install the separate add-on Block Spam Keys from the file:"
+  "bareKeysSteps": {
+    "message": "If you accept that permission, install the separate add-on Block Spam Keys:"
   },
-  "bareKeysInstall": {
-    "message": "To install it, open Add-ons and Themes, click the gear menu and choose Install Add-on From File. It captures $1 in mail windows and passes them on to Block Spam."
+  "bareKeysStepSave": {
+    "message": "Save its file to your computer:"
+  },
+  "bareKeysSave": {
+    "message": "Save the companion add-on file…"
+  },
+  "bareKeysStepInstall": {
+    "message": "Open Add-ons and Themes, click the gear menu, choose Install Add-on From File and pick the saved file."
+  },
+  "bareKeysCaptures": {
+    "message": "From then on it captures $1 in mail windows and passes them on to Block Spam."
   },
   "publicTitle": {
     "message": "Public mail providers"
@@ -1532,6 +1721,24 @@
   "popupSelectedOne": {
     "message": "Selected message"
   },
+  "popupOnWhite": {
+    "message": "On the white list (entry $1)."
+  },
+  "popupOnBlack": {
+    "message": "On the black list (entry $1)."
+  },
+  "popupOnNeither": {
+    "message": "On neither list."
+  },
+  "popupDecisionLabel": {
+    "message": "Decision about this message: $1, $2. Show in the log."
+  },
+  "popupNoChange": {
+    "message": "Nothing to change: the sender is on this list already."
+  },
+  "popupLastCommand": {
+    "message": "Last command, $1:"
+  },
   "popupSelectedMany_one": {
     "message": "$1 message selected"
   },
@@ -1590,7 +1797,7 @@
     "message": "$1: $2, $3. Show in the log."
   },
   "popupScoreSelected": {
-    "message": "Score selected messages…"
+    "message": "Test AI on selected messages…"
   },
   "popupScoreConfirm": {
     "message": "Selected messages: $1. Their content will be sent to the configured AI, also for senders on your lists. Nothing is moved and no entry is created. The scores appear in the log."

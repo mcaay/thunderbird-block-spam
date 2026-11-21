@@ -45,10 +45,13 @@
   --icon-warning: light-dark(oklch(58% 0.24 90), oklch(86% 0.14 90));
   --icon-critical: light-dark(#b91c1c, oklch(83% 0.14 15));
   --row-hover: color-mix(in srgb, AccentColor 20%, transparent);
-  --panel: light-dark(#ffffff, rgb(66, 65, 77));
+  /* The panel Thunderbird draws around the toolbar popup, as measured in Thunderbird 153 in both themes. */
+  --panel: light-dark(rgb(247, 247, 247), rgb(38, 45, 59));
+  --panel-text: light-dark(rgb(26, 32, 44), rgb(238, 238, 240));
   --panel-separator: color-mix(in srgb, var(--text) 25%, transparent);
   --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%2318181b' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   --search: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M7 2.8a4.2 4.2 0 1 1 0 8.4 4.2 4.2 0 0 1 0-8.4zM10.2 10.2l3.2 3.2' fill='none' stroke='%2315141a' stroke-opacity='.6' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --chevron-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='black' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   --check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.4 6.9 11.2 12 5.2' fill='none' stroke='%23ffffff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
@@ -228,11 +231,6 @@ button.small {
   padding: 0 8px;
 }
 
-/* A button that repeats in every row of a table: an outline, so that the column stays light. */
-button.outline {
-  background-color: transparent;
-}
-
 /* Icon buttons: remove, move. Transparent until the pointer or the focus is on them. */
 button.icon {
   display: inline-grid;
@@ -345,6 +343,93 @@ input[type="checkbox"]:checked:hover:not(:disabled) {
   background-color: var(--primary-hover);
 }
 
+/* Progress: a thin bar in the accent color, as Thunderbird draws its own. */
+
+progress {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  height: 6px;
+  margin: 6px 0 4px;
+  overflow: hidden;
+  appearance: none;
+  border: 0;
+  border-radius: 3px;
+  background-color: var(--button);
+}
+
+progress::-moz-progress-bar {
+  border-radius: 3px;
+  background-color: AccentColor;
+}
+
+/* How far is not known: a part of the bar travels along it. */
+progress:indeterminate::-moz-progress-bar {
+  width: 34%;
+  animation: progress-travel 1.6s ease-in-out infinite;
+}
+
+@keyframes progress-travel {
+  from {
+    transform: translateX(-110%);
+  }
+
+  to {
+    transform: translateX(310%);
+  }
+}
+
+/* Something is in progress: a small ring that turns. */
+.spinner {
+  display: inline-block;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border: 2px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-top-color: AccentColor;
+  border-radius: 50%;
+  animation: spinner-turn 0.9s linear infinite;
+}
+
+@keyframes spinner-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/*
+ * Disclosures. Every summary on the page carries the same marker, the chevron of
+ * Thunderbird's menus: it points to the side while closed and down while open.
+ */
+summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+summary::-moz-list-bullet {
+  display: none;
+}
+
+summary::before {
+  content: "";
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-inline-end: 3px;
+  vertical-align: -1px;
+  background-color: currentColor;
+  mask: var(--chevron-mask) center / 12px no-repeat;
+  transform: rotate(-90deg);
+}
+
+summary:dir(rtl)::before {
+  transform: rotate(90deg);
+}
+
+details[open] > summary::before {
+  transform: none;
+}
+
 /* Rows of controls. */
 
 .row {
@@ -357,6 +442,72 @@ input[type="checkbox"]:checked:hover:not(:disabled) {
 
 .row.end {
   justify-content: flex-end;
+}
+
+/* Message bars: an icon, text, and the button or link that leads on. */
+
+.bar {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 8px 0;
+  padding: 7px 10px;
+  border: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
+  border-radius: 4px;
+  background-color: var(--bar-information);
+}
+
+.bar > .icon {
+  margin-top: 1px;
+  color: var(--icon-information);
+}
+
+.bar.warning {
+  background-color: var(--bar-warning);
+}
+
+.bar.warning > .icon {
+  color: var(--icon-warning);
+}
+
+.bar.success {
+  background-color: var(--bar-success);
+}
+
+.bar.success > .icon {
+  color: var(--icon-success);
+}
+
+.bar.critical {
+  background-color: var(--bar-critical);
+}
+
+.bar.critical > .icon {
+  color: var(--icon-critical);
+}
+
+.bar-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.bar-text ul {
+  margin: 4px 0 0;
+  padding-inline-start: 18px;
+}
+
+.bar-actions {
+  display: flex;
+  flex: none;
+  gap: 6px;
+  align-self: center;
+}
+
+/* Inside a bar the buttons are the small ones, so that the bar stays one line high. */
+.bar-actions button:not(.icon) {
+  min-height: 24px;
+  padding: 0 8px;
 }
 
 /* Feedback. */

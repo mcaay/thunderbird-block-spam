@@ -1,11 +1,12 @@
-// Shortcuts: the four commands with their keys, the Smart switch, the other ways to
-// block and trust, and the bare keys of the optional companion add-on.
+// Block and trust: every way to block or trust a sender by hand. The four commands
+// with their keys, the Smart switch, the toolbar button, the context menu and the log,
+// and the bare keys of the optional companion add-on.
 
 import { COMMANDS } from "../../core/commandNames";
 import type { CommandName } from "../../core/commandNames";
 import { t } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
-import { button, byId, checkRow, description, guard, h, learnMore, replace } from "../dom";
+import { button, byId, checkRow, description, guard, h, inlineStatus, learnMore, replace, savePackaged } from "../dom";
 import { formatShortcut } from "../format";
 import type { Model } from "../model";
 import type { Section, Shell } from "../section";
@@ -18,12 +19,14 @@ const COMMAND_LABELS: Record<CommandName, string> = {
   "trust-domain": "cmdTrustDomain",
 };
 
-export function shortcutsSection(shell: Shell): Section {
-  const root = byId("shortcuts");
+export function blockAndTrustSection(shell: Shell): Section {
+  const root = byId("block-and-trust");
   const bindings = h("tbody");
-  const bareKeys = h("p");
+  const bareKeys = h("li");
   const smart = checkRow("smart-switch", t("smartLabel"), (checked) => void guard(() => send("updateSettings", { patch: { smart: checked } })));
+  // The companion is packaged with this add-on as a file. It is never loaded from here: the user saves it and installs it.
   const companionFile = `block-spam-keys-${browser.runtime.getManifest().version}.xpi`;
+  const companionStatus = inlineStatus();
 
   async function drawBindings(): Promise<void> {
     const { mac, keys } = await loadShortcutKeys();
@@ -39,13 +42,15 @@ export function shortcutsSection(shell: Shell): Section {
         );
       }),
     );
-    bareKeys.textContent = t("bareKeysInstall", ["B", "Shift+B", "W", "Shift+W"].map((key) => formatShortcut(key, mac)).join(", "));
+    bareKeys.textContent = t("bareKeysCaptures", ["B", "Shift+B", "W", "Shift+W"].map((key) => formatShortcut(key, mac)).join(", "));
   }
 
   replace(
     root,
-    h("h1", { text: t("catShortcuts"), tabIndex: -1 }),
-    description(t("shortcutsHint"), learnMore(t("catShortcuts"), t("shortcutsMore"))),
+    h("h1", { text: t("catBlockAndTrust"), tabIndex: -1 }),
+    h("p", { class: "lead" }, t("blockAndTrustLead"), " ", learnMore(t("catBlockAndTrust"), t("shortcutsMore"))),
+    h("h2", { text: t("shortcutsTitle") }),
+    description(t("shortcutsHint")),
     h(
       "table",
       { class: "keys" },
@@ -82,8 +87,29 @@ export function shortcutsSection(shell: Shell): Section {
     ),
     h("h2", { text: t("bareKeysTitle") }),
     description(t("bareKeysHint")),
-    h("p", {}, t("bareKeysFile"), " ", h("code", { text: companionFile })),
-    bareKeys,
+    h("p", { text: t("bareKeysSteps") }),
+    h(
+      "ol",
+      { class: "ways" },
+      h(
+        "li",
+        {},
+        t("bareKeysStepSave"),
+        " ",
+        h("code", { text: companionFile }),
+        h(
+          "div",
+          { class: "row" },
+          button(t("bareKeysSave"), () => {
+            savePackaged(`companion/${companionFile}`, companionFile);
+            companionStatus.set(t("exportDone"), "ok");
+          }),
+          companionStatus.element,
+        ),
+      ),
+      h("li", { text: t("bareKeysStepInstall") }),
+      bareKeys,
+    ),
   );
   browser.commands.onChanged.addListener(() => void guard(drawBindings));
   void guard(drawBindings);
@@ -95,6 +121,9 @@ export function shortcutsSection(shell: Shell): Section {
       }
       // The bindings can be changed in Thunderbird while this page is open.
       void guard(drawBindings);
+    },
+    leave() {
+      companionStatus.clear();
     },
   };
 }

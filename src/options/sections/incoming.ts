@@ -6,7 +6,7 @@ import { folderKey } from "../../core/ports";
 import type { Settings } from "../../core/types";
 import { t } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
-import { byId, description, errorText, guard, h, inlineStatus, option, reconcile, replace } from "../dom";
+import { byId, description, errorText, guard, h, inlineStatus, notice, option, reconcile, replace } from "../dom";
 import { folderRef, folderView, forgetAccounts, hasFolder, monitoredFolders, withoutFolder } from "../model";
 import type { Model } from "../model";
 import type { Intent, Section, Shell } from "../section";
@@ -20,6 +20,8 @@ export function incomingSection(shell: Shell): Section {
   const root = byId("incoming");
   let model: Model | null = null;
   const monitored = h("div", { class: "accounts" });
+  /** What the last change of the monitored folders did, with Undo. */
+  const changed = notice();
   const screening = h("div", { class: "screening" });
   /** What "Create folder" did, per account. Kept across redraws. */
   const created = new Map<string, { text: string; ok: boolean }>();
@@ -34,9 +36,10 @@ export function incomingSection(shell: Shell): Section {
   replace(
     root,
     h("h1", { text: t("catIncoming"), tabIndex: -1 }),
-    description(t("incomingHint")),
+    h("p", { class: "lead", text: t("incomingHint") }),
     h("h2", { text: t("monitoredTitle") }),
     description(t("monitoredHint")),
+    changed.element,
     monitored,
     h("h2", { text: t("noVerdictTitle") }),
     h("div", { class: "row" }, h("label", { for: "no-verdict", text: t("noVerdictLabel") }), noVerdict),
@@ -132,8 +135,25 @@ export function incomingSection(shell: Shell): Section {
           chosen: (account) => monitoredFolders(account, settings),
           removable: (account, folder) => !hasFolder(account.inboxes, folder),
           fixedNote: t("monitoredAlways"),
-          onRemove: (_account, folder) => void guard(() => update({ monitoredFoldersAdded: withoutFolder(settings.monitoredFoldersAdded, folder) })),
-          onAdd: (_account, folder) => void guard(() => update({ monitoredFoldersAdded: [...settings.monitoredFoldersAdded, folder] })),
+          onRemove: (account, folder) =>
+            void guard(async () => {
+              await update({ monitoredFoldersAdded: withoutFolder(settings.monitoredFoldersAdded, folder) });
+              changed.show(
+                t("folderRemoved", folder.name, account.name),
+                async () => {
+                  // Applied to the folders as they are now, not as they were when this one was removed.
+                  const current = model?.settings;
+                  if (current !== null && current !== undefined) {
+                    await update({ monitoredFoldersAdded: [...withoutFolder(current.monitoredFoldersAdded, folder), folderRef(folder)] });
+                  }
+                },
+                t("listsRestored", folder.name),
+              );
+            }),
+          onAdd: (_account, folder) => {
+            changed.clear();
+            void guard(() => update({ monitoredFoldersAdded: [...settings.monitoredFoldersAdded, folder] }));
+          },
         }),
       );
       drawScreening(next);
@@ -142,6 +162,9 @@ export function incomingSection(shell: Shell): Section {
       if (intent.kind === "screening") {
         document.getElementById(`screening-${intent.accountId}`)?.focus();
       }
+    },
+    leave() {
+      changed.clear();
     },
   };
 }

@@ -1,8 +1,8 @@
-// A list of folders of one account with a remove button per row and a select to add
+// A list of folders of one account with a remove button per row and a menu to add
 // another folder. Used for Sent folders and for monitored folders.
 
 import { t } from "../../tb/i18n";
-import { h, iconButton, option } from "../dom";
+import { description, focusNeighbor, h, option, removeButton } from "../dom";
 import type { Keyed } from "../dom";
 import { hasFolder } from "../model";
 import type { AccountView, FolderView } from "../model";
@@ -17,7 +17,7 @@ export interface FolderEditorOptions {
   removable: (account: AccountView, folder: FolderRef) => boolean;
   /** Said next to a folder that cannot be removed. */
   fixedNote: string;
-  onRemove: (account: AccountView, folder: FolderRef) => void;
+  onRemove: (account: AccountView, folder: FolderView) => void;
   onAdd: (account: AccountView, folder: FolderRef) => void;
 }
 
@@ -40,51 +40,51 @@ export function folderEditors(accounts: readonly AccountView[], options: FolderE
           option("", t("chooseFolder")),
           ...candidates.map((folder) => option(folder.path, folder.name)),
         );
+        // Nothing can be added before a folder is chosen: the button says so by being unavailable.
+        const add = h("button", {
+          type: "button",
+          text: t("addFolder"),
+          disabled: true,
+          onclick: () => {
+            const folder = candidates.find((candidate) => candidate.path === select.value);
+            if (folder !== undefined) {
+              // The block is drawn again with the folder in it, and the button is unavailable again: the menu takes the focus.
+              select.focus();
+              options.onAdd(account, { accountId: folder.accountId, path: folder.path });
+            }
+          },
+        });
+        select.addEventListener("input", () => {
+          add.disabled = select.value === "";
+        });
+        const rows = chosen.map((folder) => {
+          const removable = options.removable(account, folder);
+          const row = h(
+            "li",
+            {},
+            h("span", { class: "name", text: folder.name, title: folder.path }),
+            removable ? null : h("span", { class: "note", text: options.fixedNote }),
+          );
+          if (removable) {
+            const remove = removeButton(t("removeNamedIn", folder.name, account.name), () => {
+              // The row is about to go: the keyboard goes on with the next row, or with the menu for adding.
+              focusNeighbor(row, candidates.length === 0 ? null : select);
+              options.onRemove(account, folder);
+            });
+            remove.dataset.focus = `remove:${folder.path}`;
+            row.appendChild(remove);
+          }
+          return row;
+        });
         return h(
           "div",
           { class: "account-block" },
           h("h3", { text: account.name }),
-          h(
-            "ul",
-            { class: "listbox", attrs: { "aria-label": account.name } },
-            ...(chosen.length === 0
-              ? [h("li", { class: "empty", text: t("noFolders") })]
-              : chosen.map((folder) => {
-                  const removable = options.removable(account, folder);
-                  const remove = removable ? iconButton("close", t("removeNamedIn", folder.name, account.name), () => options.onRemove(account, folder), "quiet") : null;
-                  if (remove !== null) {
-                    remove.dataset.focus = `remove:${folder.path}`;
-                  }
-                  return h(
-                    "li",
-                    {},
-                    h("span", { class: "name", text: folder.name, title: folder.path }),
-                    removable ? null : h("span", { class: "note", text: options.fixedNote }),
-                    remove,
-                  );
-                })),
-          ),
+          // An empty list is one line of text, not an empty box.
+          rows.length === 0 ? description(t("noFolders")) : h("ul", { class: "plain-list", attrs: { "aria-label": account.name } }, ...rows),
           candidates.length === 0
             ? null
-            : h(
-                "div",
-                { class: "row" },
-                h("label", { for: selectId, class: "visually-hidden", text: t("folderToAdd", account.name) }),
-                select,
-                h("button", {
-                  type: "button",
-                  text: t("addFolder"),
-                  attrs: { "data-focus": "add" },
-                  onclick: () => {
-                    const folder = candidates.find((candidate) => candidate.path === select.value);
-                    if (folder === undefined) {
-                      select.focus();
-                    } else {
-                      options.onAdd(account, { accountId: folder.accountId, path: folder.path });
-                    }
-                  },
-                }),
-              ),
+            : h("div", { class: "row" }, h("label", { for: selectId, class: "visually-hidden", text: t("folderToAdd", account.name) }), select, add),
         );
       },
     };
