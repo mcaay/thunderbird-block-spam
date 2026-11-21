@@ -33,6 +33,7 @@ function element(localName: string, extra: Partial<FakeNode> & { attributes?: Re
 interface KeyEvent {
   type: string;
   key: string;
+  isTrusted: boolean;
   shiftKey: boolean;
   ctrlKey: boolean;
   altKey: boolean;
@@ -50,6 +51,7 @@ function keyEvent(key: string, partial: Partial<KeyEvent> = {}): KeyEvent {
   return {
     type: "keydown",
     key,
+    isTrusted: true,
     shiftKey: false,
     ctrlKey: false,
     altKey: false,
@@ -226,6 +228,16 @@ describe("companion add-on", () => {
     }
     const repeated = window.press(keyEvent("b", { repeat: true }));
     expect(repeated.defaultPrevented).toBe(true);
+    expect(commands).toEqual([]);
+  });
+
+  it("ignores key events that a script dispatched", () => {
+    const { windowListener, commands } = load();
+    const window = new FakeWindow("mail:3pane");
+    windowListener.onLoadWindow(window);
+    for (const type of ["keydown", "keypress"]) {
+      expect(window.press(keyEvent("b", { type, isTrusted: false })).defaultPrevented).toBe(false);
+    }
     expect(commands).toEqual([]);
   });
 

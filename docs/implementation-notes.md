@@ -128,6 +128,7 @@ Where the documentation left a question open, the source code of Thunderbird (`t
 - **The companion uses Manifest V2 with a persistent background page.** It must hold a key listener for as long as Thunderbird runs. In Manifest V3 that needs persistent-event plumbing inside the Experiment, which cannot be verified without a running Thunderbird. The main add-on is Manifest V3.
 - **It listens for `keydown` and `keypress`** in the capture phase of the window and consumes both, so that Thunderbird's own handling of `B` and `W` does not run.
 - **It leaves the keys alone** in text fields, in editable documents, in web content, outside mail tabs and while a menu or panel is open.
+- **It acts only on trusted key events.** A `keydown` that a script dispatched (`event.isTrusted` false) is ignored, so nothing but a real key press reaches the privileged code's commands.
 
 ## Known limits
 

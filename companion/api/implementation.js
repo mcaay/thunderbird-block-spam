@@ -104,6 +104,10 @@ var bareKeys = class extends ExtensionCommon.ExtensionAPI {
       return;
     }
     const handler = (event) => {
+      // Only real key presses: an event that a script dispatched is not trusted.
+      if (!event.isTrusted) {
+        return;
+      }
       const command = commandFor(event);
       if (command === null || event.defaultPrevented) {
         return;

@@ -19,6 +19,7 @@ It contains only the Experiment in `api/implementation.js` and a few lines in `b
 
 - It listens for `B`, `Shift` + `B`, `W` and `Shift` + `W` in the main window (mail tabs and message tabs) and in message windows.
 - It never captures keys in text fields, in web pages shown inside Thunderbird, or while a menu is open.
+- It acts only on real key presses: a key event that a script dispatched is ignored.
 - It suppresses Thunderbird's own action for those keys (`B` is "previous message", `W` is "watch thread").
 - It sends the matching command name to Block Spam with `runtime.sendMessage`. Block Spam accepts the four command names from this add-on's id only.
 
