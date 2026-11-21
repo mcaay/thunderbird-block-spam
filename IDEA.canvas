@@ -1,0 +1,36 @@
+{
+	"nodes":[
+		{"id":"47b3a7eec14022db","type":"text","text":"email incoming","x":-176,"y":-326,"width":161,"height":60,"color":"2"},
+		{"id":"0d7f0416641e214e","type":"text","text":"# WHITE LIST","x":-540,"y":-182,"width":198,"height":60,"color":"4"},
+		{"id":"4338637a909683bd","type":"text","text":"is it on the white list?","x":-200,"y":-182,"width":210,"height":60},
+		{"id":"f37f6c7102d16dee","x":-159,"y":696,"width":127,"height":60,"color":"4","type":"text","text":"# INBOX"},
+		{"id":"d946710687c075e0","x":156,"y":696,"width":118,"height":60,"color":"1","type":"text","text":"# SPAM"},
+		{"id":"068e6e1304d626e1","x":-15,"y":54,"width":210,"height":60,"type":"text","text":"is it on the black list?"},
+		{"id":"fccfdb6ecfdfdb03","x":170,"y":273,"width":192,"height":60,"type":"text","text":"ask AI - is it spam?"},
+		{"id":"7a2b2d77289a135d","x":361,"y":54,"width":201,"height":60,"color":"1","type":"text","text":"# BLACK LIST"},
+		{"id":"fadafce8096eaecd","x":266,"y":486,"width":196,"height":66,"type":"text","text":"add to black list and put it in SPAM"},
+		{"id":"153962779d6ba3ad","x":-1225,"y":-326,"width":159,"height":60,"color":"2","type":"text","text":"email outgoing"},
+		{"id":"f5afa4f0fd9304e8","x":-1281,"y":-182,"width":272,"height":138,"type":"text","text":"is the recipient's domain custom (e.g. betis.eu) or public (e.g. gmail.com, outlook.com, icloud.com)?"},
+		{"id":"be97e157908428d1","x":-869,"y":-262,"width":203,"height":60,"type":"text","text":"whitelist the domain"},
+		{"id":"853fd388385d9bff","x":-871,"y":-64,"width":208,"height":60,"type":"text","text":"whitelist the address"},
+		{"id":"e8d6a51e9b8d3832","x":-1364,"y":123,"width":1022,"height":668,"type":"text","text":"# Extra features\n- manually add and remove addresses and domains to the BLACK LIST - via GUI or with keyboard shortcuts:\n\t- `B` ⮕ add the address to the BLACK LIST\n\t- `Shift` + `B` ⮕ add the domain to the BLACK LIST\n- manually add and remove addresses and domains to the WHITE LIST - via GUI\n- a button to scan the entire `sent` folder to prefill the WHITE LIST in one go (without using AI)\n\t- this pretty much guarantees that AI will never read confidential emails from your customers\n- WHITE LIST and BLACK LIST are shared for all email accounts by default, but you can change it to have separate white lists and black lists for each or to have both shared and individual ones\n- use your AI subscriptions or use AI via API\n- use AI decision models instead of LLMs\n\t- this is much cheaper and safer, since decision models are immune to prompt injection attacks - the worst that could happen is the spam email arriving in your inbox, if the decision model was tricked to return a different probability score\n- AI returns only a probability value that the email is spam, nothing else - the value is between 0.00 and 1.00 (always only 2 decimal digits)\n- user can modify the cutoff point - by default the cutoff is 0.85, meaning any probability above this value will classify the email as spam\n- connect multiple AI subscriptions as fallback (when your limits run out on the main subscription, the 2nd subscription or API can keep AI functioning)"}
+	],
+	"edges":[
+		{"id":"9e203e4f08b237f8","fromNode":"47b3a7eec14022db","fromSide":"bottom","toNode":"4338637a909683bd","toSide":"top"},
+		{"id":"81c3dfdbafb03445","fromNode":"4338637a909683bd","fromSide":"left","toNode":"0d7f0416641e214e","toSide":"right","label":"check"},
+		{"id":"e14a82520fc032fb","fromNode":"4338637a909683bd","fromSide":"bottom","toNode":"f37f6c7102d16dee","toSide":"top","label":"yes"},
+		{"id":"43eb51f54d77eea1","fromNode":"4338637a909683bd","fromSide":"bottom","toNode":"068e6e1304d626e1","toSide":"top","label":"no"},
+		{"id":"2ecdaada388069cd","fromNode":"068e6e1304d626e1","fromSide":"bottom","toNode":"d946710687c075e0","toSide":"top","label":"yes"},
+		{"id":"05e91ae5112b9271","fromNode":"068e6e1304d626e1","fromSide":"bottom","toNode":"fccfdb6ecfdfdb03","toSide":"top","label":"no"},
+		{"id":"891d23a25d6d92f0","fromNode":"068e6e1304d626e1","fromSide":"right","toNode":"7a2b2d77289a135d","toSide":"left","label":"check"},
+		{"id":"2ec74fabe93bba79","fromNode":"fccfdb6ecfdfdb03","fromSide":"bottom","toNode":"f37f6c7102d16dee","toSide":"top","label":"no"},
+		{"id":"743b63fa1eb32a5e","fromNode":"fccfdb6ecfdfdb03","fromSide":"bottom","toNode":"fadafce8096eaecd","toSide":"top","label":"yes"},
+		{"id":"37ff19b7173b0af0","fromNode":"fadafce8096eaecd","fromSide":"right","toNode":"7a2b2d77289a135d","toSide":"right","label":"add"},
+		{"id":"1d53a2ef5a692a6f","fromNode":"fadafce8096eaecd","fromSide":"bottom","toNode":"d946710687c075e0","toSide":"top"},
+		{"id":"8c8971761aa4ce10","fromNode":"f5afa4f0fd9304e8","fromSide":"right","toNode":"853fd388385d9bff","toSide":"left","label":"public"},
+		{"id":"f9549035bbcf1260","fromNode":"f5afa4f0fd9304e8","fromSide":"right","toNode":"be97e157908428d1","toSide":"left","label":"custom"},
+		{"id":"947a20386757e833","fromNode":"853fd388385d9bff","fromSide":"right","toNode":"0d7f0416641e214e","toSide":"left","label":"add"},
+		{"id":"44d458f40bc0b902","fromNode":"be97e157908428d1","fromSide":"right","toNode":"0d7f0416641e214e","toSide":"left","label":"add"},
+		{"id":"d20772740a7b54be","fromNode":"153962779d6ba3ad","fromSide":"bottom","toNode":"f5afa4f0fd9304e8","toSide":"top"}
+	]
+}
