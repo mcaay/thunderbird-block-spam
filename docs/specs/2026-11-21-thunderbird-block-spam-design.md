@@ -1,6 +1,6 @@
 # Block Spam for Thunderbird: design specification
 
-Status: draft, awaiting review (2026-11-21)
+Status: approved 2026-11-21
 Name: Block Spam
 License: MIT
 Target: Thunderbird 153 and newer, Manifest V3 MailExtension
