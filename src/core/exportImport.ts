@@ -184,6 +184,8 @@ export interface ImportContext {
   newId: () => string;
   /** True when an access point of this definition cannot work without a secret. */
   needsSecret: (definition: ExportedAccessPoint) => boolean;
+  /** The checks of Save for an imported definition: the definition to use, and its problems. */
+  checkAccessPoint: (definition: ExportedAccessPoint) => { definition: ExportedAccessPoint; problems: readonly string[] };
 }
 
 function parseFolder(value: unknown, path: string): ExportedFolder {
@@ -257,6 +259,31 @@ export function applyImport(
   context: ImportContext,
 ): ImportReport {
   const file = parseFile(rawFile);
+  // Everything is checked before anything changes, in both modes, also what Merge
+  // does not apply: a file with an invalid item is rejected as a whole.
+  const definitions = file.accessPoints.map((definition, index) => {
+    const checked = context.checkAccessPoint(definition);
+    if (checked.problems.length > 0) {
+      throw new ValidationError(`file.accessPoints[${index}]: ${checked.problems.join(", ")}`);
+    }
+    return checked.definition;
+  });
+  const checked = applySettingsPatch(target.settings, {
+    observation: file.settings.observation,
+    newEntryScope: file.settings.newEntryScope,
+    noVerdictAction: file.settings.noVerdictAction,
+    smart: file.settings.smart,
+    cutoff: file.settings.cutoff,
+    prompt: file.settings.prompt,
+    publicDomainsAdded: file.settings.publicDomainsAdded,
+    publicDomainsRemoved: file.settings.publicDomainsRemoved,
+    forwardingMailboxes: file.settings.forwardingMailboxes,
+    forwardLabels: file.settings.forwardLabels,
+  } satisfies SettingsPatch);
+  if (checked.invalid.length > 0) {
+    throw new ValidationError(`file.settings: not valid: ${checked.invalid.join(", ")}`);
+  }
+
   const accountIds = new Map<string, string>();
   for (const account of context.accounts) {
     const reference = accountReference(account);
@@ -327,25 +354,14 @@ export function applyImport(
       screening.push(folder);
     }
   }
-  const patch: SettingsPatch = {
-    observation: file.settings.observation,
-    newEntryScope: file.settings.newEntryScope,
-    noVerdictAction: file.settings.noVerdictAction,
-    smart: file.settings.smart,
-    cutoff: file.settings.cutoff,
-    prompt: file.settings.prompt,
-    publicDomainsAdded: file.settings.publicDomainsAdded,
-    publicDomainsRemoved: file.settings.publicDomainsRemoved,
-    forwardingMailboxes: file.settings.forwardingMailboxes,
-    forwardLabels: file.settings.forwardLabels,
+  // Protection, the installation time and other local state are kept: importing never
+  // switches protection on.
+  const { settings } = applySettingsPatch(checked.settings, {
     sentFoldersAdded: folders(file.settings.sentFoldersAdded, "sentFolder"),
     sentFoldersRemoved: folders(file.settings.sentFoldersRemoved, "sentFolder"),
     monitoredFoldersAdded: folders(file.settings.monitoredFoldersAdded, "monitoredFolder"),
     screeningFolders: screening,
-  };
-  // Validates the imported settings. Protection, the installation time and other
-  // local state are kept: importing never switches protection on.
-  const { settings } = applySettingsPatch(target.settings, patch);
+  } satisfies SettingsPatch);
 
   const replaced = entriesFromArray([]);
   for (const entry of imported) {
@@ -355,7 +371,7 @@ export function applyImport(
     }
   }
 
-  const accessPoints: AccessPoint[] = file.accessPoints.map((definition) => ({
+  const accessPoints: AccessPoint[] = definitions.map((definition) => ({
     id: context.newId(),
     type: definition.type,
     name: definition.name,

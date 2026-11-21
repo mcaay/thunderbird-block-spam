@@ -16,7 +16,7 @@ import {
 } from "./ai/chatgptAuth";
 import type { PendingSignIn } from "./ai/chatgptAuth";
 import { isLoopbackHost, validateEndpoint } from "./ai/http";
-import { checkDefinition, KEY_REQUIRED_TYPES, newAccessPoint, normalizeDefinition } from "./ai/presets";
+import { checkDefinition, checkImportedDefinition, KEY_REQUIRED_TYPES, newAccessPoint, normalizeDefinition } from "./ai/presets";
 import { isCommandName } from "./core/commands";
 import type { CommandName } from "./core/commands";
 import { errorText } from "./core/decision";
@@ -740,6 +740,7 @@ const handlers: Handlers = {
       accounts,
       folders,
       newId: () => crypto.randomUUID(),
+      checkAccessPoint: checkImportedDefinition,
       needsSecret: (definition) => {
         const endpoint = validateEndpoint(definition.endpoint);
         return (

@@ -174,6 +174,19 @@ export function checkDefinition(definition: AccessPointDefinition, hasKey: boole
   return problems;
 }
 
+/**
+ * Checks an access point definition from an import file with the checks of Save,
+ * without the key, which is never exported. The endpoint of a provider-bound type is
+ * fixed first, so a file cannot name another host for it.
+ */
+export function checkImportedDefinition(definition: AccessPointDefinition): {
+  definition: AccessPointDefinition;
+  problems: DefinitionProblem[];
+} {
+  const normalized = normalizeDefinition(definition);
+  return { definition: normalized, problems: checkDefinition(normalized, true) };
+}
+
 export function newAccessPoint(id: string, definition: AccessPointDefinition, apiKey: string): AccessPoint {
   const normalized = normalizeDefinition(definition);
   return {

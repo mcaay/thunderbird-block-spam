@@ -6,6 +6,9 @@ import { entriesFromArray, entryKey } from "../../src/core/lists";
 import { folderKey } from "../../src/core/ports";
 import { defaultSettings, validateSettings, ValidationError } from "../../src/core/settings";
 import type { AccessPoint, AccountInfo, Entry, Settings } from "../../src/core/types";
+import { CHATGPT_RESPONSES_URL } from "../../src/ai/chatgpt";
+import { ANTHROPIC_MESSAGES_URL } from "../../src/ai/anthropic";
+import { checkImportedDefinition } from "../../src/ai/presets";
 import { accessPoint } from "../helpers/harness";
 
 const NOW = Date.UTC(2026, 10, 21, 12);
@@ -52,6 +55,7 @@ function source(): { settings: Settings; entries: ReturnType<typeof entriesFromA
         id: "ap2",
         type: "chatgpt",
         name: "ChatGPT plan",
+        endpoint: CHATGPT_RESPONSES_URL,
         apiKey: "",
         auth: { clientId: "oaiapp_x", subject: "s", email: "e@x", idToken: "idtoken", accessToken: "accesstoken", refreshToken: "refreshtoken", expiresAt: 1, earliestRefreshAt: 0, scopes: [] },
       }),
@@ -73,6 +77,7 @@ function context(partial: Partial<ImportContext> = {}): ImportContext {
     ),
     newId: () => `new-${++counter}`,
     needsSecret: (definition) => definition.type !== "systemone",
+    checkAccessPoint: checkImportedDefinition,
     ...partial,
   };
 }
@@ -115,7 +120,7 @@ describe("export", () => {
     const { file } = buildExport(source(), ACCOUNTS, NOW);
     expect(file.accessPoints).toEqual([
       { type: "openai-chat", name: "OpenAI", enabled: true, endpoint: "https://api.example.com/v1", model: "model-1" },
-      { type: "chatgpt", name: "ChatGPT plan", enabled: true, endpoint: "https://api.example.com/v1", model: "model-1" },
+      { type: "chatgpt", name: "ChatGPT plan", enabled: true, endpoint: CHATGPT_RESPONSES_URL, model: "model-1" },
     ]);
     const text = JSON.stringify(file);
     for (const secret of ["sk-secret", "refreshtoken", "accesstoken", "idtoken", "oaiapp_x", "cooldownUntil", "needsAttention", "lastError", "protection", "installedAt", "account1"]) {
@@ -210,7 +215,7 @@ describe("import: replace", () => {
     applyImport(local, file, "replace", context());
     expect(local.accessPoints).toEqual([
       { id: "new-1", type: "openai-chat", name: "OpenAI", enabled: true, endpoint: "https://api.example.com/v1", model: "model-1", apiKey: "", auth: null, cooldownUntil: 0, needsAttention: true, lastError: "" },
-      { id: "new-2", type: "chatgpt", name: "ChatGPT plan", enabled: true, endpoint: "https://api.example.com/v1", model: "model-1", apiKey: "", auth: null, cooldownUntil: 0, needsAttention: true, lastError: "" },
+      { id: "new-2", type: "chatgpt", name: "ChatGPT plan", enabled: true, endpoint: CHATGPT_RESPONSES_URL, model: "model-1", apiKey: "", auth: null, cooldownUntil: 0, needsAttention: true, lastError: "" },
     ]);
   });
 
@@ -254,6 +259,13 @@ describe("import: validation", () => {
       { ...file, settings: { ...file.settings, noVerdictAction: "delete" } },
       { ...file, accessPoints: [{ type: "telepathy", name: "x", enabled: true, endpoint: "", model: "" }] },
       { ...file, accessPoints: undefined },
+      // Valid types, invalid content: checked in both modes, also in Merge, which applies only the entries.
+      { ...file, settings: { ...file.settings, forwardingMailboxes: ["not-an-address"] } },
+      { ...file, settings: { ...file.settings, publicDomainsAdded: ["not a domain"] } },
+      { ...file, settings: { ...file.settings, forwardLabels: ["x".repeat(60)] } },
+      { ...file, accessPoints: [{ type: "openai-chat", name: "Remote", enabled: true, endpoint: "http://not-loopback.example/v1", model: "m" }] },
+      { ...file, accessPoints: [{ type: "openai-chat", name: " ", enabled: true, endpoint: "https://a.example/v1", model: "m" }] },
+      { ...file, accessPoints: [{ type: "openai-chat", name: "No model", enabled: true, endpoint: "https://a.example/v1", model: "" }] },
     ];
     for (const mode of ["merge", "replace"] as const) {
       for (const value of broken) {
@@ -264,6 +276,18 @@ describe("import: validation", () => {
         expect({ settings: local.settings, entries: [...local.entries.values()], accessPoints: local.accessPoints }).toEqual(before);
       }
     }
+  });
+
+  it("fixes the endpoint of provider-bound types, so a file cannot name another host for them", () => {
+    const { file } = buildExport(source(), ACCOUNTS, NOW);
+    const local = target();
+    applyImport(
+      local,
+      { ...file, accessPoints: [{ type: "anthropic", name: "Claude", enabled: true, endpoint: "https://collector.example/v1", model: "claude-opus-5-5" }] },
+      "replace",
+      context(),
+    );
+    expect(local.accessPoints[0]).toMatchObject({ type: "anthropic", endpoint: ANTHROPIC_MESSAGES_URL });
   });
 
   it("round-trips an export through JSON", () => {
