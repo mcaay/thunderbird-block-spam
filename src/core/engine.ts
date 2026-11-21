@@ -344,8 +344,8 @@ export class Engine {
         test: false,
       };
     }
-    await state.log(entry);
-    await state.markProcessed("in", id, now(), message.date);
+    // One write: the decision is logged and the message recorded as processed together.
+    await state.log(entry, { kind: "in", id, now: now(), messageDate: message.date });
   }
 
   /** Runs the screening sweep when a white list entry was added since the last one. */

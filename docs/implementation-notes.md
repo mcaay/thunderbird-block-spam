@@ -101,6 +101,7 @@ Where the documentation left a question open, the source code of Thunderbird (`t
 
 ### Data and packaging
 
+- **Writes stay small per message.** A day of the processed set is stored in parts of at most 100 ids (`processed:in:<day>`, then `processed:in:<day>:1` and so on), a decision is logged and its message recorded as processed in one write, and log chunks hold 50 entries. Before, each message rewrote the whole day and a chunk of 250 entries: a catch-up over 5,000 messages wrote about 490 MB, now about 43 MB.
 - **Export does not contain** the protection switch, the installation time or secrets. Importing never switches protection on.
 - **An account is exported by the address of its default identity**; an account without an identity by its name. When two local accounts share an address, the first one is used.
 - **A file with invalid settings is rejected in both import modes**, also in Merge, which reads only the entries.

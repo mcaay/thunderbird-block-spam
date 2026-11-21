@@ -4,7 +4,8 @@ import type { LogMeta } from "./keys";
 import { ValidationError } from "./settings";
 import type { LogEntry } from "./types";
 
-export const LOG_CHUNK_SIZE = 250;
+/** Each logged decision rewrites the newest chunk, so chunks are kept small. */
+export const LOG_CHUNK_SIZE = 50;
 export const LOG_MAX_ENTRIES = 5000;
 export const LOG_MAX_CHUNKS = LOG_MAX_ENTRIES / LOG_CHUNK_SIZE;
 export const LOG_SUBJECT_LIMIT = 200;

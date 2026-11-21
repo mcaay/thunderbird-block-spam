@@ -223,23 +223,27 @@ export class AppState {
     return this.processed[kind].has(id);
   }
 
-  async markProcessed(kind: ProcessedKind, id: string, now: number, messageDate: number): Promise<void> {
-    const bucket = this.processed[kind].add(id, now, messageDate);
-    const prefix = kind === "in" ? PREFIX_PROCESSED_IN : PREFIX_PROCESSED_SENT;
-    await this.store.set({ [prefix + bucket.day]: bucket.ids });
+  /** Records a processed message in memory and adds the part that changed to the writes. */
+  private recordProcessed(writes: Record<string, unknown>, kind: ProcessedKind, id: string, now: number, messageDate: number): void {
+    const part = this.processed[kind].add(id, now, messageDate);
+    if (part !== null) {
+      writes[(kind === "in" ? PREFIX_PROCESSED_IN : PREFIX_PROCESSED_SENT) + part.key] = part.ids;
+    }
   }
 
-  /** Records several ids with one write per bucket. */
+  async markProcessed(kind: ProcessedKind, id: string, now: number, messageDate: number): Promise<void> {
+    await this.markProcessedMany(kind, [{ id, date: messageDate }], now);
+  }
+
+  /** Records several ids with one write. */
   async markProcessedMany(
     kind: ProcessedKind,
     items: readonly { id: string; date: number }[],
     now: number,
   ): Promise<void> {
-    const prefix = kind === "in" ? PREFIX_PROCESSED_IN : PREFIX_PROCESSED_SENT;
     const writes: Record<string, unknown> = {};
     for (const item of items) {
-      const bucket = this.processed[kind].add(item.id, now, item.date);
-      writes[prefix + bucket.day] = bucket.ids;
+      this.recordProcessed(writes, kind, item.id, now, item.date);
     }
     if (Object.keys(writes).length > 0) {
       await this.store.set(writes);
@@ -256,11 +260,22 @@ export class AppState {
     }
   }
 
-  async log(entry: LogEntry): Promise<void> {
+  /**
+   * Appends a log entry. When the entry is the decision about an incoming or sent
+   * message, the message is recorded as processed in the same write.
+   */
+  async log(
+    entry: LogEntry,
+    processed?: { kind: ProcessedKind; id: string; now: number; messageDate: number },
+  ): Promise<void> {
     const write = appendLog(this.logMeta, this.lastLogChunk, entry);
     this.logMeta = write.meta;
     this.lastLogChunk = write.chunk;
-    await this.store.set({ [logChunkKey(write.chunkIndex)]: write.chunk, [KEY_LOG_META]: write.meta });
+    const writes: Record<string, unknown> = { [logChunkKey(write.chunkIndex)]: write.chunk, [KEY_LOG_META]: write.meta };
+    if (processed !== undefined) {
+      this.recordProcessed(writes, processed.kind, processed.id, processed.now, processed.messageDate);
+    }
+    await this.store.set(writes);
     if (write.removeChunks.length > 0) {
       await this.store.remove(write.removeChunks.map(logChunkKey));
     }

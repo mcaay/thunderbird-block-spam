@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { appendLog, EMPTY_LOG_META, LOG_CHUNK_SIZE, LOG_MAX_CHUNKS, LOG_MAX_ENTRIES, logChunkKey } from "../../src/core/log";
 import type { LogMeta } from "../../src/core/log";
 import { buildPayload, BODY_LIMIT, truncateBody } from "../../src/core/payload";
-import { dayKey, processedId, ProcessedSet } from "../../src/core/processed";
+import { dayKey, PROCESSED_PART_SIZE, processedId, ProcessedSet } from "../../src/core/processed";
 import { DEFAULT_CUTOFF, isSpam, llmInstructions, OUTPUT_LINE, parseLlmScore, parseProbability } from "../../src/core/score";
 import { DEFAULT_PROMPT, defaultSettings, validateAccessPoints, validateEntries, validateSettings, ValidationError } from "../../src/core/settings";
 import { AppState, KEY_ENTRIES, KEY_SETTINGS } from "../../src/core/state";
@@ -142,11 +142,32 @@ describe("processed set", () => {
   it("stores ids in per-day buckets", () => {
     const set = new ProcessedSet();
     const bucket = set.add("a", NOW, NOW);
-    expect(bucket).toEqual({ day: "2026-11-21", ids: ["a"] });
-    expect(set.add("b", NOW + DAY, NOW).day).toBe("2026-11-22");
+    expect(bucket).toEqual({ key: "2026-11-21", ids: ["a"] });
+    expect(set.add("b", NOW + DAY, NOW)?.key).toBe("2026-11-22");
+    expect(set.add("a", NOW, NOW)).toBeNull();
     expect(set.has("a")).toBe(true);
     expect(set.has("c")).toBe(false);
     expect(set.days()).toEqual(["2026-11-21", "2026-11-22"]);
+  });
+
+  it("splits a busy day into parts, so that one message writes at most one small part", () => {
+    const set = new ProcessedSet();
+    const written = Array.from({ length: 250 }, (_, index) => set.add(`id${index}`, NOW, NOW));
+    expect(written.every((part) => part !== null && part.ids.length <= PROCESSED_PART_SIZE)).toBe(true);
+    expect([...new Set(written.map((part) => part?.key))]).toEqual(["2026-11-21", "2026-11-21:1", "2026-11-21:2"]);
+    const stored = Object.fromEntries(written.map((part) => [part?.key ?? "", [...(part?.ids ?? [])]]));
+    const again = new ProcessedSet(stored);
+    expect(Array.from({ length: 250 }, (_, index) => again.has(`id${index}`)).every(Boolean)).toBe(true);
+    // The next id goes into the part that has room, never into a full one.
+    expect(again.add("new", NOW, NOW)).toMatchObject({ key: "2026-11-21:2" });
+    expect(again.prune(NOW + 40 * DAY).sort()).toEqual(["2026-11-21", "2026-11-21:1", "2026-11-21:2"]);
+  });
+
+  it("continues a day stored as one large bucket in a new part", () => {
+    const old = Array.from({ length: 150 }, (_, index) => `old${index}`);
+    const set = new ProcessedSet({ "2026-11-21": old });
+    expect(set.has("old149")).toBe(true);
+    expect(set.add("new", NOW, NOW)).toEqual({ key: "2026-11-21:1", ids: ["new"] });
   });
 
   it("prunes buckets after 30 days", () => {
@@ -160,7 +181,7 @@ describe("processed set", () => {
   it("files a message dated in the future under its own date", () => {
     const set = new ProcessedSet();
     const future = NOW + 400 * DAY;
-    expect(set.add("future", NOW, future).day).toBe(dayKey(future));
+    expect(set.add("future", NOW, future)?.key).toBe(dayKey(future));
     set.prune(NOW + 100 * DAY);
     expect(set.has("future")).toBe(true);
   });
@@ -305,6 +326,26 @@ describe("settings and state", () => {
     expect(again.isProcessed("in", "account1 c@d")).toBe(false);
     expect(again.isProcessed("sent", "account1 c@d")).toBe(true);
     expect(store.data[logChunkKey(0)]).toHaveLength(1);
+  });
+
+  it("logs a decision and records its message in one small write, however many messages a day brings", async () => {
+    const { state, store } = await makeState();
+    const sizes: number[] = [];
+    const set = store.set.bind(store);
+    store.set = async (items) => {
+      sizes.push(JSON.stringify(items).length);
+      await set(items);
+    };
+    for (let index = 0; index < 1000; index += 1) {
+      await state.log(logEntry(index), { kind: "in", id: `account1 message-${index}@test`, now: NOW, messageDate: NOW });
+    }
+    expect(sizes).toHaveLength(1000);
+    // One part of processed ids and one log chunk at most, not the whole day.
+    expect(Math.max(...sizes)).toBeLessThan(LOG_CHUNK_SIZE * 400 + PROCESSED_PART_SIZE * 40);
+    const again = await reload(store);
+    expect(again.isProcessed("in", "account1 message-0@test")).toBe(true);
+    expect(again.isProcessed("in", "account1 message-999@test")).toBe(true);
+    expect(again.isProcessed("sent", "account1 message-999@test")).toBe(false);
   });
 
   it("writes entries once for changes made in the same turn", async () => {
