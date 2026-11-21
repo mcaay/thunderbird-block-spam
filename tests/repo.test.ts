@@ -196,6 +196,47 @@ describe("strings", () => {
   });
 });
 
+describe("locales", () => {
+  const localeNames = readdirSync(path.join(root, "src/_locales")).filter((name) => !name.startsWith("."));
+  const placeholders = (text: string): string[] => [...new Set(text.match(/\$\d/g) ?? [])].sort();
+
+  it("ships English, the default, and Polish", () => {
+    expect([...localeNames].sort()).toEqual(["en", "pl"]);
+    expect(manifest.default_locale).toBe("en");
+  });
+
+  it("gives every locale exactly the keys of en, with the same placeholders", () => {
+    for (const name of localeNames) {
+      const locale = JSON.parse(read(`src/_locales/${name}/messages.json`)) as Record<string, { message: string }>;
+      expect(Object.keys(locale).sort(), name).toEqual(Object.keys(messages).sort());
+      const different = Object.keys(messages).filter(
+        (key) => placeholders(locale[key]?.message ?? "").join() !== placeholders(messages[key]?.message ?? "").join(),
+      );
+      expect(different, name).toEqual([]);
+    }
+  });
+
+  it("leaves no message empty and lets every locale name its own language", () => {
+    for (const name of localeNames) {
+      const locale = JSON.parse(read(`src/_locales/${name}/messages.json`)) as Record<string, { message: string }>;
+      expect(Object.keys(locale).filter((key) => (locale[key]?.message ?? "").trim() === ""), name).toEqual([]);
+      // Plural forms and number formats follow this code, see stringsLocale.
+      expect(locale.localeCode?.message, name).toBe(name);
+    }
+  });
+
+  it("localizes the name, the description, the toolbar button and the commands of the manifest", () => {
+    const text = read("src/manifest.json");
+    expect(manifest.name).toBe("__MSG_extensionName__");
+    expect(manifest.description).toBe("__MSG_extensionDescription__");
+    expect((manifest.action as { default_title: string }).default_title).toBe("__MSG_extensionName__");
+    for (const command of Object.values(manifest.commands as Record<string, { description: string }>)) {
+      expect(command.description).toMatch(/^__MSG_cmd[A-Za-z]+__$/);
+    }
+    expect(text).not.toMatch(/"(default_title|description|name)": "(?!__MSG_)[^"]*[A-Za-z]/);
+  });
+});
+
 describe("manifest of the main add-on", () => {
   const gecko = (manifest.browser_specific_settings as { gecko: Record<string, unknown> }).gecko;
 
