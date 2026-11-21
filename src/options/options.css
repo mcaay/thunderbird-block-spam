@@ -1097,6 +1097,11 @@ dialog.modal p {
     outline-offset: -1px;
   }
 
+  /* "Learn more" looks like the links next to it. */
+  details.more > summary {
+    color: LinkText;
+  }
+
   table.log tr.highlight {
     outline-width: 2px;
     outline-color: SelectedItem;

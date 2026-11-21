@@ -746,6 +746,12 @@
   "logAlreadyBlocked": {
     "message": "Wpis $1 był już na czarnej liście."
   },
+  "logRemovedFromBlack": {
+    "message": "Usunięto z czarnej listy: $1."
+  },
+  "logRemovedFromWhite": {
+    "message": "Usunięto z białej listy: $1."
+  },
   "logMovedInbox": {
     "message": "Wiadomość wróciła do Odebranych."
   },

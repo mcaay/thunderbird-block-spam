@@ -746,6 +746,12 @@
   "logAlreadyBlocked": {
     "message": "$1 was already on the black list."
   },
+  "logRemovedFromBlack": {
+    "message": "Removed from the black list: $1."
+  },
+  "logRemovedFromWhite": {
+    "message": "Removed from the white list: $1."
+  },
   "logMovedInbox": {
     "message": "The message is back in the Inbox."
   },

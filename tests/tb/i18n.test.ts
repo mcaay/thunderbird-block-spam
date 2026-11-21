@@ -70,6 +70,25 @@ describe("numbers in messages", () => {
   });
 });
 
+describe("one-letter words in Polish", () => {
+  it("are tied to the word after them, so that a line never ends with one", async () => {
+    const { t } = await withLocale("pl", {
+      lead: "Nigdy nie rusza poczty od osób, a o wszystkich pozostałych może zapytać AI w razie potrzeby.",
+      start: "W przypadku firmy cała domena (z adresem lub bez).",
+      keys: "Klawisze $1 w oknach poczty i w kartach.",
+    });
+    expect(t("lead")).toBe("Nigdy nie rusza poczty od osób, a\u00a0o\u00a0wszystkich pozostałych może zapytać AI w\u00a0razie potrzeby.");
+    expect(t("start")).toBe("W\u00a0przypadku firmy cała domena (z\u00a0adresem lub bez).");
+    // A letter before a comma is not followed by a space and stays as it is. The name of a key is tied like a word, which does no harm.
+    expect(t("keys", "B, W")).toBe("Klawisze B, W\u00a0w\u00a0oknach poczty i\u00a0w\u00a0kartach.");
+  });
+
+  it("are left alone in English", async () => {
+    const { t } = await withLocale("en", { text: "This is a test of a message." });
+    expect(t("text")).toBe("This is a test of a message.");
+  });
+});
+
 describe("messages", () => {
   it("returns the key when a message is missing, and builds code keys without hyphens", async () => {
     const { t, tCode } = await withLocale("en", { outcome_no_verdict: "No verdict" });

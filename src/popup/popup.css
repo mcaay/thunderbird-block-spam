@@ -1,22 +1,77 @@
 /* The toolbar popup, in the look of a Thunderbird panel. */
 
+/*
+ * Thunderbird shows at most 600 pixels of a popup. When there is more to show than
+ * that, only the list of the last decisions scrolls: the state, the buttons for the
+ * selected message and the footer stay where they are.
+ */
 body {
+  display: flex;
+  flex-direction: column;
   width: 380px;
+  max-height: 600px;
   background-color: var(--panel);
 }
 
 header {
   display: flex;
+  flex: none;
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
 }
 
-header h1 {
+#content {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+#content > section {
+  flex: none;
+}
+
+#content > section.recent {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.recent > h2 {
+  flex: none;
+}
+
+.recent > .decisions {
+  flex: 0 1 auto;
+  min-height: 56px;
+  overflow-y: auto;
+}
+
+/* The name with the state of protection under it: a state can be long in some languages. */
+.identity {
+  display: flex;
   flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+header h1 {
   margin: 0;
   font-size: 1.1em;
   font-weight: 600;
+  line-height: 1.3;
+}
+
+header .state {
+  line-height: 1.3;
+}
+
+header img,
+header button {
+  flex: none;
 }
 
 section {

@@ -1,16 +1,32 @@
 // All user-visible strings live in _locales. This is the only way to read them.
 
+/** Languages that do not leave a one-letter word (in Polish: a, i, o, u, w, z) at the end of a line. */
+const TIES_SHORT_WORDS = new Set(["pl", "cs", "sk"]);
+
+/** Ties every one-letter word to the word after it with a no-break space, so that a line never ends with it. */
+function tieShortWords(message: string): string {
+  return message.replace(/(?<=^|[\s(„"])([aiouwzAIOUWZ]) (?=\S)/g, "$1\u00a0");
+}
+
 /**
  * Returns the localized message, with $1, $2... replaced by the substitutions.
  * Numbers are written the way the language of the strings writes them: 12,000 in
  * English, 12 000 in Polish.
  */
 export function t(key: string, ...substitutions: (string | number)[]): string {
+  if (key === "localeCode") {
+    // The language of the strings itself: read as it is, everything below depends on it.
+    return browser.i18n.getMessage(key);
+  }
+  const locale = stringsLocale();
   const message = browser.i18n.getMessage(
     key,
-    substitutions.map((value) => (typeof value === "number" ? value.toLocaleString(stringsLocale()) : value)),
+    substitutions.map((value) => (typeof value === "number" ? value.toLocaleString(locale) : value)),
   );
-  return message === "" ? key : message;
+  if (message === "") {
+    return key;
+  }
+  return TIES_SHORT_WORDS.has(locale) ? tieShortWords(message) : message;
 }
 
 /**
@@ -30,9 +46,14 @@ export type PluralForm = "one" | "few" | "many";
  * numbers have to be written the English way as well.
  */
 export function stringsLocale(): string {
-  const code = t("localeCode");
-  return /^[a-z]{2,3}(-[A-Za-z0-9]+)*$/.test(code) ? code : "en";
+  if (stringsLocaleCode === null) {
+    const code = t("localeCode");
+    stringsLocaleCode = /^[a-z]{2,3}(-[A-Za-z0-9]+)*$/.test(code) ? code : "en";
+  }
+  return stringsLocaleCode;
 }
+
+let stringsLocaleCode: string | null = null;
 
 let pluralRules: Intl.PluralRules | null = null;
 

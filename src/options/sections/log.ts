@@ -158,6 +158,11 @@ export function logSection(): Section {
         ? t(white ? "logAlreadyTrusted" : "logAlreadyBlocked", value)
         : t(white ? "logDoneTrusted" : "logDoneBlocked", value),
     ];
+    // Entries of the other list that still decided this sender were removed, as after a shortcut. Say so.
+    const lifted = outcome.undo.restore.filter((entry) => entry.list !== outcome.list && entry.value !== value).map((entry) => entry.value);
+    if (lifted.length > 0) {
+      parts.push(t(white ? "logRemovedFromBlack" : "logRemovedFromWhite", lifted.join(", ")));
+    }
     if (outcome.move === "moved") {
       parts.push(t(white ? "logMovedInbox" : "logMovedJunk"));
     } else if (outcome.move === "not-found") {

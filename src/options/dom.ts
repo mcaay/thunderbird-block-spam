@@ -486,6 +486,9 @@ export type DialogResult = "confirm" | "extra" | "cancel";
 let dialogCount = 0;
 
 /** A modal dialog. The focus moves into it, and back to where it was when it closes. */
+/** Windows puts the confirming button first, macOS and Linux put it last. Thunderbird's own dialogs follow the platform, and so do these. */
+const CONFIRM_FIRST = typeof navigator !== "undefined" && navigator.platform.startsWith("Win");
+
 export function dialog(options: DialogOptions): Promise<DialogResult> {
   return new Promise((resolve) => {
     dialogCount += 1;
@@ -529,17 +532,12 @@ export function dialog(options: DialogOptions): Promise<DialogResult> {
       options.danger === true ? "destructive" : "primary",
     );
     const cancel = options.hideCancel === true ? null : button(options.cancelLabel ?? t("cancel"), () => close("cancel"));
+    const extra = options.extraLabel === undefined ? null : button(options.extraLabel, () => close("extra"));
     append(box, [
       h("h2", { id: titleId, text: options.title }),
       ...options.body.map((part) => (typeof part === "string" ? h("p", { text: part }) : part)),
       problem,
-      h(
-        "div",
-        { class: "dialog-actions" },
-        cancel,
-        options.extraLabel === undefined ? null : button(options.extraLabel, () => close("extra")),
-        confirm,
-      ),
+      h("div", { class: "dialog-actions" }, ...(CONFIRM_FIRST ? [confirm, extra, cancel] : [cancel, extra, confirm])),
     ]);
     box.addEventListener("cancel", (event) => {
       event.preventDefault();

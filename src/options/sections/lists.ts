@@ -162,6 +162,8 @@ export function listsSection(): Section {
   function remove(entry: Entry, row: HTMLElement): void {
     const neighbor = row.nextElementSibling ?? row.previousElementSibling;
     pendingRemoval = { key: keyOf(entry), neighbor: neighbor instanceof HTMLElement ? (neighbor.dataset.key ?? null) : null };
+    // What the form said about its last entry is history once the list is changed again.
+    addStatus.clear();
     void guard(async () => {
       await send("removeEntries", { keys: [keyOf(entry)] });
       toast(t("listsRemoved", entry.value), {
