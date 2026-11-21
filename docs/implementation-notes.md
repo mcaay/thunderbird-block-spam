@@ -175,14 +175,15 @@ The settings page and the popup were rebuilt after a UX and UI review (`reviews/
 - **Tests and errors have no action.** A test score is not a decision, and the decision about the same message is in the log next to it. An entry about a failure decided nothing either.
 - **An observed decision changes the lists only.** Nothing was moved, so nothing is moved back.
 - **A row whose sender already is on the list the button would add to** offers only the move ("Move to Inbox", "Move to Junk"), or says "Trusted now" when there is nothing to move.
-- **The row answers in place** with what was changed and an Undo, which restores the lists exactly and moves the message back (request `undoLogAction`).
+- **The row answers in place** with what was changed, also when an older entry of the other list was removed on the way, and an Undo, which restores the lists exactly and moves the message back (request `undoLogAction`).
 - **The table has five columns** (time, sender with subject and account, decision with its reason, score, action). The seven columns of the first version do not fit the 800 pixel column of the Settings look.
 - **The Refresh button is gone.** The page redraws when the log changes.
 
 ### Popup and context menu
 
 - **The popup blocks and trusts.** With messages selected it shows the sender, "Block sender" and "Trust sender" with their shortcuts, and the whole-domain variant. They run the four commands of the shortcuts (request `runCommand`), and the popup says what was added.
-- **The popup shows the state of the Overview,** counts the problems and leads to them. Until setup is finished it shows "Setup is not finished" with "Open setup" instead of the switch.
+- **The popup shows the state of the Overview,** counts the problems and leads to them. Until setup is finished it shows "Setup is not finished" with "Open setup" instead of the switch. The state stands under the name, because a state such as "Włączona, tylko obserwacja" does not fit next to it.
+- **Only the list of the last decisions scrolls** when the popup would be taller than the 600 pixels Thunderbird shows. The state, the buttons for the selected message and the footer stay in place.
 - **A row of the last decisions opens that entry in the log.** `runtime.openOptionsPage()` loads an open settings tab anew when the address differs, which would drop text typed there. The popup therefore activates the open tab (`tabs.update`) and hands the target to the page through the background (requests `showInSettings` and `takeSettingsTarget`, kept for 30 seconds).
 - **Context menu of the message list:** a "Block Spam" submenu with the four commands (`menus` API). This added the permission `menus` to the manifest. Thunderbird 153.7.0 shows no line for it in the installation prompt.
 
@@ -204,6 +205,7 @@ The settings page and the popup were rebuilt after a UX and UI review (`reviews/
 - **Numbers and scores follow the language of the strings** (0.97, in Polish 0,97). Dates and times follow Thunderbird's regional settings, like the rest of Thunderbird.
 - **Folders are shown by the name Thunderbird shows** (Odebrane, Wysłane), with the path as a tooltip.
 - **On macOS shortcuts are written with the key symbols** (⌥B), elsewhere as Alt+B.
+- **A Polish line never ends with a one-letter word** (a, i, o, u, w, z). `t()` ties such a word to the next one with a no-break space, so the locale file stays plain text.
 - **The date fields of the scan are Thunderbird's own control.** They speak Thunderbird's language, not the add-on's. The file chooser is a button of the page, so its words come from the locale file.
 
 ### Accessibility
@@ -212,6 +214,7 @@ The settings page and the popup were rebuilt after a UX and UI review (`reviews/
 - **The focus is always visible** and goes where the work goes: into an opened editor or dialog, back to the button that opened it, to the title of a pane, to the entry the popup pointed at.
 - **A redraw does not disturb.** Lists are redrawn row by row (`reconcile` in `src/options/dom.ts`), and only rows that changed are rebuilt, so the focus, a half-typed value and a pending choice in a menu survive the redraw that follows every storage change.
 - **Motion** is switched off where the system asks for reduced motion.
+- **Dialog buttons follow the platform:** the confirming button comes first on Windows and last on macOS and Linux, as in Thunderbird's own dialogs. Only the macOS order was seen rendered.
 
 ### Smaller decisions
 
