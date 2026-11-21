@@ -147,6 +147,17 @@ describe("ChatGPT plan adapter", () => {
     expect((await failure(scoreChatGpt(point(), PROMPT, PAYLOAD, refusal.deps))).kind).toBe("transient");
   });
 
+  it("stops reading an answer that is far too long to be a score", async () => {
+    const { deps } = setup({
+      [CHATGPT_RESPONSES_URL]: () =>
+        sseResponse([
+          ...Array.from({ length: 30 }, () => ({ type: "response.output_text.delta", delta: "9".repeat(500) })),
+          { type: "response.completed", response: {} },
+        ]),
+    });
+    expect(await failure(scoreChatGpt(point(), PROMPT, PAYLOAD, deps))).toMatchObject({ kind: "transient", message: "the answer is too long" });
+  });
+
   it("needs a sign-in and a model", async () => {
     const { http, deps } = setup({});
     expect(await failure(scoreChatGpt(point({ auth: null }), PROMPT, PAYLOAD, deps))).toMatchObject({ kind: "auth", message: "not signed in" });
@@ -286,6 +297,20 @@ describe("event stream parser", () => {
       },
     );
     expect(events).toEqual([{ type: "one", n: 1 }, { type: "two" }, { type: "three" }]);
+  });
+
+  it("finds event boundaries that are split across chunks", async () => {
+    const events: unknown[] = [];
+    await readEventStream(stream(['data: {"type":"one"}\r', "\n", "\r", '\ndata: {"type":"two"}\n', "\n"]), (event) => {
+      events.push(event);
+      return false;
+    });
+    expect(events).toEqual([{ type: "one" }, { type: "two" }]);
+  });
+
+  it("fails when the stream grows beyond its limit", async () => {
+    const chunks = Array.from({ length: 20 }, () => `data: ${"x".repeat(100)}`);
+    await expect(readEventStream(stream(chunks), () => false, 1000)).rejects.toMatchObject({ kind: "transient", message: "the answer is too large" });
   });
 
   it("stops when the handler says so and ignores lines that are not JSON", async () => {

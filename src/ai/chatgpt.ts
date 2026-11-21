@@ -11,7 +11,9 @@ import {
   errorMessageFromBody,
   NO_REDIRECT,
   parseRetryAfter,
+  readText,
   request,
+  RESPONSE_LIMIT_BYTES,
   safeMessage,
   statusError,
   withTimeout,
@@ -96,14 +98,27 @@ function planError(code: string, message: string, status: number, retryAfter: st
   return statusError(status, message === "" ? code : `${code}: ${message}`, retryAfter, now);
 }
 
-/** Parses a server-sent event stream and calls onEvent with each JSON payload. Stops when onEvent returns true. */
+/** A score is a few characters: a longer answer can never be valid. */
+export const ANSWER_LIMIT = 10_000;
+
+/**
+ * Parses a server-sent event stream and calls onEvent with each JSON payload. Stops
+ * when onEvent returns true. Fails as a transient error when the stream is larger
+ * than the limit.
+ */
 export async function readEventStream(
   stream: ReadableStream<Uint8Array>,
   onEvent: (event: Record<string, unknown>) => boolean,
+  limit: number = RESPONSE_LIMIT_BYTES,
 ): Promise<void> {
   const reader = stream.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  let size = 0;
+  const boundaries = /\r?\n\r?\n/g;
+  // Each chunk is searched once: only the new text, plus the three characters a
+  // boundary can reach back into what was searched before.
+  let searchFrom = 0;
   const flush = (block: string): boolean => {
     const data = block
       .split(/\r?\n/)
@@ -123,15 +138,24 @@ export async function readEventStream(
   try {
     for (;;) {
       const { done, value } = await reader.read();
+      size += value?.byteLength ?? 0;
+      if (size > limit) {
+        throw new AccessPointError("transient", "the answer is too large");
+      }
       buffer += decoder.decode(value ?? new Uint8Array(), { stream: !done });
-      let boundary = buffer.search(/\r?\n\r?\n/);
-      while (boundary !== -1) {
-        const block = buffer.slice(0, boundary);
-        buffer = buffer.slice(boundary).replace(/^\r?\n\r?\n/, "");
+      for (;;) {
+        boundaries.lastIndex = searchFrom;
+        const boundary = boundaries.exec(buffer);
+        if (boundary === null) {
+          searchFrom = Math.max(0, buffer.length - 3);
+          break;
+        }
+        const block = buffer.slice(0, boundary.index);
+        buffer = buffer.slice(boundary.index + boundary[0].length);
+        searchFrom = 0;
         if (flush(block)) {
           return;
         }
-        boundary = buffer.search(/\r?\n\r?\n/);
       }
       if (done) {
         if (buffer.trim() !== "") {
@@ -165,7 +189,7 @@ export async function scoreChatGpt(point: AccessPoint, prompt: string, payload: 
       signal,
     });
     if (!response.ok) {
-      const raw = await response.text();
+      const raw = await readText(response);
       let body: unknown = raw;
       try {
         body = JSON.parse(raw) as unknown;
@@ -189,6 +213,10 @@ export async function scoreChatGpt(point: AccessPoint, prompt: string, payload: 
     await readEventStream(response.body, (event) => {
       if (event.type === "response.output_text.delta" && typeof event.delta === "string") {
         output += event.delta;
+        if (output.length > ANSWER_LIMIT) {
+          failure = new AccessPointError("transient", "the answer is too long");
+          return true;
+        }
         return false;
       }
       if (event.type === "response.completed") {

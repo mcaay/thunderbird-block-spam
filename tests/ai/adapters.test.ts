@@ -9,7 +9,9 @@ import {
   originPattern,
   parseRetryAfter,
   postForm,
+  readText,
   request,
+  RESPONSE_LIMIT_BYTES,
   safeMessage,
   statusError,
   validateEndpoint,
@@ -77,6 +79,30 @@ describe("HTTP helpers", () => {
       ["POST", "error"],
       ["GET", undefined],
     ]);
+  });
+
+  it("reads at most 4 MB of an answer", async () => {
+    const megabyte = new TextEncoder().encode(" ".repeat(1024 * 1024));
+    const huge = (chunks: number): Response =>
+      new Response(
+        new ReadableStream<Uint8Array>({
+          start(controller) {
+            for (let index = 0; index < chunks; index += 1) {
+              controller.enqueue(megabyte);
+            }
+            controller.enqueue(new TextEncoder().encode('{"answers":{"spam":{"type":"noul","noul":0.4}}}'));
+            controller.close();
+          },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    const small = await request(async () => huge(3), "https://api.example.com/x", { method: "GET" });
+    expect(small.body).toEqual({ answers: { spam: { type: "noul", noul: 0.4 } } });
+    const refused = await failure(request(async () => huge(5), "https://api.example.com/x", { method: "GET" }));
+    expect(refused).toMatchObject({ kind: "transient", message: "the answer is too large" });
+    expect(RESPONSE_LIMIT_BYTES).toBe(4 * 1024 * 1024);
+    expect(await readText(new Response("x".repeat(11)), 10).catch((error: unknown) => error)).toBeInstanceOf(AccessPointError);
+    expect(await readText(new Response("x".repeat(10)), 10)).toBe("x".repeat(10));
   });
 
   it("caps Retry-After at a day, also when the number of seconds overflows", () => {

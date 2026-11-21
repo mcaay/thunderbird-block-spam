@@ -124,8 +124,37 @@ export interface HttpResult {
   retryAfter: string | null;
 }
 
+/** No answer that an access point or the sign-in needs comes near this size. */
+export const RESPONSE_LIMIT_BYTES = 4 * 1024 * 1024;
+
+/** Reads a response body as text. Fails as a transient error when it is larger than the limit. */
+export async function readText(response: Response, limit: number = RESPONSE_LIMIT_BYTES): Promise<string> {
+  if (response.body === null) {
+    return "";
+  }
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let size = 0;
+  let text = "";
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) {
+        return text + decoder.decode();
+      }
+      size += value.byteLength;
+      if (size > limit) {
+        throw new AccessPointError("transient", "the answer is too large");
+      }
+      text += decoder.decode(value, { stream: true });
+    }
+  } finally {
+    await reader.cancel().catch(() => undefined);
+  }
+}
+
 async function readBody(response: Response): Promise<unknown> {
-  const text = await response.text();
+  const text = await readText(response);
   try {
     return JSON.parse(text) as unknown;
   } catch {
