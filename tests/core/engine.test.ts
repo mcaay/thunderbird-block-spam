@@ -50,6 +50,23 @@ describe("tick", () => {
     expect(h.mail.ids(JUNK1)).toEqual([after.id]);
   });
 
+  it("handles mail from the very second protection was switched on", async () => {
+    const h = await harness();
+    await h.engine.tick();
+    h.state.addEntry({ list: "black", kind: "domain", value: "blocked.example", scope: "all", source: "manual" }, 1);
+    h.clock.now += HOUR;
+    h.protect();
+    // Mail dates have whole seconds; protection was switched on 400 ms into this one.
+    const second = Math.floor(h.clock.now / 1000) * 1000;
+    h.state.settings.protectionOnAt = second + 400;
+    const before = h.mail.put(INBOX1, { author: "a@blocked.example", date: second - 1000 });
+    const same = h.mail.put(INBOX1, { author: "b@blocked.example", date: second });
+    h.clock.now += 5 * MINUTE;
+    await h.engine.tick();
+    expect(h.mail.ids(INBOX1)).toEqual([before.id]);
+    expect(h.mail.ids(JUNK1)).toEqual([same.id]);
+  });
+
   it("is idempotent: a message is handled once", async () => {
     const h = await harness();
     h.protect();
@@ -223,6 +240,23 @@ describe("fast path for new mail", () => {
     expect(h.mail.ids(JUNK1)).toEqual([backdated.id]);
     expect(h.mail.ids(INBOX1)).toEqual([old.id, unknown.id]);
     expect(h.log()).toMatchObject([{ outcome: "blocked", sender: "a@blocked.example" }]);
+  });
+
+  it("handles new mail from the very second protection was switched on", async () => {
+    const h = await ready();
+    const second = Math.floor(h.clock.now / 1000) * 1000;
+    h.state.settings.protectionOnAt = second + 400;
+    const before = h.mail.put(INBOX1, { author: "a@blocked.example", date: second - 1000 });
+    const same = h.mail.put(INBOX1, { author: "b@blocked.example", date: second });
+    const arrival = new Date(second).toUTCString();
+    const backdated = h.mail.put(INBOX1, {
+      author: "c@blocked.example",
+      date: Date.UTC(2020, 0, 1),
+      headers: { received: [`from mx.outreach.example by mx.mycompany.example; ${arrival}`] },
+    });
+    await h.engine.handleNewMail(INBOX1, await pages([before, same, backdated]));
+    expect(h.mail.ids(INBOX1)).toEqual([before.id]);
+    expect(h.mail.ids(JUNK1)).toEqual([same.id, backdated.id]);
   });
 
   it("reads the arrival time of a Received header", () => {

@@ -87,6 +87,14 @@ export function receivedTime(value: string): number {
   return Number.isFinite(time) ? time : 0;
 }
 
+/**
+ * Mail dates have whole seconds, so a moment is compared by its second. Without this,
+ * a message that arrived in the second protection was switched on would be skipped.
+ */
+function wholeSecond(time: number): number {
+  return Math.floor(time / 1000) * 1000;
+}
+
 export class Engine {
   private sweeping = false;
   private sweepAgain = false;
@@ -262,10 +270,10 @@ export class Engine {
     }
   }
 
-  /** Handles monitored folders: every message dated after the window start that was not processed yet. */
+  /** Handles monitored folders: every message dated from the window start on that was not processed yet. */
   private async handleMonitoredFolders(context: Context, started: number): Promise<void> {
     const { state, mail } = this.deps;
-    const since = Math.max(state.settings.protectionOnAt ?? started, (state.lastTick ?? started) - WINDOW_MS);
+    const since = Math.max(wholeSecond(state.settings.protectionOnAt ?? started), (state.lastTick ?? started) - WINDOW_MS);
     for (const folder of resolveMonitoredFolders(context.inboxes, state.settings)) {
       try {
         for await (const page of mail.messagesSince(folder, since)) {
@@ -284,7 +292,7 @@ export class Engine {
 
   /**
    * Fast path for messages.onNewMailReceived. Uses the same handler as the tick.
-   * Mail that arrived before protection was switched on is never handled.
+   * Mail that arrived before the second in which protection was switched on is never handled.
    */
   async handleNewMail(folder: FolderRef, pages: AsyncIterable<MessageInfo[]>): Promise<void> {
     const { state } = this.deps;
@@ -296,13 +304,13 @@ export class Engine {
     if (!monitored.some((candidate) => sameFolder(candidate, folder))) {
       return;
     }
-    const protectionOnAt = state.settings.protectionOnAt ?? 0;
+    const protectionOnAt = wholeSecond(state.settings.protectionOnAt ?? 0);
     for await (const page of pages) {
       for (const message of page) {
         if (!state.settings.protection) {
           return;
         }
-        if (message.date === 0 || message.date > protectionOnAt || (await this.arrivedAfter(message, protectionOnAt))) {
+        if (message.date === 0 || message.date >= protectionOnAt || (await this.arrivedSince(message, protectionOnAt))) {
           await this.handleIncoming(context, message);
         }
       }
@@ -311,13 +319,13 @@ export class Engine {
 
   /**
    * The Date header is written by the sender, so a message dated before a moment may
-   * still have arrived after it. The newest Received header is written by the
+   * still have arrived at or after it. The newest Received header is written by the
    * receiving server and tells when the message really arrived.
    */
-  private async arrivedAfter(message: MessageInfo, time: number): Promise<boolean> {
+  private async arrivedSince(message: MessageInfo, time: number): Promise<boolean> {
     try {
       const received = (await this.deps.mail.headers(message.id))["received"]?.[0];
-      return received !== undefined && receivedTime(received) > time;
+      return received !== undefined && receivedTime(received) >= time;
     } catch {
       return false;
     }

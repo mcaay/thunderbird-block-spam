@@ -146,8 +146,9 @@ export class FakeMail implements MailPort {
   }
 
   messagesSince(folder: FolderRef, since: number, until?: number): AsyncIterable<MessageInfo[]> {
+    // Both bounds are inclusive, like fromDate and toDate of Thunderbird's messages.query.
     const items = this.folder(folder).messages.filter(
-      (item) => item.date > since && (until === undefined || item.date < until),
+      (item) => item.date >= since && (until === undefined || item.date <= until),
     );
     return this.pages(items);
   }
