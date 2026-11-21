@@ -12,7 +12,8 @@
     "build": "node scripts/build.mjs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tests",
-    "check": "npm run typecheck && npm test && npm run build"
+    "check": "npm run typecheck && npm test && npm run build",
+    "harness": "npm run build && node scripts/harness.mjs"
   },
   "dependencies": {
     "tldts": "7.5.5"

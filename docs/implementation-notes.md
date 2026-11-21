@@ -5,7 +5,7 @@ Decisions made while implementing `docs/specs/2026-11-21-thunderbird-block-spam-
 ## What was and was not verified
 
 - **Verified by tests:** all of `src/core` and `src/ai` with fake mail and HTTP layers, the companion's key logic in a sandbox, and repository rules (strings, manifest, layering). Run `npm run check`.
-- **Verified in a browser:** the built background page and settings page were run together in a Chromium browser against a fake of the Thunderbird API, including a scan, new mail, shortcuts, an access point with consent, and a complete ChatGPT sign-in against a fake OpenAI (code exchange, ID token signature check with WebCrypto, model list, streamed score).
+- **Verified in a browser:** the built background page and settings page were run together in a Chromium browser against a fake of the Thunderbird API, including a scan, new mail, shortcuts, an access point with consent, and a complete ChatGPT sign-in against a fake OpenAI (code exchange, ID token signature check with WebCrypto, model list, streamed score). `npm run harness` builds that setup in `dist/harness`; the comment at the top of `scripts/harness.mjs` says how to open it.
 - **Not verified:** anything in a real Thunderbird, with a real mailbox or with a real AI service. Every such check is listed in `docs/manual-test-checklist.md`.
 - **Build step 1** (the ChatGPT sign-in prototype against a real account, the decision gate of specification section 8.6) was not run. The flow is implemented from OpenAI's documentation, including the paste-the-address fallback.
 
@@ -20,7 +20,14 @@ Checked on 2026-11-21 against the references of the specification:
 - Anthropic Messages API, errors, authentication, effort, stop reasons, API versions, the Claude Code legal page and the monthly API credits article.
 - Ollama FAQ (`OLLAMA_ORIGINS`), Gemini OpenAI compatibility, OpenAI model pages, the OpenRouter model list.
 
-The Thunderbird "Experiment plan" thread on Topicbox could not be read without a browser session. The statement about the 2027 ESR is taken from the specification.
+The Thunderbird "Experiment plan" thread on Topicbox could not be read without a browser session. The statement about the 2027 ESR is taken from the specification. Thunderbird's source already contains the switch for it (`extensions.experiments.suppressed`, off today, with a list of exempt add-ons).
+
+Where the documentation left a question open, the source code of Thunderbird (`thunderbird/thunderbird-desktop`) and of the shared toolkit (`mozilla-firefox/firefox`) was read:
+
+- `permissions.request` is refused outside a user input handler and ignores `data_collection` while the preference is off.
+- Every extension API call that reaches the parent process resets the idle timer of a non-persistent background page, and `runtime.getPlatformInfo` is such a call. This is what the 20 second keep-alive relies on.
+- `messages.getHeaders`, `sendInfo.details` of `compose.onAfterSend`, the inclusive date comparison of `messages.query`, the folders that `messages.onNewMailReceived` reports by default (the Inbox and folders without a special use), and `messages.move` resolving after the move has finished.
+- `ExtensionSupport.registerWindowListener` also reports windows that are already open, and the tab mode names `mail3PaneTab` and `mailMessageTab`, both used by the companion.
 
 ## Where the documentation changed the design
 
@@ -33,8 +40,8 @@ The Thunderbird "Experiment plan" thread on Topicbox could not be read without a
 7. **Signing out revokes the session** at the `revocation_endpoint` of the discovery document, as the documentation asks. Removing a ChatGPT access point and a Replace import do the same.
 8. **The sign-in tab uses `linkHandler: "relaxed"`.** By default Thunderbird opens links to other hosts in the system browser, which would break a sign-in that passes through several hosts.
 9. **OpenAI's UI guidelines are followed where they apply:** the button reads "Continue with ChatGPT", a one-time message confirms plan use after the first sign-in, the access point shows "Using ChatGPT plan" with a "Manage usage" link to ChatGPT settings.
-10. **Thunderbird shows no data collection prompt of its own.** Its documentation says add-ons must ask for consent themselves. The manifest declares `personalCommunications` and `personallyIdentifyingInfo` as optional data collection permissions, and the settings page asks for explicit consent, naming Block Spam, before the first access point of a host is added. The same click requests the host permission and the data collection permission.
-11. **`webRequest` as an optional permission.** Thunderbird's permission documentation does not list `webRequest` among optional permissions, although Firefox allows it. The manifest declares it as specified. Without it the sign-in continues with the paste-the-address fallback only.
+10. **Thunderbird shows no data collection prompt of its own.** Its documentation says add-ons must ask for consent themselves, and in its source the data collection permission feature is switched off by a preference (`extensions.dataCollectionPermissions.enabled` is not set, the toolkit default is off). The settings page therefore asks for explicit consent, naming Block Spam, before the first access point of a host is added. The manifest still declares `personalCommunications` and `personallyIdentifyingInfo` as optional data collection permissions, and the page requests them together with the host permission wherever `permissions.getAll()` shows that the feature is on.
+11. **`webRequest` as an optional permission.** Thunderbird's permission documentation does not list `webRequest` among optional permissions. The toolkit schema that Thunderbird shares with Firefox does allow it (`web_request.json` extends `OptionalPermissionNoPrompt`), so the manifest declares it as specified. If a Thunderbird refuses it anyway, the sign-in continues with the paste-the-address fallback only.
 12. **Permission requests cannot be retried after an await.** Thunderbird accepts `permissions.request` only while the click is being handled, so a refused request cannot be repeated in another form afterwards. `src/options/permissions.ts` therefore detects what this Thunderbird supports when the page loads (data collection permissions, optional `webRequest`), tries the plainer forms at once when a form is refused synchronously, and otherwise remembers what was refused and asks the user to press the button again.
 13. **Anthropic API version `2026-10-21`** is sent, the current version. The request sets `output_config.effort` to `low` (classification) and checks `stop_reason` before reading the answer. Models older than Claude Opus 4.5 reject the effort parameter.
 14. **Decision model details.** OpenRouter and OpenAI can answer a question with `type: "refusal"`; both are treated as a failure of the access point. The local basal server needs no `model` field, so it is sent only when set.
