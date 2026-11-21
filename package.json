@@ -1,0 +1,26 @@
+{
+  "name": "thunderbird-block-spam",
+  "version": "1.0.0",
+  "description": "Block Spam for Thunderbird: local white and black lists learned from sent mail, with AI scoring only for mail from unknown senders.",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tests",
+    "check": "npm run typecheck && npm test && npm run build"
+  },
+  "dependencies": {
+    "tldts": "7.5.5"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "esbuild": "0.28.2",
+    "typescript": "7.0.2",
+    "vitest": "5.1.1"
+  }
+}
