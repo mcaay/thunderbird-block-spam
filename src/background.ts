@@ -24,6 +24,7 @@ import { applySettingsPatch, manualEntry } from "./core/edit";
 import { Engine } from "./core/engine";
 import type { CommandOutcome, ScanProgress } from "./core/engine";
 import { applyImport, buildExport } from "./core/exportImport";
+import { KEY_ACCESS_POINTS } from "./core/keys";
 import { folderKey } from "./core/ports";
 import { SerialQueue } from "./core/queue";
 import { AppState } from "./core/state";
@@ -428,6 +429,23 @@ async function revoke(auth: ChatGptAuth | null): Promise<boolean> {
   return auth === null ? true : withKeepAlive(() => revokeSession(httpFetch, auth));
 }
 
+/** The sign-ins in stored data, read leniently: Reset runs when the data may be invalid. */
+function storedSessions(raw: Record<string, unknown>): ChatGptAuth[] {
+  const points = raw[KEY_ACCESS_POINTS];
+  const sessions: ChatGptAuth[] = [];
+  for (const point of Array.isArray(points) ? points : []) {
+    const auth: unknown = typeof point === "object" && point !== null ? (point as { auth?: unknown }).auth : null;
+    if (typeof auth !== "object" || auth === null) {
+      continue;
+    }
+    const { refreshToken, clientId } = auth as { refreshToken?: unknown; clientId?: unknown };
+    if (typeof refreshToken === "string" && refreshToken !== "" && typeof clientId === "string") {
+      sessions.push(auth as ChatGptAuth);
+    }
+  }
+  return sessions;
+}
+
 // ---------------------------------------------------------------------------
 // Requests from the settings page and the popup.
 
@@ -758,6 +776,9 @@ const handlers: Handlers = {
     scan = null;
     signInError = "";
     await clearSignIn(true);
+    // The tokens are about to be forgotten, and the raw data the page offers to download
+    // contains them: end those sessions first, as signing out and removing do.
+    await Promise.all(storedSessions(await store.all()).map((auth) => revoke(auth).catch(() => false)));
     await store.clear();
     ready = start();
     await ready;

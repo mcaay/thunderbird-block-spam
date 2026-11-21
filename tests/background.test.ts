@@ -120,6 +120,25 @@ describe("host permissions", () => {
   });
 });
 
+describe("reset", () => {
+  it("ends the ChatGPT sessions it can still read before it deletes the data", async () => {
+    const broken = { ...defaultSettings(Date.now()), cutoff: 7 };
+    const points = [
+      { id: "plan", type: "chatgpt", auth: { clientId: "oaiapp_1", refreshToken: "refresh-1", unexpected: true } },
+      { id: "out", type: "chatgpt", auth: { clientId: "oaiapp_2", refreshToken: "" } },
+      "not an access point",
+    ];
+    const fake = new FakeBrowser({ [KEY_SETTINGS]: broken, [KEY_ACCESS_POINTS]: points });
+    const openai = await fakeOpenAi();
+    const background = await loadBackground(fake, openai.http.fetch);
+    expect(await background.send("getStatus", {})).toMatchObject({ ok: true, result: { fatal: expect.stringContaining("cutoff") } });
+    expect(await background.send("resetData", {})).toEqual({ ok: true, result: null });
+    expect(openai.revoked()).toEqual(["refresh-1"]);
+    expect(fake.storage[KEY_ACCESS_POINTS]).toBeUndefined();
+    expect(await background.send("getStatus", {})).toMatchObject({ ok: true, result: { fatal: null } });
+  });
+});
+
 describe("scoring selected messages", () => {
   async function setup(selected: number) {
     const point = accessPoint({ id: "ai", type: "openai-chat", endpoint: "https://api.example.com/v1" });

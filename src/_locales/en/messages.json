@@ -162,7 +162,7 @@
     "message": "Reset all Block Spam data?"
   },
   "fatalResetText": {
-    "message": "This deletes the lists, the settings, the access points with their keys and the log. It cannot be undone. Download the raw data first if you may need it."
+    "message": "This deletes the lists, the settings, the access points with their keys and the log, and ends ChatGPT sign-ins. It cannot be undone. Download the raw data first if you may need it."
   },
   "listsHint": {
     "message": "A sender is matched by address first, then by domain. An address entry always beats a domain entry: a blocked address stays blocked inside a trusted domain, and a trusted person passes inside a blocked domain."
