@@ -5,7 +5,7 @@
 import type { CommandName } from "../core/commandNames";
 import type { SenderInfo } from "../core/engine";
 import { KEY_ACCESS_POINTS, KEY_ENTRIES, KEY_SETTINGS, logEntryKey } from "../core/keys";
-import { findProblems } from "../core/problems";
+import { findProblems, scanIsComplete } from "../core/problems";
 import type { AccountFacts } from "../core/problems";
 import type { AccessPoint, Entry, LogEntry, Settings } from "../core/types";
 import { address, button, byId, errorText, h, replace } from "../options/dom";
@@ -90,14 +90,14 @@ async function accountFacts(): Promise<AccountFacts[]> {
   }));
 }
 
-/** How many warnings the Overview of the settings page shows at the moment. */
-async function countProblems(settings: Settings, accessPoints: AccessPoint[]): Promise<number> {
+/** How many warnings the Overview of the settings page shows at the moment. They matter here while protection is on. */
+async function countProblems(settings: Settings, accessPoints: AccessPoint[], onlyOwnAddresses: boolean): Promise<number> {
   if (!settings.protection) {
     return 0;
   }
   // When the accounts cannot be read, the problems of the AI services are still found.
   const accounts = await accountFacts().catch(() => []);
-  return findProblems({ settings, accessPoints, accounts, onlyOwnAddresses: false, now: Date.now() }).length;
+  return findProblems({ settings, accessPoints, accounts, onlyOwnAddresses, now: Date.now() }).length;
 }
 
 // ---------------------------------------------------------------------------
@@ -332,10 +332,11 @@ async function draw(): Promise<void> {
   const settings = status.fatal === null ? ((stored[KEY_SETTINGS] as Settings | undefined) ?? null) : null;
   const accessPoints = (stored[KEY_ACCESS_POINTS] as AccessPoint[] | undefined) ?? [];
   const entries = (stored[KEY_ENTRIES] as Entry[] | undefined) ?? [];
-  // Setup is finished once the white list holds more than the user's own addresses.
-  const setupDone = entries.some((entry) => entry.list === "white" && entry.source !== "identity");
-  // Before that the popup points at setup, which is where the Overview shows the only warning there can be.
-  const problems = status.fatal === null && settings !== null && setupDone ? await countProblems(settings, accessPoints) : 0;
+  // Learned: the white list holds more than the user's own addresses, or a scan found that there is nobody to add.
+  const learned = entries.some((entry) => entry.list === "white" && entry.source !== "identity") || scanIsComplete(status.scan);
+  // The popup points at setup until then, or until protection was switched on without it.
+  const setupDone = learned || settings?.protection === true;
+  const problems = status.fatal === null && settings !== null ? await countProblems(settings, accessPoints, !learned) : 0;
   drawState(status, settings, problems > 0);
   if (status.fatal !== null || settings === null) {
     // Stored data that failed validation is not read any further.

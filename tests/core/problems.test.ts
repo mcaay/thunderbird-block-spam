@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findProblems } from "../../src/core/problems";
+import { findProblems, scanIsComplete } from "../../src/core/problems";
 import type { AccountFacts, ProblemInput } from "../../src/core/problems";
 import { defaultSettings } from "../../src/core/settings";
 import { accessPoint } from "../helpers/harness";
@@ -20,6 +20,21 @@ function input(partial: Partial<ProblemInput> = {}): ProblemInput {
     ...partial,
   };
 }
+
+describe("a scan that ran to its end", () => {
+  const scan = { running: false, cancelled: false, errors: [] as string[] };
+
+  it("counts as complete, also when it found nobody", () => {
+    expect(scanIsComplete(scan)).toBe(true);
+  });
+
+  it("does not count before it ran, while it runs, after Cancel or after an error", () => {
+    expect(scanIsComplete(null)).toBe(false);
+    expect(scanIsComplete({ ...scan, running: true })).toBe(false);
+    expect(scanIsComplete({ ...scan, cancelled: true })).toBe(false);
+    expect(scanIsComplete({ ...scan, errors: ["Sent: could not be read"] })).toBe(false);
+  });
+});
 
 describe("problems that keep protection from working as set up", () => {
   it("finds none in a healthy setup", () => {

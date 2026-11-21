@@ -2,7 +2,7 @@
 // line and warnings, the three setup steps, and observation mode.
 
 import { entriesFromArray, whiteListIsOnlyIdentities } from "../../core/lists";
-import { findProblems } from "../../core/problems";
+import { findProblems, scanIsComplete } from "../../core/problems";
 import { aiHealth, summarizeDay } from "../../core/stats";
 import type { DaySummary } from "../../core/stats";
 import { t, tCode, tn } from "../../tb/i18n";
@@ -18,9 +18,14 @@ import type { Model } from "../model";
 import type { Section, Shell } from "../section";
 import { scanText } from "./scanText";
 
-/** With AI switched on and nobody but the user on the white list, mail from existing contacts would be scored. */
+/** Nobody but the user is on the white list, and no scan of this session ran to its end and found that there is nobody. */
+function nothingLearned(model: Model): boolean {
+  return whiteListIsOnlyIdentities(entriesFromArray(model.entries)) && !scanIsComplete(model.status.scan);
+}
+
+/** With AI switched on and nothing learned, mail from existing contacts would be scored. */
 function aiBeforeScan(model: Model): boolean {
-  return model.accessPoints.some((point) => point.enabled) && whiteListIsOnlyIdentities(entriesFromArray(model.entries));
+  return model.accessPoints.some((point) => point.enabled) && nothingLearned(model);
 }
 
 function startOfToday(): number {
@@ -144,7 +149,7 @@ export function overviewSection(shell: Shell): Section {
       settings,
       accessPoints: current.accessPoints,
       accounts: current.accounts,
-      onlyOwnAddresses: whiteListIsOnlyIdentities(entriesFromArray(current.entries)),
+      onlyOwnAddresses: nothingLearned(current),
       now: Date.now(),
     });
     const bars: Keyed[] = [];
@@ -264,7 +269,7 @@ export function overviewSection(shell: Shell): Section {
     if (settings === null) {
       return;
     }
-    const scanned = !whiteListIsOnlyIdentities(entriesFromArray(current.entries));
+    const scanned = !nothingLearned(current);
     const hasAi = current.accessPoints.length > 0;
     const scan = scanText(current);
     const complete = scanned && settings.protection;

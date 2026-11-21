@@ -29,9 +29,18 @@ export interface ProblemInput {
   settings: Settings;
   accessPoints: readonly AccessPoint[];
   accounts: readonly AccountFacts[];
-  /** True while the white list holds nothing but the user's own addresses. */
+  /** True while the white list holds nothing but the user's own addresses and no scan has run to its end. */
   onlyOwnAddresses: boolean;
   now: number;
+}
+
+/**
+ * A scan that ran to its end without an error has put everyone the sent mail names on
+ * the white list, also when that is nobody (a mailbox that has sent nothing yet). The
+ * state of a scan is kept for the session only.
+ */
+export function scanIsComplete(scan: { running: boolean; cancelled: boolean; errors: readonly string[] } | null): boolean {
+  return scan !== null && !scan.running && !scan.cancelled && scan.errors.length === 0;
 }
 
 /** The problems in the order the settings page lists them. */
