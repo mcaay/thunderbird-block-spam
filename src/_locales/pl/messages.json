@@ -702,7 +702,7 @@
     "message": "Spam"
   },
   "outcome_passed": {
-    "message": "Przepuszczona"
+    "message": "Przeszła"
   },
   "outcome_no_verdict": {
     "message": "Bez oceny"
@@ -969,7 +969,7 @@
     "message": "Do sprawdzenia"
   },
   "aiLead": {
-    "message": "Do usługi AI wysyłana jest wyłącznie poczta od nadawców, których nie ma na żadnej z list, a poczta od nadawców z białej listy nigdy nie jest nigdzie wysyłana."
+    "message": "Do usługi AI trafia wyłącznie poczta od nadawców spoza obu list, a poczta od nadawców z białej listy nigdy."
   },
   "aiLeadTopic": {
     "message": "wysyłane dane"

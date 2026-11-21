@@ -370,10 +370,11 @@ function drawRecent(): void {
   const entries = log.slice(0, RECENT);
   replace(
     recentBox,
-    h("h2", { text: t("popupRecent") }),
+    h("h2", { text: t("popupRecent"), id: "recent-title" }),
     entries.length === 0
       ? h("p", { class: "description", text: t("popupNoDecisions") })
-      : h("ul", { class: "decisions" }, ...entries.map((entry) => decisionRow(entry, now))),
+      : // The list scrolls when the popup is full, and can then take the focus: it is named by its heading.
+        h("ul", { class: "decisions", attrs: { "aria-labelledby": "recent-title" } }, ...entries.map((entry) => decisionRow(entry, now))),
   );
 }
 

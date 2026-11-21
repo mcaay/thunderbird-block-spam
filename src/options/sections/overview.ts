@@ -112,7 +112,6 @@ export function overviewSection(shell: Shell): Section {
   const observation = checkRow("observation-switch", t("observationLabel"), (checked) =>
     void guard(() => send("updateSettings", { patch: { observation: checked } })),
   );
-  observation.input.setAttribute("aria-describedby", "observation-hint observation-note");
   const observationNote = h("div", { class: "option-note indent", id: "observation-note", hidden: true, attrs: { role: "status" } }, icon("info"), t("observationOff"));
   const scanStatus = scanStatusView(() => shell.go("learning"));
   const byHand = h("p", { class: "ways-short" });
@@ -469,7 +468,10 @@ export function overviewSection(shell: Shell): Section {
     protection.input.checked = settings.protection;
     observation.input.checked = settings.observation;
     // Ticked while protection is off: nothing happens yet, and the page says so.
-    observationNote.hidden = !(settings.observation && !settings.protection);
+    const waiting = settings.observation && !settings.protection;
+    observationNote.hidden = !waiting;
+    // A hidden note would still be read as part of the description, so it is named only while it shows.
+    observation.input.setAttribute("aria-describedby", waiting ? "observation-hint observation-note" : "observation-hint");
     const bars = warningBars(current);
     reconcile(warnings, bars);
     renderStatusLine(current, bars.length > 0);

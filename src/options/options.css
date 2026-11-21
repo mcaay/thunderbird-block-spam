@@ -951,9 +951,10 @@ dialog.modal p {
     display: none;
   }
 
-  .category-list {
-    display: flex;
-    flex-wrap: wrap;
+  /* Both groups of categories flow as one row, so that a line is filled before the next one starts. */
+  .category-list,
+  .category-list > li {
+    display: contents;
   }
 
   .category,

@@ -969,7 +969,7 @@
     "message": "Screening"
   },
   "aiLead": {
-    "message": "Only mail from senders who are on neither list is sent to an AI service, and mail from senders on your white list is never sent anywhere."
+    "message": "Only mail from senders on neither list is sent to an AI service, and mail from senders on your white list never is."
   },
   "aiLeadTopic": {
     "message": "what is sent"
