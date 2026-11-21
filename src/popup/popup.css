@@ -224,3 +224,27 @@ p.result {
 .footer .row.end {
   flex: 1;
 }
+
+/* High contrast (forced colors): the colors of the dots are gone, the difference between filled and hollow stays. */
+@media (forced-colors: active) {
+  .dot,
+  .dot.outcome-trusted,
+  .dot.outcome-passed,
+  .dot.outcome-released,
+  .dot.outcome-blocked,
+  .dot.outcome-spam,
+  .dot.outcome-error {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+    background-color: CanvasText;
+  }
+
+  .dot.hollow {
+    background-color: Canvas;
+  }
+
+  .decision:hover {
+    outline: 1px solid CanvasText;
+    outline-offset: -1px;
+  }
+}

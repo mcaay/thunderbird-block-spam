@@ -8,6 +8,7 @@ Decisions made while implementing `docs/specs/2026-11-21-thunderbird-block-spam-
 - **Verified in a browser:** the built background page and settings page were run together in a Chromium browser against a fake of the Thunderbird API, including a scan, new mail, shortcuts, an access point with consent, and a complete ChatGPT sign-in against a fake OpenAI (code exchange, ID token signature check with WebCrypto, model list, streamed score). `npm run harness` builds that setup in `dist/harness`; the comment at the top of `scripts/harness.mjs` says how to open it.
 - **Verified in Thunderbird 153.7.0 on macOS:** isolated profiles, loopback IMAP/SMTP accounts and mock AI servers, including installation prompts, mail moves, learning, shortcuts, background suspension, imports and recovery. The practical report and evidence are in `reviews/2026-11-21-practical-test/report.md` (git-ignored). Real AI services and ChatGPT sign-in remain unverified. See `docs/manual-test-checklist.md` for the checklist and remaining checks.
 - **Build step 1** (the ChatGPT sign-in prototype against a real account, the decision gate of specification section 8.6) was not run. The flow is implemented from OpenAI's documentation, including the paste-the-address fallback.
+- **The interface was looked at in Thunderbird 153.7.0** after its rebuild (see [Interface](#interface)): every pane, the popup, the dialogs and the states in between, in the light and the dark theme, in English and in Polish, in a narrow window, at 200 percent zoom and in high contrast, and the keyboard order of every pane. The captures are in `reviews/2026-11-21-ux-ui/round-2/` (git-ignored). Not seen: the popup panel and the context menu as the system draws them, the desktop notification, Windows and Linux.
 
 ## Documentation checked
 
@@ -111,7 +112,7 @@ Where the documentation left a question open, the source code of Thunderbird (`t
 - **A redraw never overwrites an unsaved edit.** The page is redrawn after every storage change, also while the background writes the log. The prompt editor takes the stored text only while it still shows the text stored before. The cutoff and the forwarded-header labels take the stored value only when they still show what the page put there last, or once the stored value equals the edit (it was saved), and never while they have the focus.
 - **The settings page opens after installation**, because protection is off until the user switches it on.
 - **"Score selected messages" names the number of messages in its confirmation and scores at most 50 in one run.** Specification section 8.8 sets no limit, but Ctrl+A in a large folder would send all of it, also mail from whitelisted senders, one message after another, without a way to stop. A larger selection is refused before anything is sent.
-- **Preset names and sign-in errors are in `_locales`.** Diagnostic details of failed requests ("HTTP 401: ...", "the answer is not a probability") and of invalid data stay in English: they are stored in the log and next to the access point together with the provider's own English text.
+- **Preset names, sign-in errors and the mistakes a user can make are in `_locales`.** The background reports such a mistake with a code (`ValidationError`), and the pages say it in the user's language. Diagnostic details of failed requests ("HTTP 401: ...", "the answer is not a probability"), of a rejected import file and of invalid stored data stay in English: they are stored in the log and next to the AI service together with the provider's own English text.
 
 ### Data and packaging
 
@@ -132,6 +133,90 @@ Where the documentation left a question open, the source code of Thunderbird (`t
 - **It listens for `keydown` and `keypress`** in the capture phase of the window and consumes both, so that Thunderbird's own handling of `B` and `W` does not run.
 - **It leaves the keys alone** in text fields, in editable documents, in web content, outside mail tabs and while a menu or panel is open.
 - **It acts only on trusted key events.** A `keydown` that a script dispatched (`event.isTrusted` false) is ignored, so nothing but a real key press reaches the privileged code's commands.
+
+## Interface
+
+The settings page and the popup were rebuilt after a UX and UI review (`reviews/2026-11-21-ux-ui/`, git-ignored). The binding design decisions are in `reviews/2026-11-21-ux-ui/design.md`. This section records what changed and what was decided on the way. The specification file was not edited: where it says "access point", the interface now says "AI service", and the code keeps the old name.
+
+### Shell and look
+
+- **The settings page follows Thunderbird's own Settings:** a category list on the left with an icon per category, one pane at a time, no boxes around groups, Thunderbird's colors, type sizes and control sizes (`src/common.css`, shared with the popup). The colors are Thunderbird's own values as `light-dark()` pairs, so both themes come from one set of rules.
+- **Nine panes with their own addresses:** `#overview`, `#lists`, `#log`, `#learning`, `#incoming`, `#ai`, `#shortcuts`, `#advanced`, `#backup`. The current category carries `aria-current="page"`. Opening a pane moves the focus to its title. The arrow keys walk the category list and keep the focus there, as in Thunderbird's Settings.
+- **The icons are original drawings** in the outline style of Thunderbird's category icons. None of Thunderbird's icon files is used.
+- **A description is at most two lines** at full width. What is longer sits behind "Learn more" under the same heading.
+- **A filled button marks one thing only:** the confirm button of a dialog, Save in an editor, and the next step of setup.
+- **Under 760 pixels** the categories become one row that stays at the top, and under 900 pixels a log row is stacked. At 200 percent zoom the page takes that narrow layout.
+- **High contrast.** Where the system replaces the colors of the page, the selected category uses the system's selection colors and hover and marks are outlines.
+
+### Overview and first run
+
+- **The Overview opens with one sentence about the add-on,** then the protection switch with its state, a status line, warnings, the three setup steps and observation mode. Setup step 1 starts the scan in place, step 2 opens the AI pane with the add control focused, step 3 is the switch. A finished setup folds to one line.
+- **The status line is computed, not stored:** the time of the last check, today's figures from the log (`src/core/stats.ts`) and how many AI services would be asked now.
+- **One list of problems** (`src/core/problems.ts`) feeds the warnings of the Overview, the state "On, with problems" and the popup. Every warning has a button that leads to its fix.
+- **Switching protection on too early asks first.** With an AI service on and nothing but the user's own addresses on the white list, a dialog offers "Scan first" (the default), "Switch on anyway" and Cancel.
+
+### Lists
+
+- **The kind of an entry is inferred:** a value with "@" is an address, anything else a domain. The Kind menu and its column are gone, and the table shows the list, the scope, the source and the date.
+- **A wrong value is said under the field** that holds it, and the field keeps the focus.
+- **Removing an entry can be undone** from the confirmation that follows. The background puts back the exact entry (request `restoreEntries`), with its source and date.
+- **The scope of new entries** is set in this pane.
+
+### Log and undoing a decision
+
+- **A log entry now holds the Message-ID** of its message (`messageId`, at most 300 characters). Entries written before have none and therefore no action.
+- **One button per row** undoes the decision where it is seen (request `logAction`, rules in `src/core/logAction.ts`):
+  - "Trust" for Spam, Blocked and for mail without a verdict that was moved: the smart target of the sender goes on the white list (the domain of a company, the address at a public provider), and copies of the message in Junk or a screening folder move to the Inbox.
+  - "Block" for Passed, Trusted and Released, and for mail without a verdict that stayed: the smart target goes on the black list and the message moves to Junk. Where a white list entry decides the sender, only the address is blocked, so a trusted domain stays trusted.
+  - The entry is a manual one, and older entries of the other list that would still decide the sender are removed, as after a shortcut.
+  - When the message is no longer found, the lists change anyway and the row says so.
+- **Tests have no action.** A test score is not a decision, and the decision about the same message is in the log next to it.
+- **An observed decision changes the lists only.** Nothing was moved, so nothing is moved back.
+- **A row whose sender already is on the list the button would add to** offers only the move ("Move to Inbox", "Move to Junk"), or says "Trusted now" when there is nothing to move.
+- **The row answers in place** with what was changed and an Undo, which restores the lists exactly and moves the message back (request `undoLogAction`).
+- **The table has five columns** (time, sender with subject and account, decision with its reason, score, action). The seven columns of the first version do not fit the 800 pixel column of the Settings look.
+- **The Refresh button is gone.** The page redraws when the log changes.
+
+### Popup and context menu
+
+- **The popup blocks and trusts.** With messages selected it shows the sender, "Block sender" and "Trust sender" with their shortcuts, and the whole-domain variant. They run the four commands of the shortcuts (request `runCommand`), and the popup says what was added.
+- **The popup shows the state of the Overview,** counts the problems and leads to them. Until setup is finished it shows "Setup is not finished" with "Open setup" instead of the switch.
+- **A row of the last decisions opens that entry in the log.** `runtime.openOptionsPage()` loads an open settings tab anew when the address differs, which would drop text typed there. The popup therefore activates the open tab (`tabs.update`) and hands the target to the page through the background (requests `showInSettings` and `takeSettingsTarget`, kept for 30 seconds).
+- **Context menu of the message list:** a "Block Spam" submenu with the four commands (`menus` API). This added the permission `menus` to the manifest. Thunderbird 153.7.0 shows no line for it in the installation prompt.
+
+### AI
+
+- **"AI service" is the word in the interface** for what the specification and the code call an access point.
+- **Presets are grouped** (decision models, chat models, the ChatGPT plan, on this computer), the chosen one is described in a line, and a link leads to the page for a key or to the documentation. Only addresses that are certain are linked. Links open in the default browser.
+- **The editor opens in the row it edits,** a new service as a new row. "Load models" works before the first save: it runs the consent and permission step of Save and asks for the models of the unsaved definition (request `listModelsFor`). After Save the service is tested once.
+- **A sign-in in progress is a row of the list** as well: in the row it signs in again, or as a new row (`SignInStatus.accessPointId`).
+- **A service that needs attention says the remedy** (a rejected key, a missing key, a missing permission, a missing sign-in, a refused plan). A failure that neither paused the service nor needs the user says that the request is simply tried again.
+- **A test result is dropped once the service changed after it,** for example a "works" from before the key was rejected.
+- **The note about local servers** appears only in the editor of a service on this computer, with a button that copies the add-on's origin.
+- **The cutoff saves when the field is left.** The prompt has Save, which is available only after a change, "Discard changes" and "Restore default", which only fills the field.
+
+### Language
+
+- **Polish is complete** (`src/_locales/pl`), with the words Thunderbird itself uses. A test keeps the keys and placeholders of every locale equal to English.
+- **Counts have plural forms** (`tn` in `src/tb/i18n.ts`): "_one", "_few" and "_many" per counted string, chosen by the plural rules of the language the strings are in. Each locale names its language in `localeCode`, so a Thunderbird in a language without a translation counts and writes numbers the English way together with the English strings.
+- **Numbers and scores follow the language of the strings** (0.97, in Polish 0,97). Dates and times follow Thunderbird's regional settings, like the rest of Thunderbird.
+- **Folders are shown by the name Thunderbird shows** (Odebrane, Wysłane), with the path as a tooltip.
+- **On macOS shortcuts are written with the key symbols** (⌥B), elsewhere as Alt+B.
+- **The date fields of the scan are Thunderbird's own control.** They speak Thunderbird's language, not the add-on's. The file chooser is a button of the page, so its words come from the locale file.
+
+### Accessibility
+
+- **Every control has a name,** and buttons that repeat name their row ("Remove example.com", "Trust leadgen-pro.test and move the message back to the Inbox"). Each pane has one title, dialogs are labelled by theirs, errors are alerts and confirmations are status messages.
+- **The focus is always visible** and goes where the work goes: into an opened editor or dialog, back to the button that opened it, to the title of a pane, to the entry the popup pointed at.
+- **A redraw does not disturb.** Lists are redrawn row by row (`reconcile` in `src/options/dom.ts`), and only rows that changed are rebuilt, so the focus, a half-typed value and a pending choice in a menu survive the redraw that follows every storage change.
+- **Motion** is switched off where the system asks for reduced motion.
+
+### Smaller decisions
+
+- The buttons that move and remove an AI service are icon buttons in the row, not a "More" menu: one click instead of two, and no menu to build that Thunderbird's Settings do not have either.
+- The remove buttons of tables are always visible, quiet icons. Shown only on hover they would not exist for touch and would jump for keyboard users.
+- The companion for bare keys has no download link, because the project has no public page yet. The Shortcuts pane names its file and how to install it.
+- The browser harness (`npm run harness`) was run again with the rebuilt pages: the scan, the panes and the popup work against the fake API.
 
 ## Known limits
 

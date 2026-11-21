@@ -1070,3 +1070,35 @@ dialog.modal p {
     display: block;
   }
 }
+
+/*
+ * High contrast (forced colors): the system replaces the background colors, so what
+ * a fill said is said with the system's selection colors and with outlines instead.
+ */
+@media (forced-colors: active) {
+  .category {
+    border-color: Canvas;
+  }
+
+  .category:hover {
+    border-color: CanvasText;
+  }
+
+  .category[aria-current="page"] {
+    forced-color-adjust: none;
+    color: SelectedItemText;
+    border-color: SelectedItem;
+    background-color: SelectedItem;
+  }
+
+  tbody tr:hover,
+  table.log tr.highlight {
+    outline: 1px solid CanvasText;
+    outline-offset: -1px;
+  }
+
+  table.log tr.highlight {
+    outline-width: 2px;
+    outline-color: SelectedItem;
+  }
+}
