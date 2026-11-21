@@ -68,6 +68,13 @@ interface Editor {
 interface TestState {
   text: string;
   kind: "busy" | "ok" | "error";
+  /** The state of the service the result belongs to. A result is dropped when the service has changed since. */
+  stamp: string | null;
+}
+
+/** What a later request can change about a service: a test result from before that no longer describes it. */
+function stateStamp(point: AccessPoint): string {
+  return JSON.stringify([point.needsAttention, point.cooldownUntil, point.lastError, point.endpoint, point.model, point.type]);
 }
 
 export function aiSection(shell: Shell): Section {
@@ -614,17 +621,38 @@ export function aiSection(shell: Shell): Section {
   // The list of services.
 
   function runTest(id: string): void {
-    tests.set(id, { text: t("apTesting"), kind: "busy" });
+    tests.set(id, { text: t("apTesting"), kind: "busy", stamp: null });
     drawList();
     void (async () => {
+      let result: Omit<TestState, "stamp">;
       try {
         const outcome = await send("testAccessPoint", { id });
-        tests.set(id, outcome.ok ? { text: t("apTestScore", formatScore(outcome.score, stringsLocale())), kind: "ok" } : { text: t("apTestFailed", outcome.error), kind: "error" });
+        result = outcome.ok
+          ? { text: t("apTestScore", formatScore(outcome.score, stringsLocale())), kind: "ok" }
+          : { text: t("apTestFailed", outcome.error), kind: "error" };
       } catch (error) {
-        tests.set(id, { text: t("apTestFailed", errorText(error)), kind: "error" });
+        result = { text: t("apTestFailed", errorText(error)), kind: "error" };
+      }
+      // A successful test clears the problems of the service: read that first, so the result is tied to the state it left.
+      await shell.refresh().catch(() => undefined);
+      const point = model?.accessPoints.find((item) => item.id === id);
+      if (point === undefined) {
+        tests.delete(id);
+      } else {
+        tests.set(id, { ...result, stamp: stateStamp(point) });
       }
       drawList();
     })();
+  }
+
+  /** Forgets test results that a later request has overtaken, for example a test that worked before the key was rejected. */
+  function dropStaleTests(points: readonly AccessPoint[]): void {
+    for (const [id, test] of tests) {
+      const point = points.find((item) => item.id === id);
+      if (point === undefined || (test.stamp !== null && test.stamp !== stateStamp(point))) {
+        tests.delete(id);
+      }
+    }
   }
 
   function statusLines(point: AccessPoint, now: number): HTMLElement[] {
@@ -768,6 +796,7 @@ export function aiSection(shell: Shell): Section {
     }
     const points = model.accessPoints;
     const now = Date.now();
+    dropStaleTests(points);
     if (editor !== null && editor.id !== null && !points.some((point) => point.id === editor?.id)) {
       editor = null;
     }

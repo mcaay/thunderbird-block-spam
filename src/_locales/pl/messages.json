@@ -276,7 +276,7 @@
     "message": "Wybierz folder"
   },
   "openAi": {
-    "message": "Otwórz AI"
+    "message": "Pokaż usługi AI"
   },
   "setupTitle": {
     "message": "Konfiguracja"
@@ -1504,6 +1504,18 @@
   },
   "popupOpenSetup": {
     "message": "Otwórz konfigurację"
+  },
+  "popupProblems_one": {
+    "message": "$1 problem wymaga uwagi."
+  },
+  "popupProblems_few": {
+    "message": "$1 problemy wymagają uwagi."
+  },
+  "popupProblems_many": {
+    "message": "$1 problemów wymaga uwagi."
+  },
+  "popupShowProblems": {
+    "message": "Pokaż w ustawieniach"
   },
   "popupNoSelection": {
     "message": "Zaznacz wiadomość, aby tutaj zablokować jej nadawcę lub mu zaufać."

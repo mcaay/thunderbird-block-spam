@@ -59,6 +59,7 @@ export function logSection(): Section {
       id: "log-filter",
       onchange: () => {
         limit = LOG_PAGE;
+        highlighted = null;
         draw();
       },
     },
@@ -74,6 +75,7 @@ export function logSection(): Section {
     attrs: { "aria-label": t("logSearchLabel") },
     oninput: () => {
       limit = LOG_PAGE;
+      highlighted = null;
       draw();
     },
   });
@@ -423,6 +425,13 @@ export function logSection(): Section {
       wanted = intent.key;
       highlighted = intent.key;
       void guard(load);
+    },
+    leave() {
+      // The mark of the entry the popup pointed at lasts for this visit of the pane.
+      if (highlighted !== null) {
+        highlighted = null;
+        draw();
+      }
     },
   };
 }

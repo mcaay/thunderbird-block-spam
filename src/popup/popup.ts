@@ -5,6 +5,8 @@
 import type { CommandName } from "../core/commandNames";
 import type { SenderInfo } from "../core/engine";
 import { KEY_ACCESS_POINTS, KEY_ENTRIES, KEY_SETTINGS, logEntryKey } from "../core/keys";
+import { findProblems } from "../core/problems";
+import type { AccountFacts } from "../core/problems";
 import type { AccessPoint, Entry, LogEntry, Settings } from "../core/types";
 import { address, button, byId, errorText, h, replace } from "../options/dom";
 import type { Child } from "../options/dom";
@@ -56,19 +58,46 @@ async function openSettings(target: SettingsTarget | null = null): Promise<void>
   window.close();
 }
 
-function drawState(status: Status, settings: Settings | null): void {
+/** The same state as on the Overview of the settings page. */
+function drawState(status: Status, settings: Settings | null, problems: boolean): void {
   if (status.fatal !== null || settings === null) {
     stateBox.className = "state problems";
     replace(stateBox, icon("warning"), t("popupDataProblem"));
     return;
   }
-  const kind = !settings.protection ? "off" : settings.observation ? "observing" : "on";
+  const kind = !settings.protection ? "off" : problems ? "problems" : settings.observation ? "observing" : "on";
   stateBox.className = `state ${kind}`;
   replace(
     stateBox,
-    icon(kind === "off" ? "off" : "success"),
-    t(kind === "off" ? "stateOff" : kind === "observing" ? "stateObserving" : "stateOn"),
+    icon(kind === "problems" ? "warning" : kind === "off" ? "off" : "success"),
+    t(kind === "off" ? "stateOff" : kind === "problems" ? "stateProblems" : kind === "observing" ? "stateObserving" : "stateOn"),
   );
+}
+
+/** What the check for problems needs to know about the accounts: their Inbox folders, and whether they have a Junk folder. */
+async function accountFacts(): Promise<AccountFacts[]> {
+  const [accounts, inboxes, junk] = await Promise.all([
+    browser.accounts.list(false),
+    browser.folders.query({ specialUse: ["inbox"] }),
+    browser.folders.query({ specialUse: ["junk"] }),
+  ]);
+  const real = (folder: { isRoot?: boolean; isVirtual?: boolean; isUnified?: boolean; isTag?: boolean }): boolean =>
+    folder.isRoot !== true && folder.isVirtual !== true && folder.isUnified !== true && folder.isTag !== true;
+  return accounts.map((account) => ({
+    id: account.id,
+    inboxes: inboxes.filter((folder) => folder.accountId === account.id && real(folder)).map((folder) => ({ accountId: account.id, path: folder.path })),
+    hasJunk: junk.some((folder) => folder.accountId === account.id && real(folder)),
+  }));
+}
+
+/** How many warnings the Overview of the settings page shows at the moment. */
+async function countProblems(settings: Settings, accessPoints: AccessPoint[]): Promise<number> {
+  if (!settings.protection) {
+    return 0;
+  }
+  // When the accounts cannot be read, the problems of the AI services are still found.
+  const accounts = await accountFacts().catch(() => []);
+  return findProblems({ settings, accessPoints, accounts, onlyOwnAddresses: false, now: Date.now() }).length;
 }
 
 // ---------------------------------------------------------------------------
@@ -301,16 +330,19 @@ async function draw(): Promise<void> {
   ]);
   shortcuts = keys;
   const settings = status.fatal === null ? ((stored[KEY_SETTINGS] as Settings | undefined) ?? null) : null;
-  drawState(status, settings);
+  const accessPoints = (stored[KEY_ACCESS_POINTS] as AccessPoint[] | undefined) ?? [];
+  const entries = (stored[KEY_ENTRIES] as Entry[] | undefined) ?? [];
+  // Setup is finished once the white list holds more than the user's own addresses.
+  const setupDone = entries.some((entry) => entry.list === "white" && entry.source !== "identity");
+  // Before that the popup points at setup, which is where the Overview shows the only warning there can be.
+  const problems = status.fatal === null && settings !== null && setupDone ? await countProblems(settings, accessPoints) : 0;
+  drawState(status, settings, problems > 0);
   if (status.fatal !== null || settings === null) {
     // Stored data that failed validation is not read any further.
     replace(content, h("section", {}, h("p", { text: t("popupDataProblemText") }), h("div", { class: "row" }, button(t("popupOpenSettings"), () => void openSettings()))));
     return;
   }
-  const entries = (stored[KEY_ENTRIES] as Entry[] | undefined) ?? [];
-  const hasAi = ((stored[KEY_ACCESS_POINTS] as AccessPoint[] | undefined) ?? []).some((point) => point.enabled);
-  // Setup is finished once the white list holds more than the user's own addresses.
-  const setupDone = entries.some((entry) => entry.list === "white" && entry.source !== "identity");
+  const hasAi = accessPoints.some((point) => point.enabled);
   const tabId = await activeTabId();
 
   if (!setupDone) {
@@ -334,7 +366,18 @@ async function draw(): Promise<void> {
   }
   scoreBox.hidden = !hasAi;
   replace(footer, scoreBox, h("div", { class: "row end" }, toggleButton(settings)));
-  replace(content, selectionBox, recentBox, footer);
+  // The warnings themselves, each with its fix, are on the Overview of the settings page.
+  const notice =
+    problems === 0
+      ? null
+      : h(
+          "section",
+          { class: "notice" },
+          icon("warning"),
+          h("span", { class: "notice-text", text: tn("popupProblems", problems), attrs: { role: "status" } }),
+          button(t("popupShowProblems"), () => void openSettings({ pane: "overview", logKey: null }), "small"),
+        );
+  replace(content, notice, selectionBox, recentBox, footer);
   drawRecent(await recentLog(RECENT));
   await drawSelection(tabId);
 }

@@ -22,6 +22,8 @@ export interface Section {
   reveal?(intent: Intent): void;
   /** True while the pane holds text that was typed but not saved. */
   unsaved?(): boolean;
+  /** Called when another pane is opened instead of this one. */
+  leave?(): void;
 }
 
 /** What the page offers its panes. */

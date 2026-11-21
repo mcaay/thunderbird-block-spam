@@ -35,6 +35,28 @@ section > p:last-child {
   margin-bottom: 0;
 }
 
+/* Protection is on but something needs the user: one line that leads to the warnings in the settings. */
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--bar-warning);
+}
+
+.notice > .icon {
+  flex: none;
+  color: var(--icon-warning);
+}
+
+.notice-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.notice button {
+  flex: none;
+}
+
 .sender {
   margin-bottom: 6px;
   overflow-wrap: anywhere;

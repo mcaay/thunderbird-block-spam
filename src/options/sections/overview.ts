@@ -2,17 +2,18 @@
 // line and warnings, the three setup steps, and observation mode.
 
 import { entriesFromArray, whiteListIsOnlyIdentities } from "../../core/lists";
+import { findProblems } from "../../core/problems";
 import { aiHealth, summarizeDay } from "../../core/stats";
 import type { DaySummary } from "../../core/stats";
 import { t, tCode, tn } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
 import { remedyOf, refreshGrants } from "../aiState";
 import { bar, button, byId, checkRow, description, dialog, download, guard, h, learnMore, reconcile, replace } from "../dom";
-import type { Keyed } from "../dom";
+import type { Child, Keyed } from "../dom";
 import { formatShortTime } from "../format";
 import { icon } from "../icons";
 import { logReader } from "../logData";
-import { forgetAccounts, monitoredFolders } from "../model";
+import { accountName, forgetAccounts } from "../model";
 import type { Model } from "../model";
 import type { Section, Shell } from "../section";
 import { scanText } from "./scanText";
@@ -126,98 +127,72 @@ export function overviewSection(shell: Shell): Section {
     );
   }
 
+  /** One warning per problem, each with the button that leads to its fix. */
   function warningBars(current: Model): Keyed[] {
     const settings = current.settings;
     if (settings === null) {
       return [];
     }
+    const warning = (key: string, signature: string, text: Child[], action: HTMLElement | null): Keyed => ({
+      key,
+      signature,
+      build: () => bar("warning", text, [action]),
+    });
+    const fix = (label: string, focus: string, onclick: () => void): HTMLElement =>
+      h("button", { type: "button", text: label, attrs: { "data-focus": focus }, onclick });
+    const problems = findProblems({
+      settings,
+      accessPoints: current.accessPoints,
+      accounts: current.accounts,
+      onlyOwnAddresses: whiteListIsOnlyIdentities(entriesFromArray(current.entries)),
+      now: Date.now(),
+    });
     const bars: Keyed[] = [];
-    if (aiBeforeScan(current)) {
-      const running = current.status.scan?.running === true;
-      bars.push({
-        key: "ai-before-scan",
-        signature: String(running),
-        build: () =>
-          bar(
-            "warning",
-            [t("warnAiBeforeScan")],
-            [running ? null : h("button", { type: "button", text: t("scanStart"), onclick: () => void guard(startFullScan), attrs: { "data-focus": "scan" } })],
+    for (const problem of problems) {
+      if (problem.kind === "ai-before-scan") {
+        const running = current.status.scan?.running === true;
+        bars.push(
+          warning("ai-before-scan", String(running), [t("warnAiBeforeScan")], running ? null : fix(t("scanStart"), "scan", () => void guard(startFullScan))),
+        );
+      } else if (problem.kind === "no-junk") {
+        const name = accountName(current, problem.accountId);
+        bars.push(
+          warning(
+            `no-junk:${problem.accountId}`,
+            name,
+            [t("warnNoJunk", name)],
+            fix(t("checkAgain"), "check", () => {
+              forgetAccounts();
+              void shell.refresh();
+            }),
           ),
-      });
-    }
-    for (const account of current.accounts.filter((item) => monitoredFolders(item, settings).length > 0 && !item.hasJunk)) {
-      bars.push({
-        key: `no-junk:${account.id}`,
-        signature: account.name,
-        build: () =>
-          bar(
-            "warning",
-            [t("warnNoJunk", account.name)],
-            [
-              h("button", {
-                type: "button",
-                text: t("checkAgain"),
-                attrs: { "data-focus": "check" },
-                onclick: () => {
-                  forgetAccounts();
-                  void shell.refresh();
-                },
-              }),
-            ],
-          ),
-      });
-    }
-    const health = aiHealth(current.accessPoints, Date.now());
-    for (const point of current.accessPoints.filter((item) => item.enabled && item.needsAttention)) {
-      const remedy = remedyOf(point);
-      bars.push({
-        key: `attention:${point.id}`,
-        signature: `${point.name}|${remedy}`,
-        build: () =>
-          bar(
-            "warning",
-            [t("warnNeedsAttention", point.name), " ", tCode("remedy", remedy)],
-            [
-              h("button", {
-                type: "button",
-                text: t("editNamed", point.name),
-                attrs: { "data-focus": "edit" },
-                onclick: () => shell.go("ai", { kind: "ai-edit", id: point.id }),
-              }),
-            ],
-          ),
-      });
-    }
-    // Paused services come back by themselves. Only when none is left does it matter here.
-    if (health.enabled > 0 && health.working === 0 && current.accessPoints.some((item) => item.enabled && !item.needsAttention)) {
-      bars.push({
-        key: "ai-down",
-        signature: "",
-        build: () =>
-          bar("warning", [t("warnAiDown")], [h("button", { type: "button", text: t("openAi"), attrs: { "data-focus": "ai" }, onclick: () => shell.go("ai") })]),
-      });
-    }
-    if (settings.noVerdictAction === "screening") {
-      for (const account of current.accounts.filter(
-        (item) => monitoredFolders(item, settings).length > 0 && !settings.screeningFolders.some((folder) => folder.accountId === item.id),
-      )) {
-        bars.push({
-          key: `no-screening:${account.id}`,
-          signature: account.name,
-          build: () =>
-            bar(
-              "warning",
-              [t("warnNoScreening", account.name)],
-              [
-                h("button", {
-                  type: "button",
-                  text: t("chooseScreening"),
-                  attrs: { "data-focus": "screening" },
-                  onclick: () => shell.go("incoming", { kind: "screening", accountId: account.id }),
-                }),
-              ],
+        );
+      } else if (problem.kind === "attention") {
+        const point = current.accessPoints.find((item) => item.id === problem.accessPointId);
+        if (point !== undefined) {
+          const remedy = remedyOf(point);
+          bars.push(
+            warning(
+              `attention:${point.id}`,
+              `${point.name}|${remedy}`,
+              [t("warnNeedsAttention", point.name), " ", tCode("remedy", remedy)],
+              fix(t("editNamed", point.name), "edit", () => shell.go("ai", { kind: "ai-edit", id: point.id })),
             ),
-        });
+          );
+        }
+      } else if (problem.kind === "ai-down") {
+        bars.push(warning("ai-down", "", [t("warnAiDown")], fix(t("openAi"), "ai", () => shell.go("ai"))));
+      } else {
+        const accountId = problem.accountId;
+        const name = accountName(current, accountId);
+        bars.push(
+          warning(
+            `no-screening:${accountId}`,
+            name,
+            [t("warnNoScreening", name)],
+            fix(t("chooseScreening"), "screening", () => shell.go("incoming", { kind: "screening", accountId })),
+          ),
+        );
       }
     }
     return bars;

@@ -276,7 +276,7 @@
     "message": "Choose a folder"
   },
   "openAi": {
-    "message": "Open AI"
+    "message": "Show AI services"
   },
   "setupTitle": {
     "message": "Setup"
@@ -1504,6 +1504,18 @@
   },
   "popupOpenSetup": {
     "message": "Open setup"
+  },
+  "popupProblems_one": {
+    "message": "$1 problem needs your attention."
+  },
+  "popupProblems_few": {
+    "message": "$1 problems need your attention."
+  },
+  "popupProblems_many": {
+    "message": "$1 problems need your attention."
+  },
+  "popupShowProblems": {
+    "message": "Show in Settings"
   },
   "popupNoSelection": {
     "message": "Select a message to block or trust its sender here."

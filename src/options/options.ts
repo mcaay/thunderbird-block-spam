@@ -58,8 +58,14 @@ function isFatal(): boolean {
 }
 
 /** Shows one pane and marks its category. While stored data is invalid only the Overview exists. */
+let shown: PaneId | null = null;
+
 function showPane(wanted: PaneId, focusTitle: boolean): PaneId {
   const pane = isFatal() ? "overview" : wanted;
+  if (shown !== null && shown !== pane) {
+    sections[shown].leave?.();
+  }
+  shown = pane;
   for (const id of PANES) {
     byId(id).hidden = id !== pane;
     const link = links.get(id);
