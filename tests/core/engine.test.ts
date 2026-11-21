@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { WINDOW_MS } from "../../src/core/engine";
+import { receivedTime, WINDOW_MS } from "../../src/core/engine";
 import type { ScanProgress } from "../../src/core/engine";
 import { entryKey } from "../../src/core/lists";
 import { Engine } from "../../src/core/engine";
@@ -183,6 +183,33 @@ describe("fast path for new mail", () => {
     const inbox = h.mail.put(INBOX1, { author: "a@blocked.example", date: h.clock.now + MINUTE });
     await h.engine.handleNewMail(INBOX1, await pages([inbox]));
     expect(h.mail.ids(INBOX1)).toEqual([inbox.id]);
+  });
+
+  it("handles backdated mail that arrived after protection was switched on, by its Received header", async () => {
+    const h = await ready();
+    const arrival = new Date(h.clock.now + MINUTE).toUTCString();
+    const backdated = h.mail.put(INBOX1, {
+      author: "a@blocked.example",
+      date: Date.UTC(2020, 0, 1),
+      headers: { received: [`from mx.outreach.example by mx.mycompany.example; ${arrival}`, "from a by b; Wed, 1 Jan 2020 00:00:00 +0000"] },
+    });
+    const old = h.mail.put(INBOX1, {
+      author: "b@blocked.example",
+      date: Date.UTC(2020, 0, 1),
+      headers: { received: ["by mx.mycompany.example; Wed, 01 Jan 2020 00:00:05 +0000 (UTC)"] },
+    });
+    const unknown = h.mail.put(INBOX1, { author: "c@blocked.example", date: Date.UTC(2020, 0, 1) });
+    h.clock.now += 2 * MINUTE;
+    await h.engine.handleNewMail(INBOX1, await pages([backdated, old, unknown]));
+    expect(h.mail.ids(JUNK1)).toEqual([backdated.id]);
+    expect(h.mail.ids(INBOX1)).toEqual([old.id, unknown.id]);
+    expect(h.log()).toMatchObject([{ outcome: "blocked", sender: "a@blocked.example" }]);
+  });
+
+  it("reads the arrival time of a Received header", () => {
+    expect(receivedTime("from a by b with ESMTPS id x; Tue, 24 Nov 2026 12:00:00 +0100 (CET)")).toBe(Date.UTC(2026, 10, 24, 11));
+    expect(receivedTime("from a by b")).toBe(0);
+    expect(receivedTime("by b; not a date")).toBe(0);
   });
 
   it("skips mail dated before protection was switched on, but handles late arrivals after it", async () => {

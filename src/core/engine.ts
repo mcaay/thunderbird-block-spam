@@ -74,6 +74,19 @@ export interface TestScoreSummary {
 
 export type AccessPointTestResult = { ok: true; score: number } | { ok: false; error: string };
 
+/**
+ * The time at the end of a Received header ("from ... by ...; Tue, 21 Nov 2026
+ * 12:00:00 +0100 (CET)") in epoch milliseconds, or 0 when there is none.
+ */
+export function receivedTime(value: string): number {
+  const separator = value.lastIndexOf(";");
+  if (separator === -1) {
+    return 0;
+  }
+  const time = Date.parse(value.slice(separator + 1).replace(/\([^()]*\)/g, " ").trim());
+  return Number.isFinite(time) ? time : 0;
+}
+
 export class Engine {
   private sweeping = false;
   private sweepAgain = false;
@@ -264,7 +277,7 @@ export class Engine {
 
   /**
    * Fast path for messages.onNewMailReceived. Uses the same handler as the tick.
-   * Mail dated before protection was switched on is never handled.
+   * Mail that arrived before protection was switched on is never handled.
    */
   async handleNewMail(folder: FolderRef, pages: AsyncIterable<MessageInfo[]>): Promise<void> {
     const { state } = this.deps;
@@ -282,10 +295,24 @@ export class Engine {
         if (!state.settings.protection) {
           return;
         }
-        if (message.date === 0 || message.date > protectionOnAt) {
+        if (message.date === 0 || message.date > protectionOnAt || (await this.arrivedAfter(message, protectionOnAt))) {
           await this.handleIncoming(context, message);
         }
       }
+    }
+  }
+
+  /**
+   * The Date header is written by the sender, so a message dated before a moment may
+   * still have arrived after it. The newest Received header is written by the
+   * receiving server and tells when the message really arrived.
+   */
+  private async arrivedAfter(message: MessageInfo, time: number): Promise<boolean> {
+    try {
+      const received = (await this.deps.mail.headers(message.id))["received"]?.[0];
+      return received !== undefined && receivedTime(received) > time;
+    } catch {
+      return false;
     }
   }
 

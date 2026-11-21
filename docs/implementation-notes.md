@@ -61,7 +61,7 @@ Where the documentation left a question open, the source code of Thunderbird (`t
 
 ### Incoming mail
 
-- **The fast path handles the messages of the event itself** and skips mail dated before protection was switched on. The tick uses the date query of the specification. Both use the same per-message handler and the same processed set.
+- **The fast path handles the messages of the event itself** and skips mail that arrived before protection was switched on. The Date header is written by the sender, so for a message dated before that moment the time in its newest `Received` header, written by the receiving server, decides. The tick uses the date query of the specification. Both use the same per-message handler and the same processed set.
 - **A processed record of a message dated in the future** is filed under the message's date instead of today, so it cannot expire while the message would still be returned by the date query.
 - **Buckets are pruned after a completed tick**, never before one.
 - **An unexpected failure while handling a message** is logged and the message is marked as processed, like a failed move. It is not retried.
@@ -118,5 +118,5 @@ Where the documentation left a question open, the source code of Thunderbird (`t
 
 - A message that exists in two monitored folders of one account (the same Message-ID) is handled once.
 - A sender's display name is not used anywhere, also not for the AI.
-- Mail that arrives with a `Date` header older than 48 hours before the previous tick is handled only by the fast path, not by the tick.
+- The tick finds mail by its `Date` header, which the sender writes. Mail dated more than 48 hours before the previous tick, or before protection was switched on, is handled only by the fast path, which looks at the arrival time in the newest `Received` header. If the new mail event does not fire for such a message, it is not handled.
 - The companion suppresses `B` and `W` also when the main add-on is disabled. Remove or disable the companion in that case.

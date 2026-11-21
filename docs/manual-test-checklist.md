@@ -99,6 +99,7 @@ Pending for every provider. One Test and one real message each:
 - [ ] Protection on, no AI: mail from a whitelisted sender stays, mail from a blacklisted sender goes to Junk, mail from an unknown sender follows the "no AI verdict" setting (try all three values).
 - [ ] With an AI access point: an obvious cold email is scored above the cutoff, the sender's domain appears on the black list (source "AI") and the message is in Junk. A normal first message stays in the Inbox and nothing is remembered about its sender.
 - [ ] Mail that was already in the Inbox before protection was switched on is not touched.
+- [ ] A message from a blacklisted sender with a `Date` header years in the past, sent while protection is on, still goes to Junk when it arrives (the new mail event reads its `Received` header).
 - [ ] Observation mode: nothing is moved, nothing is added by the AI, the log shows what would have happened.
 
 ### B3. Mail read on a phone first
