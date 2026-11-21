@@ -53,6 +53,8 @@ export interface ChainOptions {
    * only when it refuses the sample as well.
    */
   probe?: (point: AccessPoint) => Promise<number>;
+  /** Asked before each access point. True ends the chain without a verdict, for example once the sender is on a list. */
+  stop?: () => boolean;
 }
 
 /** At most a day, and always a number that can be stored and validated again. */
@@ -87,6 +89,9 @@ export async function runChain(
   for (const point of points) {
     if (!isAvailable(point, now())) {
       continue;
+    }
+    if (options.stop?.() === true) {
+      break;
     }
     try {
       const value = await score(point);

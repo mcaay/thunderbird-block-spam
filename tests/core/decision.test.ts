@@ -293,6 +293,99 @@ describe("decision for one message", () => {
     expect(h.state.entries.get(entryKey("domain", "outreach.example", "all"))).toMatchObject({ list: "white", source: "manual" });
     expect(h.log()[0]).toMatchObject({ outcome: "trusted", action: "none", reason: "white-domain", score: 0.99 });
   });
+
+  describe("lists and settings that change while the message is decided", () => {
+    const trust = (h: Harness): void => {
+      h.state.addEntry({ list: "white", kind: "domain", value: "outreach.example", scope: "all", source: "manual" }, 5);
+    };
+
+    it("sends nothing to the AI when the sender is trusted while the body is read", async () => {
+      const h = await protectedHarness();
+      h.state.accessPoints = [accessPoint()];
+      const read = h.mail.bodyText.bind(h.mail);
+      h.mail.bodyText = async (id) => {
+        trust(h);
+        return read(id);
+      };
+      const msg = h.mail.put(INBOX1, { author: "a@outreach.example", date: arrived(h) });
+      await h.engine.tick();
+      expect(h.ai.calls).toHaveLength(0);
+      expect(h.mail.ids(INBOX1)).toEqual([msg.id]);
+      expect(h.log()[0]).toMatchObject({ outcome: "trusted", reason: "white-domain", score: null });
+    });
+
+    it("asks no further access point once the sender is trusted", async () => {
+      const h = await protectedHarness();
+      h.state.accessPoints = [accessPoint({ id: "a", name: "A" }), accessPoint({ id: "b", name: "B" })];
+      h.ai.replies = {
+        a: () => {
+          trust(h);
+          throw transient();
+        },
+        b: 0.99,
+      };
+      h.mail.put(INBOX1, { author: "a@outreach.example", date: arrived(h) });
+      await h.engine.tick();
+      expect(h.ai.calls.map((call) => call.point)).toEqual(["a"]);
+      expect(h.log()[0]).toMatchObject({ outcome: "trusted", action: "none" });
+    });
+
+    it("lets a sender trusted while every access point failed outrank the no AI verdict setting", async () => {
+      const h = await protectedHarness();
+      h.state.settings.noVerdictAction = "junk";
+      h.state.accessPoints = [accessPoint()];
+      h.ai.replies["*"] = () => {
+        trust(h);
+        throw transient();
+      };
+      const msg = h.mail.put(INBOX1, { author: "a@outreach.example", date: arrived(h) });
+      await h.engine.tick();
+      expect(h.mail.ids(INBOX1)).toEqual([msg.id]);
+      expect(h.log()[0]).toMatchObject({ outcome: "trusted", action: "none" });
+    });
+
+    it("moves nothing and writes no AI entry when observation mode is switched on during scoring", async () => {
+      const h = await protectedHarness();
+      h.state.accessPoints = [accessPoint()];
+      h.ai.replies["*"] = () => {
+        // The settings page replaces the settings object, as updateSettings does.
+        h.state.settings = { ...h.state.settings, observation: true };
+        return 0.99;
+      };
+      const msg = h.mail.put(INBOX1, { author: "a@outreach.example", date: arrived(h) });
+      await h.engine.tick();
+      expect(h.mail.ids(INBOX1)).toEqual([msg.id]);
+      expect(h.state.entries.has(entryKey("domain", "outreach.example", "all"))).toBe(false);
+      expect(h.log()[0]).toMatchObject({ outcome: "spam", action: "junk", observed: true });
+    });
+
+    it("moves nothing when protection is paused during scoring", async () => {
+      const h = await protectedHarness();
+      h.state.accessPoints = [accessPoint()];
+      h.ai.replies["*"] = () => {
+        h.state.settings.protection = false;
+        return 0.99;
+      };
+      const msg = h.mail.put(INBOX1, { author: "a@outreach.example", date: arrived(h) });
+      await h.engine.tick();
+      expect(h.mail.ids(INBOX1)).toEqual([msg.id]);
+      expect(h.state.entries.has(entryKey("domain", "outreach.example", "all"))).toBe(false);
+      expect(h.log()[0]).toMatchObject({ outcome: "spam", observed: true });
+    });
+
+    it("uses the cutoff that is set when the score arrives", async () => {
+      const h = await protectedHarness();
+      h.state.accessPoints = [accessPoint()];
+      h.ai.replies["*"] = () => {
+        h.state.settings = { ...h.state.settings, cutoff: 0.99 };
+        return 0.95;
+      };
+      const msg = h.mail.put(INBOX1, { author: "a@outreach.example", date: arrived(h) });
+      await h.engine.tick();
+      expect(h.mail.ids(INBOX1)).toEqual([msg.id]);
+      expect(h.log()[0]).toMatchObject({ outcome: "passed", score: 0.95 });
+    });
+  });
 });
 
 describe("forwarded mail", () => {

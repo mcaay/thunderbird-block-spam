@@ -95,11 +95,19 @@ export interface DecisionDeps {
   junkFolder(accountId: string): Promise<FolderRef | null>;
 }
 
-/** Runs the chain with the current prompt and stores changed access point state. */
-export async function scorePayload(deps: Pick<DecisionDeps, "state" | "ai" | "now">, payload: string): Promise<ChainResult> {
+/**
+ * Runs the chain with the current prompt and stores changed access point state.
+ * The chain ends early when stop() turns true before an access point is asked.
+ */
+export async function scorePayload(
+  deps: Pick<DecisionDeps, "state" | "ai" | "now">,
+  payload: string,
+  stop?: () => boolean,
+): Promise<ChainResult> {
   const { state, ai, now } = deps;
   const result = await runChain(state.accessPoints, (point) => ai.score(point, state.settings.prompt, payload), now, {
     probe: (point) => ai.score(point, state.settings.prompt, SAMPLE_PAYLOAD),
+    stop,
   });
   if (result.stateChanged) {
     await state.saveAccessPoints();
@@ -122,12 +130,19 @@ function matchDetail(entry: Entry): string {
  * Decides one message and carries the decision out: writes the black list entry
  * first, then moves. In observation mode nothing is moved and no entry is written.
  * A failed move leaves the message where it is. Returns the log entry.
+ *
+ * Reading the body and asking the AI take time, during which the user can trust the
+ * sender, switch observation mode on or pause protection. So the lists and settings
+ * are read when they are used, never kept from the start.
  */
 export async function decideMessage(deps: DecisionDeps, message: MessageInfo): Promise<LogEntry> {
   const { state, mail, now } = deps;
-  const { settings } = state;
   const reader = new MessageReader(mail, message);
   const effective = await reader.effectiveSender(state);
+  /** A decision that finishes after protection was paused is only observed, too. */
+  const observing = (): boolean => state.settings.observation || !state.settings.protection;
+  const listed = (): Entry | null =>
+    effective.sender === null ? null : matchSender(state.entries, effective.sender, message.accountId);
 
   const entry: LogEntry = {
     time: now(),
@@ -142,7 +157,7 @@ export async function decideMessage(deps: DecisionDeps, message: MessageInfo): P
     accessPoint: "",
     reason: "",
     detail: "",
-    observed: settings.observation,
+    observed: false,
     test: false,
   };
 
@@ -151,13 +166,14 @@ export async function decideMessage(deps: DecisionDeps, message: MessageInfo): P
     entry.reason = reason;
     entry.detail = detail;
     entry.action = action;
-    if (action === "none" || settings.observation) {
+    entry.observed = observing();
+    if (action === "none" || entry.observed) {
       return entry;
     }
     const target =
       action === "junk"
         ? await deps.junkFolder(message.accountId)
-        : (settings.screeningFolders.find((folder) => folder.accountId === message.accountId) ?? null);
+        : (state.settings.screeningFolders.find((folder) => folder.accountId === message.accountId) ?? null);
     if (target === null) {
       entry.action = "none";
       entry.reason = action === "junk" ? REASONS.noJunkFolder : REASONS.noScreeningFolder;
@@ -189,14 +205,14 @@ export async function decideMessage(deps: DecisionDeps, message: MessageInfo): P
 
   // For a wrapped forward whose original sender is unknown, the forwarding
   // mailbox's own list status is never used: the sender is simply unknown.
-  const match = effective.sender === null ? null : matchSender(state.entries, effective.sender, message.accountId);
+  const match = listed();
   if (match !== null) {
     return byList(match);
   }
 
   const noVerdict = (reason: string, detail: string): Promise<LogEntry> => {
-    const action: Action =
-      settings.noVerdictAction === "junk" ? "junk" : settings.noVerdictAction === "screening" ? "screening" : "none";
+    const setting = state.settings.noVerdictAction;
+    const action: Action = setting === "junk" ? "junk" : setting === "screening" ? "screening" : "none";
     return finish("no-verdict", action, reason, detail);
   };
 
@@ -204,21 +220,25 @@ export async function decideMessage(deps: DecisionDeps, message: MessageInfo): P
     return noVerdict(REASONS.noAi, "");
   }
 
-  const result = await scorePayload(deps, await reader.payload(effective));
-  if (result.verdict === null) {
-    return noVerdict(REASONS.aiFailed, result.attempts.map((attempt) => `${attempt.accessPoint}: ${attempt.error}`).join("; "));
+  const payload = await reader.payload(effective);
+  // Nothing more is sent once the sender is on a list.
+  const result = await scorePayload(deps, payload, () => listed() !== null);
+  if (result.verdict !== null) {
+    entry.score = result.verdict.score;
+    entry.accessPoint = result.verdict.accessPoint;
   }
-  entry.score = result.verdict.score;
-  entry.accessPoint = result.verdict.accessPoint;
 
-  // The lists may have changed while the AI was working (a shortcut, sent mail).
-  // A list entry always outranks an AI verdict.
-  const later = effective.sender === null ? null : matchSender(state.entries, effective.sender, message.accountId);
+  // The lists may have changed while the body was read or the AI was working (a
+  // shortcut, sent mail). A list entry outranks the AI and the "no AI verdict" setting.
+  const later = listed();
   if (later !== null) {
     return byList(later);
   }
+  if (result.verdict === null) {
+    return noVerdict(REASONS.aiFailed, result.attempts.map((attempt) => `${attempt.accessPoint}: ${attempt.error}`).join("; "));
+  }
 
-  if (!isSpam(result.verdict.score, settings.cutoff)) {
+  if (!isSpam(result.verdict.score, state.settings.cutoff)) {
     return finish("passed", "none", REASONS.aiBelow, "");
   }
 
@@ -227,7 +247,7 @@ export async function decideMessage(deps: DecisionDeps, message: MessageInfo): P
     const target = smartTarget(effective.sender, state.publicDomains);
     const scope = state.newEntryScope(message.accountId);
     detail = `${target.value} [${scope}]`;
-    if (!settings.observation) {
+    if (!observing()) {
       // The black list entry is always written before the move.
       state.addEntry({ list: "black", kind: target.kind, value: target.value, scope, source: "ai" }, now());
       await state.saveEntries();
