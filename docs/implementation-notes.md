@@ -6,7 +6,7 @@ Decisions made while implementing `docs/specs/2026-11-21-thunderbird-block-spam-
 
 - **Verified by tests:** all of `src/core` and `src/ai` with fake mail and HTTP layers, the companion's key logic in a sandbox, and repository rules (strings, manifest, layering). Run `npm run check`.
 - **Verified in a browser:** the built background page and settings page were run together in a Chromium browser against a fake of the Thunderbird API, including a scan, new mail, shortcuts, an access point with consent, and a complete ChatGPT sign-in against a fake OpenAI (code exchange, ID token signature check with WebCrypto, model list, streamed score). `npm run harness` builds that setup in `dist/harness`; the comment at the top of `scripts/harness.mjs` says how to open it.
-- **Not verified:** anything in a real Thunderbird, with a real mailbox or with a real AI service. Every such check is listed in `docs/manual-test-checklist.md`.
+- **Verified in Thunderbird 153.7.0 on macOS:** isolated profiles, loopback IMAP/SMTP accounts and mock AI servers, including installation prompts, mail moves, learning, shortcuts, background suspension, imports and recovery. The practical report and evidence are in `reviews/2026-11-21-practical-test/report.md` (git-ignored). Real AI services and ChatGPT sign-in remain unverified. See `docs/manual-test-checklist.md` for the checklist and remaining checks.
 - **Build step 1** (the ChatGPT sign-in prototype against a real account, the decision gate of specification section 8.6) was not run. The flow is implemented from OpenAI's documentation, including the paste-the-address fallback.
 
 ## Documentation checked
@@ -65,6 +65,7 @@ Where the documentation left a question open, the source code of Thunderbird (`t
 
 ### Incoming mail
 
+- **Reading raw headers has a 30 second limit.** In the practical IMAP test, Thunderbird's `messages.getHeaders` stayed pending on a fresh large message and blocked the serial processing queue. The timeout uses the existing missing-header fallback and lets subsequent messages proceed. The native request cannot be cancelled; a timed-out read can omit Reply-To from the payload. Other MIME APIs did not stall in the completed tests.
 - **The fast path handles the messages of the event itself** and skips mail that arrived before protection was switched on. The Date header is written by the sender, so for a message dated before that moment the time in its newest `Received` header, written by the receiving server, decides. The tick uses the date query of the specification. Both use the same per-message handler and the same processed set.
 - **A message is identified by its account and a hash of its Message-ID, author and date.** Specification section 5.1 names account and Message-ID only; then one harmless message exempted every later message that reused its Message-ID, also from a blacklisted sender, for 30 days and without a log line. Copies of one message still share the identity. A sender who also copies the author and the `Date` header of the earlier message is still skipped.
 - **A processed record of a message dated in the future** is filed under the message's date instead of today, so it cannot expire while the message would still be returned by the date query.
@@ -105,6 +106,7 @@ Where the documentation left a question open, the source code of Thunderbird (`t
 
 ### Settings page and popup
 
+- **The scan's end date stops one millisecond before the next local midnight.** Thunderbird's `messages.query` includes `toDate`; passing the next midnight included mail from the following day. Calendar arithmetic preserves the selected day across daylight-saving changes.
 - **The pages read storage directly and never write it.** Every change is a request to the background page. While a scan or a sign-in runs, the page asks the background for its state once a second.
 - **A redraw never overwrites an unsaved edit.** The page is redrawn after every storage change, also while the background writes the log. The prompt editor takes the stored text only while it still shows the text stored before. The cutoff and the forwarded-header labels take the stored value only when they still show what the page put there last, or once the stored value equals the edit (it was saved), and never while they have the focus.
 - **The settings page opens after installation**, because protection is off until the user switches it on.
@@ -133,8 +135,9 @@ Where the documentation left a question open, the source code of Thunderbird (`t
 
 ## Known limits
 
+- The activation cutoff has millisecond precision, but mail Date and Received headers have whole-second precision. A message arriving after activation within that same second can be skipped by both the event and the tick. This was reproduced in the practical test. Rounding the cutoff down would also include some mail from before activation, conflicting with the approved rule, so the boundary policy remains an owner decision.
 - A message that exists in two monitored folders of one account (the same Message-ID, author and date) is handled once.
 - A sender's display name is not used anywhere, also not for the AI.
-- For a forwarding mailbox the From of an attached message is read before the forwarder's labelled body line, as specification section 6 orders it. An inline forward carries the original's attachments, so an attached message from another sender decides whom such a forward is from. Changing the order waits for a check in Thunderbird and for the owner (review finding S5, see the manual test checklist, B7).
+- For a forwarding mailbox the From of an attached message is read before the forwarder's labelled body line, as specification section 6 orders it. An inline forward carries the original's attachments, so an attached message from another sender decides whom such a forward is from. The practical test reproduced a trusted decoy attachment bypassing AI. In Thunderbird 153.7.0, `messages.listInlineTextParts` returned only the outer body for the tested attached `message/rfc822`, excluding its body. Changing the source order still waits for the owner (review finding S5, checklist B7).
 - The tick finds mail by its `Date` header, which the sender writes. Mail dated more than 48 hours before the previous tick, or before protection was switched on, is handled only by the fast path, which looks at the arrival time in the newest `Received` header. If the new mail event does not fire for such a message, it is not handled.
 - The companion suppresses `B` and `W` also when the main add-on is disabled. Remove or disable the companion in that case.

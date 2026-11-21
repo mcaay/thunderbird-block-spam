@@ -1,6 +1,6 @@
 # Manual test checklist
 
-Nothing in this list has been run yet. The add-on was built and unit tested without a running Thunderbird, a mailbox or a live AI service. The background and the settings page were only exercised in a browser against a fake of the Thunderbird API.
+Practical testing was performed on 2026-11-21 in Thunderbird 153.7.0 on macOS, using isolated profiles and loopback IMAP, SMTP and mock AI servers. Results, evidence, fixes and remaining checks are in `reviews/2026-11-21-practical-test/report.md` (git-ignored). The checkboxes below remain a reusable checklist, not a statement that every environment or real service has passed.
 
 Use a separate Thunderbird profile and a test IMAP account. Build with `npm run check`, then install `dist/block-spam-<version>.xpi` (Add-ons and Themes, gear menu, Install Add-on From File). Keep the Error Console open (Tools, Developer Tools, Error Console) and note every message that starts with "Block Spam".
 
@@ -57,7 +57,7 @@ Pending. The adapter reads both shapes.
 
 ### A5. `messages.onNewMailReceived` fires reliably
 
-Pending. Nothing depends on it: the 5 minute tick covers every miss.
+The local IMAP test handled ordinary new deliveries immediately. A message already marked read was handled by the real five minute alarm. The tick covers ordinary missed events, but its date query cannot recover every backdated message; see the known limit in the implementation notes.
 
 - [ ] With protection on, send a message from an unknown address to the test account. Note how long it takes until the log shows it: at once (the event fired) or within 5 minutes (the tick).
 
@@ -128,6 +128,8 @@ Pending for every provider. One Test and one real message each:
 - [ ] Close the settings tab during the scan and open it again: the progress is still shown.
 
 ### B7. Transparent and wrapped forwards
+
+Practical result: `messages.listInlineTextParts` returned exactly `[{"contentType":"text/plain","content":"OUTER_BODY_SENTINEL"}]` for the attached-message fixture. The attached body was absent. The S5 trusted-decoy bypass was also reproduced. The approved source order was not changed; the owner must decide.
 
 - [ ] Transparent forward (alias or server redirect): the message shows the original author. It is handled like direct mail, without configuration.
 - [ ] Wrapped forward (for example an Outlook or Exchange "Forward" rule, or Google Groups): the message shows the forwarding mailbox. Add that mailbox under Forwarding mailboxes. Expected: the log shows the original sender "forwarded by" the mailbox, a spam forward goes to Junk, the black list gets the original sender and never the forwarding mailbox.
