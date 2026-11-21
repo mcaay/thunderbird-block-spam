@@ -59,6 +59,8 @@ Where the documentation left a question open, the source code of Thunderbird (`t
 - **The public domain list** is seeded from `free-email-domains` 1.2.21 (MIT), the last small, curated version of that package (4,779 providers, based on HubSpot's list), plus appendix A. Later versions of the package mix in tens of thousands of disposable and unrelated domains, some of them real company domains. Treating a company domain as public would weaken domain-level whitelisting, and with it the promise that mail from a customer's colleagues is not sent to the AI.
 - **The forwarded-header label table** (`From:`, `Od:`, `Nadawca:`) is a setting, editable next to the forwarding mailboxes.
 - **A forwarding mailbox is never the effective sender.** If a header or the body names a forwarding mailbox as the original sender, the next source is tried.
+- **A body line is searched up to 998 characters** (the line limit of RFC 5322) for a forwarded-header label and its address. The address patterns backtrack on one very long line, which took about 0.2 seconds per message at 20,000 characters.
+- **Addresses from mail are at most 254 characters long** (RFC 5321). A longer sender is treated like one that cannot be parsed and a longer recipient is not learned, so a message cannot put an arbitrarily long value into the log, the lists or the payload. Stored entries are not checked for length and keep loading.
 
 ### Incoming mail
 

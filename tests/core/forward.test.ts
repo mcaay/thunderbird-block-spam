@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_FORWARD_LABELS, extractForwardedFrom, resolveEffectiveSender } from "../../src/core/forward";
+import { DEFAULT_FORWARD_LABELS, extractForwardedFrom, FORWARD_LINE_LIMIT, resolveEffectiveSender } from "../../src/core/forward";
 import type { ForwardSources } from "../../src/core/forward";
 import { fakeParseAddresses } from "../helpers/fakes";
 
@@ -158,6 +158,18 @@ describe("extractForwardedFrom", () => {
   it("returns null without labels or for an empty body", () => {
     expect(extractForwardedFrom("From: a@b.example", [])).toBeNull();
     expect(extractForwardedFrom("", labels)).toBeNull();
+  });
+
+  it("searches only the first 998 characters of a labelled line, so one long line stays fast", () => {
+    const padded = `From: ${" ".repeat(FORWARD_LINE_LIMIT)}cold@outreach.example`;
+    expect(extractForwardedFrom(padded, DEFAULT_FORWARD_LABELS)).toBeNull();
+    expect(extractForwardedFrom(`From: ${" ".repeat(900)}cold@outreach.example`, DEFAULT_FORWARD_LABELS)).toBe("cold@outreach.example");
+    const started = performance.now();
+    for (const filler of ["a", ".", "<a", "[mailto:a"]) {
+      expect(extractForwardedFrom(`From: ${filler.repeat(19990 / filler.length)}`, DEFAULT_FORWARD_LABELS)).toBeNull();
+    }
+    // Each of these lines took about 190 ms before lines were cut.
+    expect(performance.now() - started).toBeLessThan(100);
   });
 
   it("handles Windows line endings", () => {

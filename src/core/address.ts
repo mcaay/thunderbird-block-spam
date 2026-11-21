@@ -76,9 +76,17 @@ export function normalizeDomain(raw: string): string | null {
   return domainToAscii(text);
 }
 
+/** RFC 5321 allows no longer address. */
+export const MAX_ADDRESS_LENGTH = 254;
+
+/**
+ * A sender or recipient from mail. Longer addresses than RFC 5321 allows are refused,
+ * so that a message cannot put an arbitrarily long value into the log or the lists;
+ * stored entries are checked with normalizeAddress and keep loading.
+ */
 export function parseSender(rawAddress: string): Sender | null {
   const address = normalizeAddress(rawAddress);
-  if (address === null) {
+  if (address === null || address.length > MAX_ADDRESS_LENGTH) {
     return null;
   }
   const host = address.slice(address.lastIndexOf("@") + 1);

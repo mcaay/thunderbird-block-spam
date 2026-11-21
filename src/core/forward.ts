@@ -7,6 +7,11 @@ export const DEFAULT_FORWARD_LABELS: readonly string[] = ["From:", "Od:", "Nadaw
 
 /** How many characters of the body are searched for a forwarded-header label. */
 export const FORWARD_BODY_LIMIT = 20000;
+/**
+ * The longest line RFC 5322 allows. A line is cut to it before it is searched, which
+ * keeps the address patterns fast on one long line written by a sender.
+ */
+export const FORWARD_LINE_LIMIT = 998;
 
 export type SenderSource = "from" | "x-original-from" | "x-original-sender" | "attachment" | "body" | "none";
 
@@ -107,7 +112,7 @@ export function extractForwardedFrom(body: string, labels: readonly string[]): s
   }
   for (const rawLine of body.slice(0, FORWARD_BODY_LIMIT).split(/\r?\n/)) {
     // Quote markers and the emphasis marks that HTML to text conversion leaves around bold labels.
-    const line = rawLine.replace(/^[\s>*_]+/, "");
+    const line = rawLine.slice(0, FORWARD_LINE_LIMIT).replace(/^[\s>*_]+/, "");
     const lower = line.toLowerCase();
     for (const label of wanted) {
       if (!lower.startsWith(label)) {

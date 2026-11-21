@@ -3,6 +3,7 @@ import {
   buildPublicDomains,
   domainToAscii,
   isPublic,
+  MAX_ADDRESS_LENGTH,
   normalizeAddress,
   normalizeDomain,
   parseSender,
@@ -116,6 +117,16 @@ describe("public domains", () => {
     expect(viaHost && isPublic(viaHost, publicDomains)).toBe(true);
     expect(viaDomain && isPublic(viaDomain, publicDomains)).toBe(true);
     expect(custom && isPublic(custom, publicDomains)).toBe(false);
+  });
+});
+
+describe("parseSender", () => {
+  it("refuses addresses longer than RFC 5321 allows, while stored entries keep loading", () => {
+    const longest = `${"a".repeat(MAX_ADDRESS_LENGTH - "@example.com".length)}@example.com`;
+    expect(parseSender(longest)?.address).toHaveLength(MAX_ADDRESS_LENGTH);
+    expect(parseSender(`a${longest}`)).toBeNull();
+    expect(parseSender(`x${"@a".repeat(9995)}`)).toBeNull();
+    expect(normalizeAddress(`a${longest}`)).toBe(`a${longest}`);
   });
 });
 
