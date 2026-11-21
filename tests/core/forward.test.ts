@@ -73,22 +73,33 @@ describe("effective sender", () => {
     expect(result.sender?.address).toBe("cold@outreach.example");
   });
 
-  it("uses the From of the first attached message", async () => {
-    const { result, calls } = await resolve("office@partner.example", {
-      attached: "Cold Sender <cold@outreach.example>",
-      body: "From: wrong@body.example",
-    });
-    expect(result).toMatchObject({ source: "attachment" });
-    expect(result.sender?.address).toBe("cold@outreach.example");
-    expect(calls).toEqual(["headers", "attachment"]);
-  });
-
   it("uses the first labelled line of the body", async () => {
     const body = ["Hello,", "", "-----Original Message-----", "From: Cold Sender <cold@outreach.example>", "Sent: Monday", "From: second@later.example"].join("\n");
     const { result, calls } = await resolve("office@partner.example", { body });
     expect(result).toMatchObject({ source: "body", forwarder: "office@partner.example" });
     expect(result.sender?.address).toBe("cold@outreach.example");
-    expect(calls).toEqual(["headers", "attachment", "body"]);
+    expect(calls).toEqual(["headers", "body"]);
+  });
+
+  it("prefers the forwarder's body line over an attached message from a trusted address", async () => {
+    // An inline forward carries the original's attachments, which the original sender controls.
+    const { result, calls } = await resolve("office@partner.example", {
+      body: "From: Cold Sender <cold@outreach.example>\nSubject: Offer\n\nSee the attached letter from your CEO.",
+      attached: "CEO <ceo@mycompany.example>",
+    });
+    expect(result).toMatchObject({ source: "body", forwarder: "office@partner.example" });
+    expect(result.sender?.address).toBe("cold@outreach.example");
+    expect(calls).toEqual(["headers", "body"]);
+  });
+
+  it("uses the From of the first attached message when the body names no sender", async () => {
+    const { result, calls } = await resolve("office@partner.example", {
+      attached: "Cold Sender <cold@outreach.example>",
+      body: "Forwarded as an attachment.",
+    });
+    expect(result).toMatchObject({ source: "attachment" });
+    expect(result.sender?.address).toBe("cold@outreach.example");
+    expect(calls).toEqual(["headers", "body", "attachment"]);
   });
 
   it("treats the sender as unknown when nothing is found", async () => {

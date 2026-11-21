@@ -37,9 +37,14 @@ export interface ForwardSources {
 
 /**
  * The effective sender is the address in From, except when From is a forwarding
- * mailbox. Then it is the first of: X-Original-From, X-Original-Sender, the From of
- * the first attached message, the address on the first body line that starts with a
- * forwarded-header label. The forwarding mailbox itself is never the effective sender.
+ * mailbox. Then it is the first of: X-Original-From, X-Original-Sender, the address
+ * on the first body line that starts with a forwarded-header label, the From of the
+ * first attached message. The forwarding mailbox itself is never the effective sender.
+ *
+ * The body line comes before the attachment because the forwarding mailbox writes it,
+ * while an attached message is whatever the original sender attached: an inline
+ * forward carries those attachments along, so an attached message from a trusted
+ * address must not decide whom the forward is from.
  */
 export async function resolveEffectiveSender(
   rawFrom: string,
@@ -74,19 +79,19 @@ export async function resolveEffectiveSender(
     }
   }
 
-  const attachedFrom = await safely(() => sources.attachedMessageFrom());
-  if (attachedFrom !== null) {
-    const sender = accept(await safely(() => sources.parseAddress(attachedFrom)));
-    if (sender !== null) {
-      return { sender, forwarder: from.address, source: "attachment" };
-    }
-  }
-
   const body = await safely(() => sources.bodyText());
   if (body !== null) {
     const sender = accept(extractForwardedFrom(body, labels));
     if (sender !== null) {
       return { sender, forwarder: from.address, source: "body" };
+    }
+  }
+
+  const attachedFrom = await safely(() => sources.attachedMessageFrom());
+  if (attachedFrom !== null) {
+    const sender = accept(await safely(() => sources.parseAddress(attachedFrom)));
+    if (sender !== null) {
+      return { sender, forwarder: from.address, source: "attachment" };
     }
   }
 
