@@ -105,6 +105,7 @@ Where the documentation left a question open, the source code of Thunderbird (`t
 
 - **The pages read storage directly and never write it.** Every change is a request to the background page. While a scan or a sign-in runs, the page asks the background for its state once a second.
 - **The settings page opens after installation**, because protection is off until the user switches it on.
+- **"Score selected messages" names the number of messages in its confirmation and scores at most 50 in one run.** Specification section 8.8 sets no limit, but Ctrl+A in a large folder would send all of it, also mail from whitelisted senders, one message after another, without a way to stop. A larger selection is refused before anything is sent.
 - **Preset names and sign-in errors are in `_locales`.** Diagnostic details of failed requests ("HTTP 401: ...", "the answer is not a probability") and of invalid data stay in English: they are stored in the log and next to the access point together with the provider's own English text.
 
 ### Data and packaging

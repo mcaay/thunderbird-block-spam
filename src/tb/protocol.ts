@@ -35,6 +35,8 @@ export interface Requests {
   exportData: { request: Record<string, never>; result: ExportResult };
   importData: { request: { file: unknown; mode: ImportMode }; result: ImportReport };
   resetData: { request: Record<string, never>; result: null };
+  /** How many messages are selected, counted up to one more than the limit of a run. */
+  selectedCount: { request: { tabId: number }; result: { count: number; limit: number } };
   scoreSelected: { request: { tabId: number }; result: TestScoreSummary & { selected: number } };
   welcomeShown: { request: Record<string, never>; result: null };
 }

@@ -169,6 +169,7 @@ Pending for every provider. One Test and one real message each:
 - [ ] Status, pause and resume.
 - [ ] The last ten decisions.
 - [ ] "Score selected messages" asks for confirmation, writes test entries to the log, moves nothing and creates no entry.
+- [ ] The confirmation names the number of selected messages. With more than 50 selected, it refuses and sends nothing.
 
 ### B12. The companion add-on
 

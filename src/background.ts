@@ -39,6 +39,8 @@ import { BrowserStore } from "./tb/store";
 const TICK_ALARM = "tick";
 const TICK_MINUTES = 5;
 const NOTIFICATION_TARGETS = 5;
+/** "Score selected messages" sends at most this many messages in one run, also from listed senders. */
+const SCORE_SELECTED_LIMIT = 50;
 
 interface App {
   state: AppState;
@@ -763,14 +765,22 @@ const handlers: Handlers = {
     return null;
   },
 
+  async selectedCount({ tabId }) {
+    const messages = await messagesOfTab(await browser.tabs.get(tabId), SCORE_SELECTED_LIMIT);
+    return { count: Math.min(messages.length, SCORE_SELECTED_LIMIT + 1), limit: SCORE_SELECTED_LIMIT };
+  },
+
   async scoreSelected({ tabId }) {
     const { engine } = need();
     if (scoring) {
       throw new Error(t("errorScoringRunning"));
     }
-    const messages = await messagesOfTab(await browser.tabs.get(tabId));
+    const messages = await messagesOfTab(await browser.tabs.get(tabId), SCORE_SELECTED_LIMIT);
     if (messages.length === 0) {
       return { selected: 0, scored: 0, failed: 0 };
+    }
+    if (messages.length > SCORE_SELECTED_LIMIT) {
+      throw new Error(t("popupScoreTooMany", SCORE_SELECTED_LIMIT));
     }
     scoring = true;
     try {

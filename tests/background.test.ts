@@ -120,6 +120,31 @@ describe("host permissions", () => {
   });
 });
 
+describe("scoring selected messages", () => {
+  async function setup(selected: number) {
+    const point = accessPoint({ id: "ai", type: "openai-chat", endpoint: "https://api.example.com/v1" });
+    const fake = new FakeBrowser({ [KEY_SETTINGS]: defaultSettings(Date.now()), [KEY_ACCESS_POINTS]: [point] });
+    fake.granted.add("https://api.example.com/*");
+    fake.selected = Array.from({ length: selected }, (_, index) => FakeBrowser.header(index + 1, `Sender <s${index}@customer.example>`));
+    const http = fakeFetch(() => jsonResponse({ choices: [{ message: { content: "0.3" } }] }));
+    return { http, background: await loadBackground(fake, http.fetch) };
+  }
+
+  it("tells the popup how many messages are selected and scores them", async () => {
+    const { http, background } = await setup(3);
+    expect(await background.send("selectedCount", { tabId: 1 })).toEqual({ ok: true, result: { count: 3, limit: 50 } });
+    expect(await background.send("scoreSelected", { tabId: 1 })).toEqual({ ok: true, result: { selected: 3, scored: 3, failed: 0 } });
+    expect(http.requests).toHaveLength(3);
+  });
+
+  it("refuses more than 50 messages before anything is sent", async () => {
+    const { http, background } = await setup(5000);
+    expect(await background.send("selectedCount", { tabId: 1 })).toEqual({ ok: true, result: { count: 51, limit: 50 } });
+    expect(await background.send("scoreSelected", { tabId: 1 })).toEqual({ ok: false, error: "popupScoreTooMany(50)" });
+    expect(http.requests).toHaveLength(0);
+  });
+});
+
 describe("ChatGPT sign-in", () => {
   async function setup() {
     const fake = new FakeBrowser();

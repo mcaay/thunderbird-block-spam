@@ -915,7 +915,10 @@
     "message": "Score selected messages"
   },
   "popupScoreConfirm": {
-    "message": "The content of the selected messages will be sent to the configured AI, also for senders on your lists. Nothing is moved and no entry is created. The scores appear in the log."
+    "message": "Selected messages: $1. Their content will be sent to the configured AI, also for senders on your lists. Nothing is moved and no entry is created. The scores appear in the log."
+  },
+  "popupScoreTooMany": {
+    "message": "Select at most $1 messages to score them in one run."
   },
   "popupScoreSend": {
     "message": "Send and score"

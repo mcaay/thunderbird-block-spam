@@ -64,7 +64,7 @@ Nothing is ever deleted. Every failure leaves mail where it is.
 - An editable prompt, with a button that restores the default.
 - **Observation mode:** decisions are computed and logged, but no message is moved and the AI adds nothing to the black list. The recommended way to try a model, a prompt or a cutoff before trusting them.
 - A log of the last 5000 decisions, with a filter. Message bodies are never stored.
-- "Score selected messages" in the toolbar popup, to tune the prompt and the cutoff on real mail.
+- "Score selected messages" in the toolbar popup, to tune the prompt and the cutoff on real mail: up to 50 messages at a time, after a confirmation that says how many.
 - Export and import of the lists, the settings and the access points (without keys), to move to another computer.
 
 

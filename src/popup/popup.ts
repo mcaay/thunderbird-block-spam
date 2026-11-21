@@ -77,42 +77,63 @@ function showScoreMessage(message: string, isError = false): void {
   replace(scoreBox, h("p", { class: isError ? "error" : "hint", text: message }), scoreButton());
 }
 
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/** Confirmation: the content of the selected messages, and how many they are, is sent to the configured AI. */
+function confirmScoring(tabId: number, count: number): void {
+  replace(
+    scoreBox,
+    h("p", { text: t("popupScoreConfirm", count) }),
+    h(
+      "div",
+      { class: "row" },
+      button(
+        t("popupScoreSend"),
+        () => {
+          replace(scoreBox, h("p", { class: "hint", text: t("popupScoring") }));
+          void (async () => {
+            try {
+              const summary = await send("scoreSelected", { tabId });
+              showScoreMessage(
+                summary.selected === 0 ? t("popupNothingSelected") : t("popupScoreDone", summary.scored, summary.failed),
+                summary.selected === 0,
+              );
+              await draw();
+            } catch (error) {
+              showScoreMessage(errorMessage(error), true);
+            }
+          })();
+        },
+        "primary",
+      ),
+      button(t("cancel"), () => replace(scoreBox, scoreButton())),
+    ),
+  );
+}
+
 function scoreButton(): HTMLButtonElement {
   return button(t("popupScoreSelected"), () => {
-    // Confirmation: the content of the selected messages is sent to the configured AI.
-    replace(
-      scoreBox,
-      h("p", { text: t("popupScoreConfirm") }),
-      h(
-        "div",
-        { class: "row" },
-        button(
-          t("popupScoreSend"),
-          () => {
-            replace(scoreBox, h("p", { class: "hint", text: t("popupScoring") }));
-            void (async () => {
-              try {
-                const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
-                if (tab?.id === undefined) {
-                  showScoreMessage(t("popupNothingSelected"), true);
-                  return;
-                }
-                const summary = await send("scoreSelected", { tabId: tab.id });
-                showScoreMessage(
-                  summary.selected === 0 ? t("popupNothingSelected") : t("popupScoreDone", summary.scored, summary.failed),
-                  summary.selected === 0,
-                );
-                await draw();
-              } catch (error) {
-                showScoreMessage(error instanceof Error ? error.message : String(error), true);
-              }
-            })();
-          },
-          "primary",
-        ),
-        button(t("cancel"), () => replace(scoreBox, scoreButton())),
-      ),
-    );
+    void (async () => {
+      try {
+        const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+        if (tab?.id === undefined) {
+          showScoreMessage(t("popupNothingSelected"), true);
+          return;
+        }
+        const { count, limit } = await send("selectedCount", { tabId: tab.id });
+        if (count === 0) {
+          showScoreMessage(t("popupNothingSelected"), true);
+        } else if (count > limit) {
+          showScoreMessage(t("popupScoreTooMany", limit), true);
+        } else {
+          confirmScoring(tab.id, count);
+        }
+      } catch (error) {
+        showScoreMessage(errorMessage(error), true);
+      }
+    })();
   });
 }
 

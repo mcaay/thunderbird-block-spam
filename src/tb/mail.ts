@@ -171,28 +171,32 @@ export class ThunderbirdMail implements MailPort {
   }
 }
 
-/** All messages of a list, across its pages. */
-async function collect(list: tb.MessageList): Promise<MessageInfo[]> {
+/** The messages of a list, across its pages. Stops reading once there are more than the limit. */
+async function collect(list: tb.MessageList, limit: number): Promise<MessageInfo[]> {
   const messages: MessageInfo[] = [];
   for await (const page of messagePages(list)) {
     messages.push(...page);
+    if (messages.length > limit) {
+      break;
+    }
   }
   return messages;
 }
 
 /**
  * The messages a command acts on: the selected messages of a mail tab, or the
- * message shown in a message tab or window.
+ * message shown in a message tab or window. With a limit, the list is read only
+ * until it is known to hold more than that.
  */
-export async function messagesOfTab(tab: tb.Tab | undefined): Promise<MessageInfo[]> {
+export async function messagesOfTab(tab: tb.Tab | undefined, limit = Number.POSITIVE_INFINITY): Promise<MessageInfo[]> {
   if (tab?.id === undefined) {
     return [];
   }
   if (tab.type === "mail") {
-    return collect(await browser.mailTabs.getSelectedMessages(tab.id));
+    return collect(await browser.mailTabs.getSelectedMessages(tab.id), limit);
   }
   if (tab.type === "messageDisplay") {
-    return collect(await browser.messageDisplay.getDisplayedMessages(tab.id));
+    return collect(await browser.messageDisplay.getDisplayedMessages(tab.id), limit);
   }
   return [];
 }
