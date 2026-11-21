@@ -315,14 +315,46 @@ function watchSignIn(pending: StoredSignIn): void {
   );
 }
 
+/** The attempt whose code is being exchanged. A second callback for it waits for the first. */
+let completing: { state: string; done: Promise<void> } | null = null;
+
 async function finishSignIn(callbackUrl: string): Promise<void> {
-  const { state, ai } = need();
+  need();
   const pending = signIn;
   if (pending === null) {
     throw new Error(t("signInNoneInProgress"));
   }
+  // The capture and a pasted address can both arrive: a code is exchanged only once.
+  if (completing?.state === pending.state) {
+    return completing.done;
+  }
+  const done = completeAttempt(pending, callbackUrl);
+  completing = { state: pending.state, done };
+  try {
+    await done;
+  } finally {
+    if (completing?.done === done) {
+      completing = null;
+    }
+  }
+}
+
+async function completeAttempt(pending: StoredSignIn, callbackUrl: string): Promise<void> {
+  const { state, ai } = need();
+  /** False once the attempt was cancelled, timed out or replaced by a new one. */
+  const current = (): boolean => signIn?.state === pending.state;
   try {
     const auth = await withKeepAlive(() => completeSignIn(httpFetch, callbackUrl, pending, Date.now()));
+    if (!current()) {
+      // The user cancelled or started again while the code was exchanged: end the new session.
+      await revoke(auth).catch(() => false);
+      return;
+    }
+    // The attempt is complete. Ending it now (signIn is cleared at once) means that a
+    // sign-in started from here on is never touched by this one.
+    signInError = "";
+    const ended = clearSignIn(true);
+    ended.catch(() => undefined); // awaited below; this only keeps an early failure from going unhandled
     let point = pending.accessPointId === null ? undefined : state.accessPoints.find((item) => item.id === pending.accessPointId);
     if (point === undefined) {
       point = newAccessPoint(
@@ -343,8 +375,7 @@ async function finishSignIn(callbackUrl: string): Promise<void> {
     point.cooldownUntil = 0;
     point.lastError = "";
     await state.saveAccessPoints();
-    signInError = "";
-    await clearSignIn(true);
+    await ended;
     if (point.model === "") {
       // The user picks the model later. Start with the first one the account offers.
       try {
@@ -359,11 +390,13 @@ async function finishSignIn(callbackUrl: string): Promise<void> {
     }
   } catch (error) {
     const message = error instanceof SignInError ? tCode("signInError", error.code, error.detail) : errorText(error);
-    signInError = message;
-    // A wrong pasted address can be corrected. Any other failure ends the attempt.
-    const retryable = error instanceof SignInError && ["wrong-address", "state-mismatch", "no-code"].includes(error.code);
-    if (!retryable) {
-      await clearSignIn(true);
+    if (current()) {
+      signInError = message;
+      // A wrong pasted address can be corrected. Any other failure ends the attempt.
+      const retryable = error instanceof SignInError && ["wrong-address", "state-mismatch", "no-code"].includes(error.code);
+      if (!retryable) {
+        await clearSignIn(true);
+      }
     }
     throw new Error(message);
   }

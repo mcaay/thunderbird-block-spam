@@ -2,14 +2,81 @@
 // through the same requests the settings page and the popup send.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { CHATGPT_MODELS_URL } from "../src/ai/chatgpt";
+import { CHATGPT_ORIGINS, DISCOVERY_URL, ISSUER, JWKS_URL, TOKEN_URL } from "../src/ai/chatgptAuth";
 import { KEY_ACCESS_POINTS, KEY_SETTINGS } from "../src/core/keys";
 import { defaultSettings } from "../src/core/settings";
 import type { AccessPoint } from "../src/core/types";
 import { FakeBrowser, loadBackground } from "./helpers/browser";
+import type { Background } from "./helpers/browser";
 import { accessPoint } from "./helpers/harness";
-import { fakeFetch, jsonResponse } from "./helpers/http";
+import { fakeFetch, jsonResponse, tokenFactory } from "./helpers/http";
+import type { Handler, RecordedRequest } from "./helpers/http";
 
 const COLLECTOR = "https://collector.example/v1";
+const REVOKE_URL = "https://auth.openai.com/oauth/revoke";
+const PLAN_SCOPES = "openid profile email offline_access resource.invoke chatgpt.tokens.use.direct";
+
+function deferred<T>(): { promise: Promise<T>; resolve(value: T): void } {
+  let resolve: (value: T) => void = () => undefined;
+  const promise = new Promise<T>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
+/** Lets every pending promise callback run. */
+async function settle(): Promise<void> {
+  for (let round = 0; round < 5; round += 1) {
+    await new Promise((done) => setImmediate(done));
+  }
+}
+
+/** A fake OpenAI: the token endpoint answers when the test releases it. */
+async function fakeOpenAi() {
+  const factory = await tokenFactory();
+  const tokens = deferred<void>();
+  // The server remembers the nonce of the authorization request.
+  const session = { nonce: "" };
+  const handlers: Record<string, Handler> = {
+    [TOKEN_URL]: async (request) => {
+      await tokens.promise;
+      if (request.form.grant_type === "authorization_code") {
+        const idToken = await factory.sign({
+          iss: ISSUER,
+          aud: request.form.client_id,
+          exp: Math.floor(Date.now() / 1000) + 3600,
+          nonce: session.nonce,
+          sub: "user-1",
+          email: "user@example.com",
+        });
+        return jsonResponse({ access_token: "access-new", refresh_token: "refresh-new", id_token: idToken, expires_in: 3600, scope: PLAN_SCOPES });
+      }
+      return jsonResponse({ access_token: "access-2", refresh_token: "refresh-2", expires_in: 3600, scope: PLAN_SCOPES });
+    },
+    [JWKS_URL]: () => jsonResponse(factory.jwks),
+    [DISCOVERY_URL]: () => jsonResponse({ revocation_endpoint: REVOKE_URL }),
+    [REVOKE_URL]: () => new Response("", { status: 200 }),
+    [CHATGPT_MODELS_URL]: () => jsonResponse({ models: [{ slug: "gpt-6-luna", visibility: "list" }] }),
+  };
+  const http = fakeFetch(handlers);
+  const revoked = (): string[] => http.requests.filter((request: RecordedRequest) => request.url === REVOKE_URL).map((request) => request.form.token ?? "");
+  return { http, release: () => tokens.resolve(), handlers, revoked, session };
+}
+
+async function startSignIn(background: Background, session: { nonce: string }): Promise<string> {
+  const started = await background.send("startSignIn", { accessPointId: null, openTab: true });
+  if (!started.ok) {
+    throw new Error(started.error);
+  }
+  const params = new URL(started.result.url).searchParams;
+  session.nonce = params.get("nonce") ?? "";
+  return `http://127.0.0.1:1455/auth/callback?code=code-1&state=${params.get("state") ?? ""}&client_id=oaiapp_new`;
+}
+
+function chatgptPoints(fake: FakeBrowser): AccessPoint[] {
+  return ((fake.storage[KEY_ACCESS_POINTS] as AccessPoint[] | undefined) ?? []).filter((point) => point.type === "chatgpt");
+}
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval"] });
@@ -50,5 +117,63 @@ describe("host permissions", () => {
     fake.granted.add("https://collector.example/*");
     expect(await background.send("testAccessPoint", { id: "imported" })).toEqual({ ok: true, result: { ok: true, score: 0.97 } });
     expect(http.requests.map((request) => request.url)).toEqual([`${COLLECTOR}/chat/completions`]);
+  });
+});
+
+describe("ChatGPT sign-in", () => {
+  async function setup() {
+    const fake = new FakeBrowser();
+    for (const origin of CHATGPT_ORIGINS) {
+      fake.granted.add(origin);
+    }
+    const openai = await fakeOpenAi();
+    const background = await loadBackground(fake, openai.http.fetch);
+    return { fake, openai, background };
+  }
+
+  it("exchanges a code once when the capture and a pasted address both arrive", async () => {
+    const { fake, openai, background } = await setup();
+    const callback = await startSignIn(background, openai.session);
+    const captured = background.send("finishSignIn", { url: callback });
+    const pasted = background.send("finishSignIn", { url: callback });
+    await settle();
+    openai.release();
+    expect(await captured).toEqual({ ok: true, result: null });
+    expect(await pasted).toEqual({ ok: true, result: null });
+    expect(openai.http.requests.filter((request) => request.url === TOKEN_URL)).toHaveLength(1);
+    expect(chatgptPoints(fake)).toHaveLength(1);
+    expect(chatgptPoints(fake)[0]).toMatchObject({ enabled: true, model: "gpt-6-luna", auth: { refreshToken: "refresh-new" } });
+  });
+
+  it("creates nothing and ends the new session when the sign-in is cancelled during the exchange", async () => {
+    const { fake, openai, background } = await setup();
+    const callback = await startSignIn(background, openai.session);
+    const finishing = background.send("finishSignIn", { url: callback });
+    await settle();
+    expect(await background.send("cancelSignIn", {})).toEqual({ ok: true, result: null });
+    openai.release();
+    await finishing;
+    await settle();
+    expect(chatgptPoints(fake)).toEqual([]);
+    expect(openai.revoked()).toEqual(["refresh-new"]);
+  });
+
+  it("does not let a failing old attempt end the attempt that replaced it", async () => {
+    const { openai, background } = await setup();
+    openai.handlers[TOKEN_URL] = async () => {
+      await new Promise<void>((done) => {
+        openai.release = done;
+      });
+      return jsonResponse({ error: "invalid_grant" }, 400);
+    };
+    const oldCallback = await startSignIn(background, openai.session);
+    const finishing = background.send("finishSignIn", { url: oldCallback });
+    await settle();
+    await startSignIn(background, openai.session);
+    openai.release();
+    expect(await finishing).toMatchObject({ ok: false });
+    const status = await background.send("getStatus", {});
+    expect(status).toMatchObject({ ok: true, result: { signIn: { error: "" } } });
+    expect(status.ok && status.result.signIn.url).not.toBeNull();
   });
 });
