@@ -88,3 +88,5 @@ export function validateLogEntry(value: unknown, path: string): LogEntry {
     messageId: record.messageId === undefined ? "" : asString(record.messageId, `${path}.messageId`),
   };
 }
+
+export { logEntryKey } from "./keys";

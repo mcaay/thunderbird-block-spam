@@ -19,22 +19,22 @@ export function tCode(prefix: string, code: string, ...substitutions: (string | 
 
 export type PluralForm = "one" | "few" | "many";
 
+/**
+ * The language of the strings in use. The locale file names its own language in
+ * "localeCode". It can differ from the language of Thunderbird: a Thunderbird in a
+ * language without a translation shows the English strings, and then counts and
+ * numbers have to be written the English way as well.
+ */
+export function stringsLocale(): string {
+  const code = t("localeCode");
+  return /^[a-z]{2,3}(-[A-Za-z0-9]+)*$/.test(code) ? code : "en";
+}
+
 let pluralRules: Intl.PluralRules | null = null;
 
-/**
- * The plural form of a count in the language of the locale file in use. That file
- * names its own language in "localeCode", which can differ from the language of
- * Thunderbird: a Thunderbird in a language without a translation shows the English
- * strings and needs the English forms. English uses "one" and "many", Polish all three.
- */
+/** The plural form of a count in the language of the strings. English uses "one" and "many", Polish all three. */
 export function pluralForm(count: number): PluralForm {
-  if (pluralRules === null) {
-    try {
-      pluralRules = new Intl.PluralRules(t("localeCode"));
-    } catch {
-      pluralRules = new Intl.PluralRules("en");
-    }
-  }
+  pluralRules ??= new Intl.PluralRules(stringsLocale());
   const category = pluralRules.select(count);
   return category === "one" ? "one" : category === "few" ? "few" : "many";
 }
@@ -53,8 +53,8 @@ export function tn(key: string, count: number, ...substitutions: (string | numbe
  * attributes. The document is marked with the language of the strings.
  */
 export function localizePage(root: ParentNode = document): void {
-  if (root === document && /^[a-z]{2,3}(-[A-Za-z0-9]+)*$/.test(t("localeCode"))) {
-    document.documentElement.lang = t("localeCode");
+  if (root === document) {
+    document.documentElement.lang = stringsLocale();
   }
   for (const element of root.querySelectorAll<HTMLElement>("[data-i18n-aria-label]")) {
     element.setAttribute("aria-label", t(element.dataset.i18nAriaLabel ?? ""));

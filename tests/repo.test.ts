@@ -5,7 +5,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { inflateRawSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
-import { PRESETS } from "../src/ai/presets";
+import { PRESET_GROUPS, PRESETS } from "../src/ai/presets";
 import { COMMANDS } from "../src/core/commands";
 import { REASONS } from "../src/core/decision";
 import { ACCESS_POINT_TYPES, DEFAULT_PROMPT } from "../src/core/settings";
@@ -67,13 +67,19 @@ describe("strings", () => {
   const codeKeys: Record<string, readonly string[]> = {
     source: ["identity", "sent", "scan", "ai", "manual"],
     problem: ["name-missing", "endpoint-invalid", "endpoint-insecure", "endpoint-placeholder", "model-missing", "key-missing"],
+    // Mistakes a user can make: the codes of ValidationError that the pages translate.
+    invalid: ["entry-invalid", "address-invalid", "account-unknown", "cutoff-range", "prompt-empty", "own-address", "no-sender", "import-invalid"],
+    remedy: ["sign-in", "permission", "key-missing", "key-rejected", "plan-refused"],
     endpointHint: ["systemone", "openai-chat"],
     modelHint: ACCESS_POINT_TYPES,
     type: ACCESS_POINT_TYPES,
     outcome: ["trusted", "blocked", "spam", "passed", "no-verdict", "released", "error"],
     action: ["junk", "screening", "inbox"],
+    actionObserved: ["junk", "screening", "inbox"],
     reason: [...Object.values(REASONS), "failed"],
     preset: PRESETS.map((preset) => preset.id),
+    presetHint: PRESETS.map((preset) => preset.id),
+    presetGroup: PRESET_GROUPS,
     signInError: [
       "state-mismatch",
       "wrong-address",
@@ -89,14 +95,21 @@ describe("strings", () => {
     ],
   };
 
+  const PLURAL_FORMS = ["one", "few", "many"] as const;
   const used = new Set<string>();
   for (const file of sourceFiles) {
     const source = read(file);
     for (const key of literalKeys(source)) {
       used.add(key);
     }
-    for (const match of source.matchAll(/data-i18n(?:-placeholder|-title)?="([A-Za-z0-9_]+)"/g)) {
+    for (const match of source.matchAll(/data-i18n(?:-placeholder|-title|-aria-label)?="([A-Za-z0-9_]+)"/g)) {
       used.add(match[1] as string);
+    }
+    // A counted string has three forms: tn("key", count) reads key_one, key_few or key_many.
+    for (const match of source.matchAll(/\btn\(\s*"([A-Za-z0-9_]+)"/g)) {
+      for (const form of PLURAL_FORMS) {
+        used.add(`${match[1] as string}_${form}`);
+      }
     }
     for (const match of source.matchAll(/"(cmd[A-Z][A-Za-z]+)"/g)) {
       used.add(match[1] as string);

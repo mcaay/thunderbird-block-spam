@@ -5,14 +5,15 @@ import type { AiPort } from "../core/ports";
 import type { AccessPoint } from "../core/types";
 import { scoreAnthropic } from "./anthropic";
 import { listChatGptModels, scoreChatGpt } from "./chatgpt";
-import { CHATGPT_ORIGINS } from "./chatgptAuth";
 import type { FetchLike } from "./http";
-import { originPattern, validateEndpoint } from "./http";
+import { validateEndpoint } from "./http";
 import { listOpenAiChatModels, scoreOpenAiChat } from "./openaiChat";
 import type { ModelOption } from "./openaiChat";
 import { scoreOpenAiDecisions } from "./openaiDecisions";
-import { FIXED_ENDPOINTS } from "./presets";
+import { requiredOrigins } from "./presets";
 import { scoreSystemOne } from "./systemOne";
+
+export { requiredOrigins } from "./presets";
 
 export interface AiDeps {
   fetch: FetchLike;
@@ -26,19 +27,6 @@ export interface AiDeps {
 export interface Ai extends AiPort {
   /** Models an access point offers. Empty for types without a model list. */
   listModels(point: AccessPoint): Promise<ModelOption[]>;
-}
-
-/**
- * The host permissions the requests of an access point need: the host it really
- * contacts (the fixed endpoint of a provider-bound type), both OpenAI hosts for the
- * ChatGPT plan. Null when the address is not valid.
- */
-export function requiredOrigins(point: AccessPoint): string[] | null {
-  if (point.type === "chatgpt") {
-    return [...CHATGPT_ORIGINS];
-  }
-  const checked = validateEndpoint(FIXED_ENDPOINTS[point.type] ?? point.endpoint);
-  return checked.ok ? [originPattern(checked.url)] : null;
 }
 
 export function createAi(deps: AiDeps): Ai {

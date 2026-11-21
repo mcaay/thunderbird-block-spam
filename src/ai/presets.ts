@@ -3,17 +3,27 @@
 import type { AccessPoint, AccessPointType } from "../core/types";
 import { ANTHROPIC_MESSAGES_URL } from "./anthropic";
 import { CHATGPT_RESPONSES_URL } from "./chatgpt";
-import { validateEndpoint } from "./http";
+import { CHATGPT_ORIGINS } from "./chatgptAuth";
+import { originPattern, validateEndpoint } from "./http";
 import { OPENAI_DECISIONS_URL } from "./openaiDecisions";
 
+/** How the settings page groups the presets, in the order it shows the groups. */
+export const PRESET_GROUPS = ["decision", "chat", "plan", "local"] as const;
+export type PresetGroup = (typeof PRESET_GROUPS)[number];
+
 export interface Preset {
-  /** Also the key of the display name in the locale file: preset_<id>. */
+  /** Also the key of the display name and of the description in the locale file: preset_<id>, presetHint_<id>. */
   id: string;
   type: AccessPointType;
   endpoint: string;
   model: string;
   /** False for local servers, which usually need no key. */
   keyRequired: boolean;
+  group: PresetGroup;
+  /** Where the user creates the key. Only for services whose address is certain. */
+  keyUrl?: string;
+  /** The service's own description of what the preset uses. */
+  docsUrl?: string;
 }
 
 export const CLOUDFLARE_ACCOUNT_PLACEHOLDER = "<account id>";
@@ -25,6 +35,8 @@ export const PRESETS: readonly Preset[] = [
     endpoint: "https://api.typesafe.ai/v1/systemone",
     model: "jev-latest",
     keyRequired: true,
+    group: "decision",
+    docsUrl: "https://docs.typesafe.ai/api/system-one.md",
   },
   {
     id: "openrouter-decisions",
@@ -32,6 +44,8 @@ export const PRESETS: readonly Preset[] = [
     endpoint: "https://openrouter.ai/api/alpha/decisions",
     model: "~typesafe/jev-latest",
     keyRequired: true,
+    group: "decision",
+    keyUrl: "https://openrouter.ai/keys",
   },
   {
     id: "cloudflare-clef",
@@ -39,6 +53,8 @@ export const PRESETS: readonly Preset[] = [
     endpoint: `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_PLACEHOLDER}/ai/run/@cf/cloudflare/clef`,
     model: "clef",
     keyRequired: true,
+    group: "decision",
+    docsUrl: "https://developers.cloudflare.com/workers-ai/models/clef/",
   },
   {
     id: "local-systemone",
@@ -46,6 +62,8 @@ export const PRESETS: readonly Preset[] = [
     endpoint: "http://localhost:8000/v1/systemone",
     model: "",
     keyRequired: false,
+    group: "local",
+    docsUrl: "https://github.com/rkinas/basal",
   },
   {
     id: "openai-decisions",
@@ -53,6 +71,9 @@ export const PRESETS: readonly Preset[] = [
     endpoint: OPENAI_DECISIONS_URL,
     model: "gpt-6-luna",
     keyRequired: true,
+    group: "decision",
+    keyUrl: "https://platform.openai.com/api-keys",
+    docsUrl: "https://developers.openai.com/api/docs/guides/decisions",
   },
   {
     id: "openai",
@@ -60,6 +81,8 @@ export const PRESETS: readonly Preset[] = [
     endpoint: "https://api.openai.com/v1",
     model: "gpt-6-luna",
     keyRequired: true,
+    group: "chat",
+    keyUrl: "https://platform.openai.com/api-keys",
   },
   {
     id: "gemini",
@@ -67,6 +90,8 @@ export const PRESETS: readonly Preset[] = [
     endpoint: "https://generativelanguage.googleapis.com/v1beta/openai",
     model: "gemini-4-hydrogen",
     keyRequired: true,
+    group: "chat",
+    keyUrl: "https://aistudio.google.com/apikey",
   },
   {
     id: "openrouter",
@@ -74,6 +99,8 @@ export const PRESETS: readonly Preset[] = [
     endpoint: "https://openrouter.ai/api/v1",
     model: "openai/gpt-6-luna",
     keyRequired: true,
+    group: "chat",
+    keyUrl: "https://openrouter.ai/keys",
   },
   {
     id: "ollama",
@@ -81,6 +108,7 @@ export const PRESETS: readonly Preset[] = [
     endpoint: "http://localhost:11434/v1",
     model: "qwen3:8b",
     keyRequired: false,
+    group: "local",
   },
   {
     id: "lmstudio",
@@ -88,6 +116,7 @@ export const PRESETS: readonly Preset[] = [
     endpoint: "http://localhost:1234/v1",
     model: "",
     keyRequired: false,
+    group: "local",
   },
   {
     id: "custom",
@@ -95,6 +124,7 @@ export const PRESETS: readonly Preset[] = [
     endpoint: "",
     model: "",
     keyRequired: false,
+    group: "chat",
   },
   {
     id: "anthropic",
@@ -102,6 +132,8 @@ export const PRESETS: readonly Preset[] = [
     endpoint: ANTHROPIC_MESSAGES_URL,
     model: "claude-opus-5-5",
     keyRequired: true,
+    group: "chat",
+    keyUrl: "https://console.anthropic.com/settings/keys",
   },
   {
     id: "chatgpt",
@@ -109,6 +141,8 @@ export const PRESETS: readonly Preset[] = [
     endpoint: CHATGPT_RESPONSES_URL,
     model: "",
     keyRequired: false,
+    group: "plan",
+    docsUrl: "https://help.openai.com/en/articles/20001542-using-your-chatgpt-plan-in-other-apps-and-sites",
   },
 ];
 
@@ -118,6 +152,19 @@ export const FIXED_ENDPOINTS: Partial<Record<AccessPointType, string>> = {
   anthropic: ANTHROPIC_MESSAGES_URL,
   chatgpt: CHATGPT_RESPONSES_URL,
 };
+
+/**
+ * The host permissions the requests of an access point need: the host it really
+ * contacts (the fixed endpoint of a provider-bound type), both OpenAI hosts for the
+ * ChatGPT plan. Null when the address is not valid.
+ */
+export function requiredOrigins(point: Pick<AccessPoint, "type" | "endpoint">): string[] | null {
+  if (point.type === "chatgpt") {
+    return [...CHATGPT_ORIGINS];
+  }
+  const checked = validateEndpoint(FIXED_ENDPOINTS[point.type] ?? point.endpoint);
+  return checked.ok ? [originPattern(checked.url)] : null;
+}
 
 /** Types that cannot work without an API key. */
 export const KEY_REQUIRED_TYPES: readonly AccessPointType[] = ["openai-decisions", "anthropic"];

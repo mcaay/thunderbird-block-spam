@@ -1,168 +1,198 @@
-:root {
-  color-scheme: light dark;
-  --text: #1c1f24;
-  --muted: #5d6673;
-  --border: #d9dee5;
-  --accent: #1f6feb;
-  --accent-text: #ffffff;
-  --green: #1a7f37;
-  --red: #c62828;
-  --amber: #9a6700;
-  --chip: #eef1f5;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #e6e8eb;
-    --muted: #9aa3ae;
-    --border: #3a3f47;
-    --accent: #4c8dff;
-    --accent-text: #0b1220;
-    --green: #56c271;
-    --red: #ff7b72;
-    --amber: #e3b341;
-    --chip: #30343b;
-  }
-}
+/* The toolbar popup, in the look of a Thunderbird panel. */
 
 body {
-  margin: 0;
-  padding: 12px 14px;
-  width: 360px;
-  color: var(--text);
-  font: 13px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  width: 380px;
+  background-color: var(--panel);
 }
 
 header {
   display: flex;
   align-items: center;
   gap: 8px;
+  padding: 10px 12px;
 }
 
-header strong {
+header h1 {
   flex: 1;
-  font-size: 14px;
+  margin: 0;
+  font-size: 1.1em;
+  font-weight: 600;
+}
+
+section {
+  padding: 8px 12px 10px;
+  border-top: 1px solid var(--panel-separator);
 }
 
 h2 {
-  font-size: 12px;
-  color: var(--muted);
-  margin: 12px 0 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  margin: 0 0 4px;
+  font-size: 1em;
+  font-weight: 600;
 }
 
-p {
-  margin: 6px 0;
+section > .description:last-child,
+section > p:last-child {
+  margin-bottom: 0;
 }
 
-.hint {
-  color: var(--muted);
+.sender {
+  margin-bottom: 6px;
+  overflow-wrap: anywhere;
 }
 
-.error {
-  color: var(--red);
-}
-
-.row {
-  display: flex;
-  gap: 8px;
-  margin: 8px 0;
-}
-
-button {
-  font: inherit;
-  color: inherit;
-  background: var(--chip);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 4px 12px;
-  cursor: pointer;
-}
-
-button.primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-text);
-}
-
-button.link {
-  background: none;
-  border: none;
-  color: var(--accent);
-  padding: 0;
-  text-decoration: underline;
-}
-
-.badge {
-  font-size: 12px;
-  border-radius: 10px;
-  padding: 1px 9px;
-  background: var(--chip);
-}
-
-.badge.good {
-  color: var(--green);
-}
-
-.badge.warn {
-  color: var(--amber);
-}
-
-.badge.bad {
-  color: var(--red);
-}
-
-ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-li {
-  display: flex;
+.selection button {
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 0;
-  border-bottom: 1px solid var(--border);
+  gap: 8px;
 }
 
-li .sender {
-  flex: 1;
-  min-width: 0;
+.selection .key {
+  font-size: 0.9em;
+  color: var(--description);
+}
+
+.selection .row.domain {
+  gap: 4px 6px;
+  margin-bottom: 0;
+}
+
+.selection .row.domain .description {
+  margin: 0 2px 0 0;
+}
+
+.result {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  margin: 0 0 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  background-color: var(--bar-success);
+}
+
+.result > .icon {
+  margin-top: 1px;
+  color: var(--icon-success);
+}
+
+.result.error {
+  background-color: var(--bar-warning);
+}
+
+.result.error > .icon {
+  color: var(--icon-warning);
+}
+
+p.result {
+  display: block;
+}
+
+/* The last decisions: each row is a button that opens its entry in the log. */
+
+.decisions {
+  margin: 0 -6px;
+  padding: 0;
+  list-style: none;
+}
+
+.decision {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto auto;
+  gap: 0 7px;
+  align-items: center;
+  width: 100%;
+  min-height: 26px;
+  padding: 2px 6px;
+  text-align: start;
+  color: inherit;
+  border: 0;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.decision:hover {
+  background-color: var(--hover);
+}
+
+.decision:focus-visible {
+  outline-offset: -2px;
+}
+
+.decision .who {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-li .outcome,
-li .time {
-  color: var(--muted);
-  font-size: 11px;
+.decision .what,
+.decision .when {
+  font-size: 0.9em;
   white-space: nowrap;
+  color: var(--deemphasized);
+}
+
+.decision .when {
+  min-width: 34px;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
 }
 
 .dot {
   width: 8px;
   height: 8px;
+  border: 2px solid var(--icon-warning);
   border-radius: 50%;
-  background: var(--amber);
-  flex: none;
+  background-color: var(--icon-warning);
 }
 
 .dot.outcome-trusted,
 .dot.outcome-passed,
 .dot.outcome-released {
-  background: var(--green);
+  border-color: var(--icon-success);
+  background-color: var(--icon-success);
 }
 
 .dot.outcome-blocked,
 .dot.outcome-spam,
 .dot.outcome-error {
-  background: var(--red);
+  border-color: var(--icon-critical);
+  background-color: var(--icon-critical);
 }
 
-footer {
-  margin-top: 12px;
-  text-align: right;
+/* A test or an observed decision moved nothing: its dot is hollow. */
+.dot.hollow {
+  background-color: transparent;
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.footer .score {
+  flex: 1;
+  min-width: 0;
+}
+
+.footer .score p {
+  margin: 0 0 6px;
+}
+
+/* While the score box asks or answers, it takes the whole width and the switch moves below it. */
+.footer .score:has(p) {
+  flex-basis: 100%;
+}
+
+.footer .row {
+  margin: 0;
+}
+
+.footer .score:not([hidden]) + .row.end {
+  flex: none;
+}
+
+.footer .row.end {
+  flex: 1;
 }

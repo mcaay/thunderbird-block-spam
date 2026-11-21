@@ -80,6 +80,8 @@ declare namespace tb {
     windowId?: number;
     type?: string;
     active: boolean;
+    /** Only set for tabs the add-on may see the address of: its own pages. */
+    url?: string;
   }
 
   type ComposeRecipient = string | { nodeId: string; type: string };
@@ -178,10 +180,12 @@ declare namespace tb {
       create(properties: { url: string; windowId?: number; active?: boolean; linkHandler?: string }): Promise<Tab>;
       query(queryInfo: { active?: boolean; currentWindow?: boolean; lastFocusedWindow?: boolean }): Promise<Tab[]>;
       get(tabId: number): Promise<Tab>;
+      update(tabId: number, properties: { active?: boolean }): Promise<Tab>;
       remove(tabIds: number | number[]): Promise<void>;
     };
     windows: {
       openDefaultBrowser(url: string): Promise<void>;
+      update(windowId: number, properties: { focused?: boolean }): Promise<unknown>;
     };
     alarms: {
       create(name: string, alarmInfo: { periodInMinutes?: number; delayInMinutes?: number }): void | Promise<void>;

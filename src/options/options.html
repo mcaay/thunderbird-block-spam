@@ -4,36 +4,112 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Block Spam</title>
+    <link rel="stylesheet" href="../common.css" />
     <link rel="stylesheet" href="options.css" />
   </head>
   <body>
-    <nav>
+    <nav id="categories" data-i18n-aria-label="navLabel">
       <div class="brand">
-        <img src="../icons/icon.svg" alt="" width="28" height="28" />
+        <img src="../icons/icon.svg" alt="" width="24" height="24" />
         <span data-i18n="extensionName"></span>
       </div>
-      <a href="#status" data-i18n="sectionStatus"></a>
-      <a href="#lists" data-i18n="sectionLists"></a>
-      <a href="#public" data-i18n="sectionPublic"></a>
-      <a href="#forwarding" data-i18n="sectionForwarding"></a>
-      <a href="#learning" data-i18n="sectionLearning"></a>
-      <a href="#incoming" data-i18n="sectionIncoming"></a>
-      <a href="#ai" data-i18n="sectionAi"></a>
-      <a href="#shortcuts" data-i18n="sectionShortcuts"></a>
-      <a href="#log" data-i18n="sectionLog"></a>
-      <a href="#data" data-i18n="sectionData"></a>
+      <ul class="category-list">
+        <li>
+          <a class="category" href="#overview">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path class="fill" d="M12 3.2 5 6v5.2c0 4.5 2.8 7.9 7 9.6 4.2-1.7 7-5.1 7-9.6V6z" />
+              <path d="m8.8 11.9 2.3 2.3 4.1-4.5" />
+            </svg>
+            <span data-i18n="catOverview"></span>
+          </a>
+        </li>
+        <li>
+          <a class="category" href="#lists">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect class="fill" x="3.5" y="3.5" width="17" height="17" rx="2.5" />
+              <path d="m6.8 8.6 1.4 1.4 2.4-2.8M13.5 8.6h4M7 14.2l2.8 2.8m0-2.8L7 17M13.5 15.6h4" />
+            </svg>
+            <span data-i18n="catLists"></span>
+          </a>
+        </li>
+        <li>
+          <a class="category" href="#log">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle class="fill" cx="12" cy="12" r="8.5" />
+              <path d="M12 7.2V12l3.2 2.1" />
+            </svg>
+            <span data-i18n="catLog"></span>
+          </a>
+        </li>
+        <li>
+          <a class="category" href="#learning">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path class="fill" d="M20.3 3.7 3.9 9.8c-.5.2-.5.9 0 1.1l6.3 2.9 2.9 6.3c.2.5.9.5 1.1 0z" />
+              <path d="M10.2 13.8 20.3 3.7" />
+            </svg>
+            <span data-i18n="catLearning"></span>
+          </a>
+        </li>
+        <li>
+          <a class="category" href="#incoming">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path class="fill" d="M3.5 13.5 6 5.9c.2-.8.9-1.4 1.8-1.4h8.4c.9 0 1.6.6 1.8 1.4l2.5 7.6v4.1c0 1-.8 1.9-1.9 1.9H5.4c-1.1 0-1.9-.9-1.9-1.9z" />
+              <path d="M3.5 13.5h4.7c.3 0 .6.2.7.6.4 1.3 1.6 2.2 3.1 2.2s2.7-.9 3.1-2.2c.1-.4.4-.6.7-.6h4.7" />
+            </svg>
+            <span data-i18n="catIncoming"></span>
+          </a>
+        </li>
+        <li>
+          <a class="category" href="#ai">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path class="fill" d="M10.5 3.5c.7 4.3 2.7 6.3 7 7-4.3.7-6.3 2.7-7 7-.7-4.3-2.7-6.3-7-7 4.3-.7 6.3-2.7 7-7z" />
+              <path class="fill" d="M18 14.5c.3 1.8 1.2 2.7 3 3-1.8.3-2.7 1.2-3 3-.3-1.8-1.2-2.7-3-3 1.8-.3 2.7-1.2 3-3z" />
+            </svg>
+            <span data-i18n="catAi"></span>
+          </a>
+        </li>
+        <li>
+          <a class="category" href="#shortcuts">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect class="fill" x="2.5" y="6" width="19" height="12" rx="2.2" />
+              <path d="M6.3 10h.01M9.9 10h.01M13.5 10h.01M17.1 10h.01M8.2 14h7.6" />
+            </svg>
+            <span data-i18n="catShortcuts"></span>
+          </a>
+        </li>
+      </ul>
+      <ul class="category-list footer-categories">
+        <li>
+          <a class="category" href="#advanced">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3.5 7h8.3M16.7 7h3.8M3.5 12h2.8M11.2 12h9.3M3.5 17h9.3M17.7 17h2.8" />
+              <circle class="fill" cx="14.2" cy="7" r="2.4" />
+              <circle class="fill" cx="8.7" cy="12" r="2.4" />
+              <circle class="fill" cx="15.2" cy="17" r="2.4" />
+            </svg>
+            <span data-i18n="catAdvanced"></span>
+          </a>
+        </li>
+        <li>
+          <a class="category" href="#backup">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M8 19.5v-15M4.3 8.2 8 4.5l3.7 3.7M16 4.5v15M12.3 15.8l3.7 3.7 3.7-3.7" />
+            </svg>
+            <span data-i18n="catBackup"></span>
+          </a>
+        </li>
+      </ul>
     </nav>
     <main>
-      <section id="status"></section>
-      <section id="lists" class="needs-data"></section>
-      <section id="public" class="needs-data"></section>
-      <section id="forwarding" class="needs-data"></section>
-      <section id="learning" class="needs-data"></section>
-      <section id="incoming" class="needs-data"></section>
-      <section id="ai" class="needs-data"></section>
-      <section id="shortcuts" class="needs-data"></section>
-      <section id="log" class="needs-data"></section>
-      <section id="data" class="needs-data"></section>
+      <section id="overview" class="pane"></section>
+      <section id="lists" class="pane" hidden></section>
+      <section id="log" class="pane" hidden></section>
+      <section id="learning" class="pane" hidden></section>
+      <section id="incoming" class="pane" hidden></section>
+      <section id="ai" class="pane" hidden></section>
+      <section id="shortcuts" class="pane" hidden></section>
+      <section id="advanced" class="pane" hidden></section>
+      <section id="backup" class="pane" hidden></section>
     </main>
     <script src="options.js"></script>
   </body>

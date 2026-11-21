@@ -1,0 +1,406 @@
+/*
+ * The look of Thunderbird's own Settings, shared by the settings page and the popup.
+ * Every value is one of Thunderbird's design tokens, measured in Thunderbird 153:
+ * neutral zinc greys, the system accent color, the platform font.
+ */
+
+:root {
+  color-scheme: light dark;
+  --page: light-dark(#ffffff, #18181b);
+  --soft: light-dark(#fafafa, #27272a);
+  --text: light-dark(#15141a, #fbfbfe);
+  --description: color-mix(in srgb, var(--text) 60%, transparent);
+  --deemphasized: color-mix(in srgb, var(--text) 69%, transparent);
+  --border: color-mix(in srgb, var(--text) 46%, transparent);
+  --separator: light-dark(#d4d4d8, #3f3f46);
+  --hover: color-mix(in srgb, var(--text) 10%, transparent);
+  --selected: light-dark(#e4e4e7, #52525b);
+  --button: light-dark(#e4e4e7, #52525b);
+  --button-hover: light-dark(#f4f4f5, #3f3f46);
+  --button-active: light-dark(#d4d4d8, #71717a);
+  --button-border: light-dark(#a1a1aa, #71717a);
+  --button-text: light-dark(#18181b, #f4f4f5);
+  --primary: AccentColor;
+  --primary-text: AccentColorText;
+  --primary-border: color-mix(in srgb, AccentColor 85%, black);
+  --primary-hover: color-mix(in srgb, AccentColor 80%, black);
+  --primary-active: color-mix(in srgb, AccentColor 70%, black);
+  --destructive: light-dark(#dc2626, #fca5a5);
+  --destructive-text: light-dark(#ffffff, #15141a);
+  --destructive-hover: light-dark(#b91c1c, oklch(83% 0.14 15));
+  --field: light-dark(#ffffff, #42414d);
+  --checkbox: light-dark(#e4e4e7, #52525b);
+  --checkbox-border: light-dark(#52525b, #71717a);
+  --link: light-dark(#1373d9, #4cb1f9);
+  --link-active: light-dark(#105bbc, #2493ef);
+  --success: light-dark(#1d783b, #55d37e);
+  --error: light-dark(#b91c1c, oklch(83% 0.14 15));
+  --warning: light-dark(#713f12, #fee78a);
+  --bar-critical: light-dark(oklch(97% 0.05 15), #7f1d1d);
+  --bar-warning: light-dark(oklch(97% 0.05 90), #713f12);
+  --bar-success: light-dark(oklch(97% 0.05 145), oklch(34% 0.14 145));
+  --bar-information: light-dark(oklch(97% 0.05 260), oklch(34% 0.14 260));
+  --icon-information: light-dark(#1373d9, oklch(83% 0.17 260));
+  --icon-success: light-dark(#16a34a, oklch(83% 0.14 145));
+  --icon-warning: light-dark(oklch(58% 0.24 90), oklch(86% 0.14 90));
+  --icon-critical: light-dark(#b91c1c, oklch(83% 0.14 15));
+  --row-hover: color-mix(in srgb, AccentColor 20%, transparent);
+  --panel: light-dark(#ffffff, rgb(66, 65, 77));
+  --panel-separator: color-mix(in srgb, var(--text) 25%, transparent);
+  --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%2318181b' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.4 6.9 11.2 12 5.2' fill='none' stroke='%23ffffff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%23f4f4f5' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* The platform font and size, then the size Thunderbird's Settings use for their content. */
+html {
+  font: message-box;
+}
+
+body {
+  margin: 0;
+  font-size: 1.1rem;
+  line-height: 1.4;
+  color: var(--text);
+  background-color: var(--page);
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+:focus-visible {
+  outline: 2px solid AccentColor;
+  outline-offset: 2px;
+}
+
+/* Text. */
+
+h1 {
+  margin: 0 0 8px;
+  font-size: 1.46em;
+  font-weight: 300;
+  line-height: 1.3;
+}
+
+h2 {
+  margin: 28px 0 4px;
+  font-size: 1.1em;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+h3 {
+  margin: 14px 0 4px;
+  font-size: 1em;
+  font-weight: 600;
+}
+
+p {
+  margin: 4px 0;
+}
+
+.description {
+  margin: 2px 0 6px;
+  font-size: 0.9em;
+  line-height: 1.6;
+  color: var(--description);
+}
+
+a {
+  color: var(--link);
+  text-decoration: underline;
+}
+
+a:active {
+  color: var(--link-active);
+}
+
+code,
+pre {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+}
+
+/* A key or a key combination. The platform font draws the modifier glyphs of macOS best. */
+kbd {
+  display: inline-block;
+  min-width: 2em;
+  padding: 1px 6px;
+  font: inherit;
+  letter-spacing: 0.06em;
+  text-align: center;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background-color: var(--soft);
+}
+
+/* Buttons and menus. A select looks like a button, as Thunderbird's menu lists do. */
+
+button,
+select {
+  min-height: 2.2em;
+  margin: 0;
+  padding: 0 12px;
+  font: inherit;
+  color: var(--button-text);
+  border: 1px solid var(--button-border);
+  border-radius: 3px;
+  background-color: var(--button);
+}
+
+select {
+  max-width: 100%;
+  padding: 0 24px 0 6px;
+  appearance: none;
+  text-overflow: ellipsis;
+  background-image: var(--chevron);
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  background-size: 12px;
+}
+
+button:hover:not(:disabled, [aria-disabled="true"]),
+select:hover:not(:disabled) {
+  background-color: var(--button-hover);
+}
+
+button:active:not(:disabled, [aria-disabled="true"]) {
+  background-color: var(--button-active);
+}
+
+button:disabled,
+button[aria-disabled="true"],
+select:disabled,
+input:disabled,
+textarea:disabled {
+  opacity: 0.5;
+}
+
+button.primary {
+  color: var(--primary-text);
+  border-color: var(--primary-border);
+  background-color: var(--primary);
+}
+
+button.primary:hover:not(:disabled, [aria-disabled="true"]) {
+  background-color: var(--primary-hover);
+}
+
+button.primary:active:not(:disabled, [aria-disabled="true"]) {
+  background-color: var(--primary-active);
+}
+
+button.destructive {
+  color: var(--destructive-text);
+  border-color: transparent;
+  background-color: var(--destructive);
+}
+
+button.destructive:hover:not(:disabled, [aria-disabled="true"]) {
+  background-color: var(--destructive-hover);
+}
+
+button.small {
+  min-height: 24px;
+  padding: 0 8px;
+}
+
+/* A button that repeats in every row of a table: an outline, so that the column stays light. */
+button.outline {
+  background-color: transparent;
+}
+
+/* Icon buttons: remove, move. Transparent until the pointer or the focus is on them. */
+button.icon {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  min-height: 24px;
+  padding: 0;
+  color: inherit;
+  border-color: transparent;
+  background-color: transparent;
+}
+
+button.icon.quiet {
+  color: var(--deemphasized);
+}
+
+button.icon.quiet:hover:not([aria-disabled="true"]),
+button.icon.quiet:focus-visible {
+  color: inherit;
+}
+
+.icon {
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.icon .fill {
+  fill: color-mix(in srgb, currentColor 20%, transparent);
+}
+
+/* Fields. */
+
+input[type="text"],
+input[type="search"],
+input[type="email"],
+input[type="url"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+textarea {
+  min-height: 2.2em;
+  margin: 0;
+  padding: 0 6px;
+  font: inherit;
+  color: inherit;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background-color: var(--field);
+}
+
+textarea {
+  padding: 6px;
+}
+
+::placeholder {
+  color: color-mix(in srgb, var(--text) 50%, transparent);
+  opacity: 1;
+}
+
+[aria-invalid="true"] {
+  border-color: var(--error);
+}
+
+input[type="checkbox"] {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  appearance: none;
+  vertical-align: middle;
+  border: 1px solid var(--checkbox-border);
+  border-radius: 4px;
+  background-color: var(--checkbox);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 16px;
+}
+
+input[type="checkbox"]:hover:not(:disabled) {
+  background-color: var(--button-hover);
+}
+
+input[type="checkbox"]:checked {
+  border-color: AccentColor;
+  background-color: AccentColor;
+  background-image: var(--check);
+}
+
+input[type="checkbox"]:checked:hover:not(:disabled) {
+  border-color: var(--primary-hover);
+  background-color: var(--primary-hover);
+}
+
+/* Rows of controls. */
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 6px 0;
+}
+
+.row.end {
+  justify-content: flex-end;
+}
+
+/* Feedback. */
+
+.field-error {
+  margin: 2px 0 6px;
+  color: var(--error);
+}
+
+.inline-status {
+  color: var(--deemphasized);
+}
+
+.inline-status.ok {
+  color: var(--success);
+}
+
+.inline-status.error {
+  color: var(--error);
+}
+
+.badge {
+  display: inline-block;
+  padding: 0 5px;
+  font-size: 0.9em;
+  line-height: 1.5;
+  white-space: nowrap;
+  color: var(--deemphasized);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+/* The state of protection: a word, with an icon and a color that say the same. */
+.state {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 1rem;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.state.on,
+.state.observing {
+  color: var(--success);
+}
+
+.state.off {
+  color: var(--deemphasized);
+}
+
+.state.problems {
+  color: var(--warning);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+}

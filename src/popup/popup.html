@@ -3,23 +3,17 @@
   <head>
     <meta charset="utf-8" />
     <title>Block Spam</title>
+    <link rel="stylesheet" href="../common.css" />
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
     <header>
-      <img src="../icons/icon.svg" alt="" width="22" height="22" />
-      <strong data-i18n="extensionName"></strong>
-      <span id="status"></span>
+      <img src="../icons/icon.svg" alt="" width="20" height="20" />
+      <h1 data-i18n="extensionName"></h1>
+      <span id="state" class="state" role="status"></span>
+      <button id="open-settings" type="button" data-i18n="popupSettings"></button>
     </header>
-    <div class="row">
-      <button id="toggle" type="button" hidden></button>
-    </div>
-    <h2 data-i18n="popupRecent"></h2>
-    <div id="recent"></div>
-    <div id="score"></div>
-    <footer>
-      <button id="open-settings" type="button" class="link" data-i18n="popupSettings"></button>
-    </footer>
+    <main id="content"></main>
     <script src="popup.js"></script>
   </body>
 </html>

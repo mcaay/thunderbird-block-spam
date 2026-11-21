@@ -37,7 +37,7 @@ import { t, tCode } from "./tb/i18n";
 import { hold, withKeepAlive } from "./tb/keepAlive";
 import { collect, messagePages, messagesOfTab, ThunderbirdMail } from "./tb/mail";
 import { COMPANION_ID, KEY_PENDING_SIGN_IN } from "./tb/protocol";
-import type { Envelope, PageEvent, Reply, RequestName, Requests, Status } from "./tb/protocol";
+import type { Envelope, PageEvent, Reply, RequestName, Requests, SettingsTarget, Status } from "./tb/protocol";
 import { BrowserStore } from "./tb/store";
 
 const TICK_ALARM = "tick";
@@ -526,9 +526,9 @@ function findPoint(state: AppState, id: string): AccessPoint {
   return point;
 }
 
-/** The log entry the settings page was asked to show. Kept until the page takes it, for a short while. */
-let logFocus: { key: string; at: number } | null = null;
-const LOG_FOCUS_MS = 30 * 1000;
+/** What the settings page was asked to show. Kept until the page takes it, for a short while. */
+let settingsTarget: { target: SettingsTarget; at: number } | null = null;
+const SETTINGS_TARGET_MS = 30 * 1000;
 
 function asFolderRef(value: unknown, path: string): FolderRef {
   const record = asRecord(value, path);
@@ -976,19 +976,20 @@ const handlers: Handlers = {
     }
   },
 
-  async showLogEntry({ key }) {
-    logFocus = { key: asString(key, "key"), at: Date.now() };
-    // A settings page that is already open shows the entry at once. One that is about
-    // to open asks with takeLogFocus.
-    const event: PageEvent = { blockSpamEvent: "logFocus", key: logFocus.key };
+  async showInSettings({ pane, logKey }) {
+    const target: SettingsTarget = { pane: asString(pane, "pane"), logKey: logKey === null ? null : asString(logKey, "logKey") };
+    settingsTarget = { target, at: Date.now() };
+    // A settings page that is already open shows the target at once. One that is about
+    // to open asks with takeSettingsTarget.
+    const event: PageEvent = { blockSpamEvent: "show", target };
     void browser.runtime.sendMessage(event).catch(() => undefined);
     return null;
   },
 
-  async takeLogFocus() {
-    const focus = logFocus;
-    logFocus = null;
-    return { key: focus !== null && Date.now() - focus.at < LOG_FOCUS_MS ? focus.key : null };
+  async takeSettingsTarget() {
+    const wanted = settingsTarget;
+    settingsTarget = null;
+    return { target: wanted !== null && Date.now() - wanted.at < SETTINGS_TARGET_MS ? wanted.target : null };
   },
 
   async welcomeShown() {

@@ -65,10 +65,10 @@ export interface Requests {
   /** Runs one of the four shortcut commands on the selection of a tab. The lines say what was done. */
   runCommand: { request: { command: CommandName; tabId: number }; result: { lines: string[]; failed: boolean } };
   scoreSelected: { request: { tabId: number }; result: TestScoreSummary & { selected: number } };
-  /** Asks the settings page, open or about to open, to show one log entry. */
-  showLogEntry: { request: { key: string }; result: null };
-  /** The log entry the settings page was asked to show, once. */
-  takeLogFocus: { request: Record<string, never>; result: { key: string | null } };
+  /** Asks the settings page, open or about to open, to show a pane, and in the log one entry. */
+  showInSettings: { request: SettingsTarget; result: null };
+  /** What the settings page was asked to show, once. */
+  takeSettingsTarget: { request: Record<string, never>; result: { target: SettingsTarget | null } };
   welcomeShown: { request: Record<string, never>; result: null };
 }
 
@@ -82,18 +82,28 @@ export interface Envelope<Name extends RequestName = RequestName> {
 /** A failed request carries the background's message and, for mistakes a user can make, a code the pages translate. */
 export type Reply<Result> = { ok: true; result: Result } | { ok: false; error: string; code?: string };
 
+/** What the popup wants to see in the settings page: a pane, and in the log one entry (see logEntryKey). */
+export interface SettingsTarget {
+  pane: string;
+  logKey: string | null;
+}
+
 /** What the background tells open pages without being asked. */
 export interface PageEvent {
-  blockSpamEvent: "logFocus";
-  key: string;
+  blockSpamEvent: "show";
+  target: SettingsTarget;
 }
 
 export function isPageEvent(message: unknown): message is PageEvent {
+  const target = (message as PageEvent | null)?.target;
   return (
     typeof message === "object" &&
     message !== null &&
-    (message as PageEvent).blockSpamEvent === "logFocus" &&
-    typeof (message as PageEvent).key === "string"
+    (message as PageEvent).blockSpamEvent === "show" &&
+    typeof target === "object" &&
+    target !== null &&
+    typeof target.pane === "string" &&
+    (target.logKey === null || typeof target.logKey === "string")
   );
 }
 

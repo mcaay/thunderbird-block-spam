@@ -11,6 +11,9 @@
   "optionsTitle": {
     "message": "Block Spam settings"
   },
+  "navLabel": {
+    "message": "Categories"
+  },
   "cancel": {
     "message": "Cancel"
   },
@@ -29,11 +32,20 @@
   "edit": {
     "message": "Edit"
   },
-  "refresh": {
-    "message": "Refresh"
+  "copy": {
+    "message": "Copy"
   },
   "copied": {
     "message": "Copied."
+  },
+  "ok": {
+    "message": "OK"
+  },
+  "undo": {
+    "message": "Undo"
+  },
+  "dismiss": {
+    "message": "Dismiss"
   },
   "noneYet": {
     "message": "None yet."
@@ -44,20 +56,47 @@
   "invalidItems": {
     "message": "Not valid and left out: $1"
   },
+  "learnMore": {
+    "message": "Learn more"
+  },
+  "learnMoreAbout": {
+    "message": "Learn more about $1"
+  },
+  "unsavedChanges": {
+    "message": "Unsaved changes"
+  },
+  "errorDetail": {
+    "message": "Details: $1"
+  },
+  "removeNamed": {
+    "message": "Remove $1"
+  },
+  "editNamed": {
+    "message": "Edit $1"
+  },
+  "checkAgain": {
+    "message": "Check again"
+  },
+  "colActions": {
+    "message": "Actions"
+  },
   "permissionDeclined": {
     "message": "The permission was not granted, so nothing was changed."
+  },
+  "permissionTryAgain": {
+    "message": "Thunderbird refused part of the permission request. Press the button again: Block Spam will then ask for less."
   },
   "errorNotReady": {
     "message": "Block Spam is still starting. Try again in a moment."
   },
   "errorAccessPointGone": {
-    "message": "This access point no longer exists."
+    "message": "This AI service no longer exists."
   },
   "errorAccountGone": {
     "message": "This account no longer exists."
   },
   "errorChatgptNeedsSignIn": {
-    "message": "A ChatGPT plan access point is added by signing in."
+    "message": "A ChatGPT plan service is added by signing in."
   },
   "errorFolderPermission": {
     "message": "Thunderbird has not made folder creation available yet. Create the folder in Thunderbird and choose it here."
@@ -69,85 +108,223 @@
     "message": "Selected messages are already being scored."
   },
   "errorTypeChange": {
-    "message": "The type of an access point cannot be changed. Remove it and add a new one."
+    "message": "The type of an AI service cannot be changed. Remove it and add a new one."
   },
-  "sectionStatus": {
-    "message": "Status and setup"
+  "invalid_entry_invalid": {
+    "message": "Enter an email address such as name@example.com or a domain such as example.com."
   },
-  "sectionLists": {
+  "invalid_address_invalid": {
+    "message": "Enter an email address such as name@example.com."
+  },
+  "invalid_account_unknown": {
+    "message": "This account no longer exists."
+  },
+  "invalid_cutoff_range": {
+    "message": "Enter a number from 0.00 to 1.00."
+  },
+  "invalid_prompt_empty": {
+    "message": "An empty prompt cannot be saved."
+  },
+  "invalid_own_address": {
+    "message": "This is one of your own addresses, so nothing was changed."
+  },
+  "invalid_no_sender": {
+    "message": "This entry has no sender to act on."
+  },
+  "invalid_import_invalid": {
+    "message": "This file is not a valid Block Spam export."
+  },
+  "catOverview": {
+    "message": "Overview"
+  },
+  "catLists": {
     "message": "Lists"
   },
-  "sectionPublic": {
-    "message": "Public domains"
-  },
-  "sectionForwarding": {
-    "message": "Forwarding mailboxes"
-  },
-  "sectionLearning": {
-    "message": "Learning"
-  },
-  "sectionIncoming": {
-    "message": "Incoming mail"
-  },
-  "sectionAi": {
-    "message": "AI"
-  },
-  "sectionShortcuts": {
-    "message": "Shortcuts"
-  },
-  "sectionLog": {
+  "catLog": {
     "message": "Log"
   },
-  "sectionData": {
-    "message": "Data"
+  "catLearning": {
+    "message": "Learning"
   },
-  "protectionLabel": {
+  "catIncoming": {
+    "message": "Incoming mail"
+  },
+  "catAi": {
+    "message": "AI"
+  },
+  "catShortcuts": {
+    "message": "Shortcuts"
+  },
+  "catAdvanced": {
+    "message": "Advanced"
+  },
+  "catBackup": {
+    "message": "Export and import"
+  },
+  "overviewLead": {
+    "message": "Block Spam moves mail from blocked senders to Junk, never touches mail from people you write to, and can ask an AI about everyone else."
+  },
+  "protectionTitle": {
     "message": "Protection"
   },
-  "protectionOn": {
-    "message": "On"
-  },
-  "protectionOff": {
-    "message": "Off"
-  },
-  "protectionObserving": {
-    "message": "On, observing only"
+  "protectionLabel": {
+    "message": "Check incoming mail"
   },
   "protectionHint": {
-    "message": "While protection is on, incoming mail in monitored folders is checked against the lists. Mail from blacklisted senders goes to Junk. Mail that arrived before protection was switched on is never touched. Learning from sent mail and the shortcuts work whether protection is on or off."
+    "message": "New mail in monitored folders is checked against the lists, and mail from blocked senders goes to Junk. Mail that arrived before protection was switched on is never touched."
   },
-  "observationLabel": {
-    "message": "Observation mode"
+  "protectionMore": {
+    "message": "Mail from senders on neither list is scored by an AI service if you added one. Otherwise it follows the setting under Incoming mail. Learning from sent mail, the shortcuts and the buttons of the toolbar panel work whether protection is on or off."
   },
-  "observationHint": {
-    "message": "Decisions are computed and logged, but no message is moved and the AI adds nothing to the black list. This is the recommended way to try a model, a prompt or a cutoff before trusting them."
-  },
-  "checklistTitle": {
-    "message": "Setup"
-  },
-  "checklistScan": {
-    "message": "Scan your Sent folders, so the people you already write to are on the white list"
-  },
-  "checklistAi": {
-    "message": "Optional: add an AI access point for mail from unknown senders"
-  },
-  "checklistProtect": {
+  "protectionSwitchOn": {
     "message": "Switch protection on"
   },
+  "protectionSwitchOff": {
+    "message": "Switch protection off"
+  },
+  "stateOn": {
+    "message": "On"
+  },
+  "stateOff": {
+    "message": "Off"
+  },
+  "stateObserving": {
+    "message": "On, observing only"
+  },
+  "stateProblems": {
+    "message": "On, with problems"
+  },
+  "statusLastCheck": {
+    "message": "Last check: $1."
+  },
+  "statusNeverChecked": {
+    "message": "Not checked yet."
+  },
+  "statusToday": {
+    "message": "Today: $1, $2, $3."
+  },
+  "statusTodayNone": {
+    "message": "No mail was checked today yet."
+  },
+  "statusChecked_one": {
+    "message": "$1 message checked"
+  },
+  "statusChecked_few": {
+    "message": "$1 messages checked"
+  },
+  "statusChecked_many": {
+    "message": "$1 messages checked"
+  },
+  "statusJunk_one": {
+    "message": "$1 moved to Junk"
+  },
+  "statusJunk_few": {
+    "message": "$1 moved to Junk"
+  },
+  "statusJunk_many": {
+    "message": "$1 moved to Junk"
+  },
+  "statusScored_one": {
+    "message": "$1 scored by AI"
+  },
+  "statusScored_few": {
+    "message": "$1 scored by AI"
+  },
+  "statusScored_many": {
+    "message": "$1 scored by AI"
+  },
+  "statusAi": {
+    "message": "AI services working: $1 of $2."
+  },
+  "statusAiOff": {
+    "message": "All AI services are switched off."
+  },
   "warnAiBeforeScan": {
-    "message": "AI is configured, but the white list holds only your own addresses. Mail from your existing contacts would be scored by the AI. Scan your Sent folders first."
+    "message": "An AI service is switched on, but the white list holds only your own addresses. Mail from people you already write to would be sent to the AI."
   },
   "warnNoJunk": {
-    "message": "No Junk folder found for: $1. Spam in these accounts stays where it is. Enable junk handling for the account in Thunderbird, or create a Junk folder."
+    "message": "$1 has no Junk folder, so spam in this account stays where it is. Enable junk handling for the account in Thunderbird, or create a Junk folder."
   },
   "warnNeedsAttention": {
-    "message": "These access points need attention and are skipped until you edit them: $1"
+    "message": "The AI service $1 is not used."
   },
   "warnNoScreening": {
-    "message": "Mail without an AI verdict is set to go to a screening folder, but these accounts have none, so it stays in place: $1"
+    "message": "Mail without an AI verdict goes to a screening folder, but $1 has none, so its mail stays where it is."
+  },
+  "warnAiDown": {
+    "message": "No AI service is working at the moment, so mail from unknown senders gets no AI verdict."
+  },
+  "remedy_key_rejected": {
+    "message": "The key was rejected. Edit this service and enter a valid key."
+  },
+  "remedy_key_missing": {
+    "message": "Its key is missing. Edit this service and enter the key."
+  },
+  "remedy_permission": {
+    "message": "This computer has not allowed its host yet. Edit this service and press Save."
+  },
+  "remedy_sign_in": {
+    "message": "You are not signed in. Use Continue with ChatGPT in its row."
+  },
+  "remedy_plan_refused": {
+    "message": "OpenAI refused to use this plan. Sign in again, or check the plan in ChatGPT settings."
+  },
+  "chooseScreening": {
+    "message": "Choose a folder"
+  },
+  "openAi": {
+    "message": "Open AI"
+  },
+  "setupTitle": {
+    "message": "Setup"
+  },
+  "setupComplete": {
+    "message": "Setup complete"
+  },
+  "stepDone": {
+    "message": "done"
+  },
+  "step1Title": {
+    "message": "Scan your sent mail"
+  },
+  "step1Text": {
+    "message": "Everyone you have written to goes on the white list, so their mail is never sent to an AI."
+  },
+  "step2Title": {
+    "message": "Add an AI service (optional)"
+  },
+  "step2Text": {
+    "message": "It scores mail from senders you have never written to. Without one, such mail stays where it is."
+  },
+  "step2Add": {
+    "message": "Add an AI service"
+  },
+  "step3Text": {
+    "message": "From then on new mail is checked. Mail that is already in your folders is never touched."
+  },
+  "scanFirstTitle": {
+    "message": "Scan your sent mail first?"
+  },
+  "scanFirstText": {
+    "message": "The scan puts everyone you have written to on the white list. It reads only the recipients of your sent mail and uses no AI."
+  },
+  "scanFirst": {
+    "message": "Scan first"
+  },
+  "switchOnAnyway": {
+    "message": "Switch on anyway"
+  },
+  "observationTitle": {
+    "message": "Observation mode"
+  },
+  "observationLabel": {
+    "message": "Only observe: decide and log, but move nothing"
+  },
+  "observationHint": {
+    "message": "No message is moved and the AI adds nothing to the black list. The log shows what would have happened. Use it to try a model, a prompt or a cutoff before you trust them."
   },
   "fatalTitle": {
-    "message": "Stored data is not valid"
+    "message": "Stored data is not valid."
   },
   "fatalText": {
     "message": "Block Spam could not read its stored data. Protection is off and nothing is written until this is resolved. Nothing is repaired automatically."
@@ -159,28 +336,106 @@
     "message": "The raw data contains your API keys and sign-in tokens. Keep the file private."
   },
   "fatalReset": {
-    "message": "Reset"
+    "message": "Reset…"
   },
   "fatalResetTitle": {
     "message": "Reset all Block Spam data?"
   },
   "fatalResetText": {
-    "message": "This deletes the lists, the settings, the access points with their keys and the log, and ends ChatGPT sign-ins. It cannot be undone. Download the raw data first if you may need it."
+    "message": "This deletes the lists, the settings, the AI services with their keys and the log, and ends ChatGPT sign-ins. It cannot be undone. Download the raw data first if you may need it."
+  },
+  "fatalResetConfirm": {
+    "message": "Reset"
+  },
+  "scanTitle": {
+    "message": "Scan sent mail"
+  },
+  "scanHint": {
+    "message": "Reads the recipients of the mail in the Sent folders above and adds them to the white list. Leave the dates empty to scan everything. Running it again is harmless."
+  },
+  "scanFrom": {
+    "message": "From:"
+  },
+  "scanTo": {
+    "message": "To:"
+  },
+  "scanStart": {
+    "message": "Scan sent mail"
+  },
+  "scanAgain": {
+    "message": "Scan again"
+  },
+  "scanCancel": {
+    "message": "Cancel scan"
+  },
+  "scanRangeInvalid": {
+    "message": "The end date is before the start date."
+  },
+  "scanStarting": {
+    "message": "Starting the scan…"
+  },
+  "scanRunning": {
+    "message": "Scanning folder $1 of $2 ($3). Messages read: $4. Entries added: $5."
+  },
+  "scanDone": {
+    "message": "Scan finished. Messages read: $1. Entries added: $2."
+  },
+  "scanCancelled": {
+    "message": "Scan cancelled. Messages read: $1. Entries added: $2. The entries learned so far are kept."
+  },
+  "scanErrors": {
+    "message": "Problems: $1"
   },
   "listsHint": {
-    "message": "A sender is matched by address first, then by domain. An address entry always beats a domain entry: a blocked address stays blocked inside a trusted domain, and a trusted person passes inside a blocked domain."
+    "message": "A sender is matched by address first, then by domain, so an address entry always beats a domain entry."
   },
-  "listsCounts": {
-    "message": "White list: $1 entries. Black list: $2 entries."
+  "listsMore": {
+    "message": "A blocked address stays blocked inside a trusted domain, and a trusted person passes inside a blocked domain. The white list is learned from your sent mail. The black list holds senders you blocked and senders the AI scored as spam."
+  },
+  "listsWhiteCount_one": {
+    "message": "White list: $1 entry."
+  },
+  "listsWhiteCount_few": {
+    "message": "White list: $1 entries."
+  },
+  "listsWhiteCount_many": {
+    "message": "White list: $1 entries."
+  },
+  "listsBlackCount_one": {
+    "message": "Black list: $1 entry."
+  },
+  "listsBlackCount_few": {
+    "message": "Black list: $1 entries."
+  },
+  "listsBlackCount_many": {
+    "message": "Black list: $1 entries."
   },
   "listsAddTitle": {
     "message": "Add an entry"
   },
+  "listsValueLabel": {
+    "message": "Address or domain"
+  },
   "listsValuePlaceholder": {
     "message": "name@example.com or example.com"
   },
+  "listsListLabel": {
+    "message": "List"
+  },
+  "listsScopeLabel": {
+    "message": "Applies to"
+  },
+  "listsEntriesTitle": {
+    "message": "Entries"
+  },
+  "listsFilterLabel": {
+    "message": "Show:"
+  },
   "listsSearch": {
     "message": "Search"
+  },
+  "listsSearchLabel": {
+    "message": "Search entries"
   },
   "listsBoth": {
     "message": "Both lists"
@@ -191,38 +446,44 @@
   "listBlack": {
     "message": "Black list"
   },
-  "kindAddress": {
-    "message": "Address"
-  },
-  "kindDomain": {
-    "message": "Domain"
-  },
   "scopeAll": {
     "message": "All accounts"
   },
   "scopeAccount": {
     "message": "Only $1"
   },
-  "listsAdded": {
-    "message": "Added $1."
+  "listsAddedWhite": {
+    "message": "Added $1 to the white list."
+  },
+  "listsAddedBlack": {
+    "message": "Added $1 to the black list."
+  },
+  "listsMovedWhite": {
+    "message": "Moved $1 from the black list to the white list."
+  },
+  "listsMovedBlack": {
+    "message": "Moved $1 from the white list to the black list."
   },
   "listsAlreadyThere": {
     "message": "$1 is already on that list."
   },
+  "listsRemoved": {
+    "message": "Removed $1."
+  },
   "listsEmpty": {
-    "message": "No entries."
+    "message": "No entries yet."
+  },
+  "listsNoMatch": {
+    "message": "No entry matches."
   },
   "colValue": {
-    "message": "Value"
+    "message": "Address or domain"
   },
   "colList": {
     "message": "List"
   },
-  "colKind": {
-    "message": "Kind"
-  },
   "colScope": {
-    "message": "Scope"
+    "message": "Applies to"
   },
   "colSource": {
     "message": "Source"
@@ -245,137 +506,11 @@
   "source_manual": {
     "message": "Manual"
   },
-  "publicHint": {
-    "message": "At a public mail provider such as gmail.com each address is a different person, so the lists hold single addresses. For any other domain the whole company is trusted or blocked as one domain. Changing this list affects future entries only."
-  },
-  "publicCount": {
-    "message": "The built-in list has $1 providers. Type a domain to check it."
-  },
-  "publicInvalid": {
-    "message": "This is not a domain."
-  },
-  "publicIsPublic": {
-    "message": "$1 is treated as a public provider: entries are made per address."
-  },
-  "publicIsCustom": {
-    "message": "$1 is treated as a company domain: entries are made for the whole domain."
-  },
-  "publicMakePublic": {
-    "message": "Treat as public"
-  },
-  "publicMakeCustom": {
-    "message": "Treat as company domain"
-  },
-  "publicAddedTitle": {
-    "message": "Added by you"
-  },
-  "publicRemovedTitle": {
-    "message": "Removed by you"
-  },
-  "forwardingHint": {
-    "message": "Some mailboxes forward mail to you in their own name: the message shows the forwarding mailbox as its sender instead of the original author. Add such mailboxes here. Block Spam then judges each of their messages by its original sender and never by the mailbox that forwarded it."
-  },
-  "forwardingHowTo": {
-    "message": "How to tell: if a forwarded message shows the original author as its sender, nothing needs to be configured. If it shows the mailbox that forwarded it, add that mailbox here once."
-  },
-  "forwardLabelsTitle": {
-    "message": "Forwarded header labels"
-  },
-  "forwardLabelsHint": {
-    "message": "When the original sender is not in the message headers, it is read from the first line of the text that starts with one of these labels, and only after that from an attached message. Add the label your forwarding mailbox writes before the original sender. Separate labels with commas."
-  },
-  "learningHint": {
-    "message": "Everyone you write to goes on the white list: the whole domain for a company, the single address at a public provider. Learning reads only the recipients of your sent mail, never uses AI, and never overrides a block you set by hand."
-  },
-  "sentFoldersTitle": {
-    "message": "Sent folders"
-  },
-  "sentFoldersHint": {
-    "message": "These folders are watched for new sent mail, including mail sent from a phone or from webmail, and are read by the scan."
-  },
-  "chooseFolder": {
-    "message": "Choose a folder"
-  },
-  "addFolder": {
-    "message": "Add folder"
-  },
-  "noFolders": {
-    "message": "No folders."
-  },
-  "scanTitle": {
-    "message": "Scan sent mail"
-  },
-  "scanHint": {
-    "message": "Reads the recipients of the mail in the Sent folders above and adds them to the white list. Leave the dates empty to scan everything. Running it again is harmless."
-  },
-  "scanFrom": {
-    "message": "From"
-  },
-  "scanTo": {
-    "message": "To"
-  },
-  "scanStart": {
-    "message": "Start scan"
-  },
-  "scanRangeInvalid": {
-    "message": "The end date is before the start date."
-  },
-  "scanRunning": {
-    "message": "Scanning folder $1 of $2 ($3): $4 messages read, $5 entries added."
-  },
-  "scanDone": {
-    "message": "Scan finished: $1 messages read, $2 entries added."
-  },
-  "scanCancelled": {
-    "message": "Scan cancelled: $1 messages read, $2 entries added. The entries learned so far are kept."
-  },
-  "scanErrors": {
-    "message": "Problems: $1"
-  },
-  "incomingHint": {
-    "message": "New mail in monitored folders is checked when it arrives, at startup and every 5 minutes. Mail that was read on another device first is handled as well."
-  },
-  "monitoredTitle": {
-    "message": "Monitored folders"
-  },
-  "monitoredHint": {
-    "message": "The Inbox of every account is always monitored. Add folders that receive new mail directly, for example through a server-side rule."
-  },
-  "noVerdictTitle": {
-    "message": "Unknown senders without an AI verdict"
-  },
-  "noVerdictLabel": {
-    "message": "When no AI is configured or all access points failed:"
-  },
-  "noVerdictLeave": {
-    "message": "Leave the message where it is"
-  },
-  "noVerdictJunk": {
-    "message": "Move it to Junk"
-  },
-  "noVerdictScreening": {
-    "message": "Move it to the screening folder"
-  },
-  "screeningTitle": {
-    "message": "Screening folder"
-  },
-  "screeningHint": {
-    "message": "A folder between the Inbox and Junk for mail from unknown senders. When a sender is added to the white list, their messages move from the screening folder to the Inbox."
-  },
-  "screeningNone": {
-    "message": "None"
-  },
-  "screeningCreate": {
-    "message": "Create folder"
-  },
-  "screeningCreated": {
-    "message": "Screening folder: $1"
-  },
   "newEntriesTitle": {
     "message": "New entries"
   },
   "newEntriesLabel": {
-    "message": "Entries created by learning, by AI and by shortcuts are:"
+    "message": "Entries created by learning, by AI and by blocking or trusting are:"
   },
   "scopeShared": {
     "message": "Shared by all accounts"
@@ -384,325 +519,19 @@
     "message": "Kept per account"
   },
   "newEntriesHint": {
-    "message": "Changing this affects future entries only. Entries added by hand choose their scope themselves."
-  },
-  "aiHint": {
-    "message": "The AI is asked only when the sender is on neither list. It receives the sender, the Reply-To address if there is one, the recipients, the subject, the date and the first 20,000 characters of the text, and can answer with nothing but a probability from 0.00 to 1.00. Mail from whitelisted senders is never sent anywhere."
-  },
-  "aiSecretsHint": {
-    "message": "API keys and sign-in tokens are stored unencrypted in your Thunderbird profile. They are never written to the log and never exported."
-  },
-  "accessPointsTitle": {
-    "message": "Access points"
-  },
-  "accessPointsHint": {
-    "message": "Access points are tried from top to bottom and the first valid score is final. When one runs out of quota or fails, the next one takes over."
-  },
-  "accessPointsNone": {
-    "message": "No access points. Without AI, mail from unknown senders follows the setting under Incoming mail."
-  },
-  "accessPointAdd": {
-    "message": "Add"
-  },
-  "apEnabled": {
-    "message": "Enabled"
-  },
-  "apDisabled": {
-    "message": "Disabled"
-  },
-  "apNeedsAttention": {
-    "message": "Needs attention"
-  },
-  "apCoolingDown": {
-    "message": "Paused until $1"
-  },
-  "apLastError": {
-    "message": "Last problem: $1"
-  },
-  "apNoModel": {
-    "message": "no model"
-  },
-  "apTest": {
-    "message": "Test"
-  },
-  "apTesting": {
-    "message": "Testing..."
-  },
-  "apTestScore": {
-    "message": "The sample spam email scored $1"
-  },
-  "apTestFailed": {
-    "message": "Test failed: $1"
-  },
-  "apRemoveTitle": {
-    "message": "Remove $1?"
-  },
-  "apRemoveText": {
-    "message": "The access point and its key or sign-in are deleted from this computer."
-  },
-  "editorAddTitle": {
-    "message": "Add: $1"
-  },
-  "editorEditTitle": {
-    "message": "Edit: $1"
-  },
-  "fieldName": {
-    "message": "Name"
-  },
-  "fieldEndpoint": {
-    "message": "Address"
-  },
-  "fieldModel": {
-    "message": "Model"
-  },
-  "fieldKey": {
-    "message": "API key"
-  },
-  "endpointFixed": {
-    "message": "Set by the provider."
-  },
-  "endpointHint_systemone": {
-    "message": "The full address of the decision endpoint. For Cloudflare, replace <account id> with your account id."
-  },
-  "endpointHint_openai_chat": {
-    "message": "The base address, without /chat/completions. Only local addresses may use http."
-  },
-  "modelHint_systemone": {
-    "message": "Leave empty for a local server that serves a single model."
-  },
-  "modelHint_openai_decisions": {
-    "message": "The decision model, for example gpt-6-luna."
-  },
-  "modelHint_openai_chat": {
-    "message": "The model name as the provider spells it. After saving, Load models lists what the server offers."
-  },
-  "modelHint_anthropic": {
-    "message": "A Claude model id, for example claude-opus-5-5, or claude-haiku-5-5 for lower cost."
-  },
-  "modelHint_chatgpt": {
-    "message": "Load models lists the models of your ChatGPT account."
-  },
-  "keyPlaceholder": {
-    "message": "Paste the key"
-  },
-  "keyKeep": {
-    "message": "Saved. Leave empty to keep it."
-  },
-  "keyHint": {
-    "message": "Local servers usually need no key."
-  },
-  "loadModels": {
-    "message": "Load models"
-  },
-  "loadModelsDone": {
-    "message": "$1 models loaded. Type or pick one in the Model field."
-  },
-  "loadModelsNone": {
-    "message": "The server listed no models."
-  },
-  "problem_name_missing": {
-    "message": "Give the access point a name."
-  },
-  "problem_endpoint_invalid": {
-    "message": "The address is not valid."
-  },
-  "problem_endpoint_insecure": {
-    "message": "The address must start with https. Only localhost and 127.0.0.1 may use http."
-  },
-  "problem_endpoint_placeholder": {
-    "message": "Replace the placeholder in the address with your own value."
-  },
-  "problem_model_missing": {
-    "message": "Enter a model."
-  },
-  "problem_key_missing": {
-    "message": "Enter an API key."
-  },
-  "type_systemone": {
-    "message": "Decision model (System One)"
-  },
-  "type_openai_decisions": {
-    "message": "OpenAI Decisions"
-  },
-  "type_openai_chat": {
-    "message": "Chat model (OpenAI-compatible)"
-  },
-  "type_anthropic": {
-    "message": "Claude (Anthropic)"
-  },
-  "type_chatgpt": {
-    "message": "ChatGPT plan"
-  },
-  "consentTitle": {
-    "message": "Send mail from unknown senders to this service?"
-  },
-  "consentText": {
-    "message": "Block Spam will send mail from senders who are on neither list to $1, in the background, to get a spam probability."
-  },
-  "consentWhat": {
-    "message": "What is sent: the sender, the Reply-To address if there is one, the recipients, the subject, the date and the first 20,000 characters of the text. Attachments, remote content and other headers are never sent."
-  },
-  "consentNever": {
-    "message": "Mail from senders on your white list is never sent anywhere."
-  },
-  "consentAgree": {
-    "message": "Agree and save"
-  },
-  "localServerHint": {
-    "message": "Local servers reject requests from add-ons unless told otherwise. This add-on's origin is $1. For Ollama set OLLAMA_ORIGINS to that value, for basal pass it to --cors-origins."
-  },
-  "promptTitle": {
-    "message": "Prompt"
-  },
-  "promptHint": {
-    "message": "The question the AI answers about each email. Decision models get it as their instructions, chat models as their system prompt."
-  },
-  "outputLineLabel": {
-    "message": "For chat models this line is always added. It cannot be changed:"
-  },
-  "promptSave": {
-    "message": "Save prompt"
-  },
-  "promptRestore": {
-    "message": "Restore default"
-  },
-  "promptEmpty": {
-    "message": "An empty prompt cannot be saved."
-  },
-  "cutoffTitle": {
-    "message": "Cutoff"
-  },
-  "cutoffLabel": {
-    "message": "A message is spam when its score is greater than:"
-  },
-  "cutoffHint": {
-    "message": "From 0.00 to 1.00. The default is 0.85. A higher cutoff lets more spam through, a lower one risks blocking wanted mail."
-  },
-  "cutoffInvalid": {
-    "message": "The cutoff must be a number from 0.00 to 1.00."
-  },
-  "chatgptConsentTitle": {
-    "message": "Use your ChatGPT plan"
-  },
-  "chatgptConsentText": {
-    "message": "Block Spam will send mail from senders who are on neither list to OpenAI, in the background, to get a spam probability. These requests use your ChatGPT plan."
-  },
-  "chatgptConsentManage": {
-    "message": "You sign in on OpenAI's page. Block Spam never sees your password. You can review and limit the usage in ChatGPT settings at any time."
-  },
-  "chatgptContinue": {
-    "message": "Continue with ChatGPT"
-  },
-  "chatgptDefaultName": {
-    "message": "ChatGPT plan"
-  },
-  "chatgptNamedAccount": {
-    "message": "ChatGPT plan ($1)"
-  },
-  "chatgptUsingPlan": {
-    "message": "Using ChatGPT plan"
-  },
-  "chatgptSignedOut": {
-    "message": "Not signed in"
-  },
-  "chatgptManageUsage": {
-    "message": "Manage usage"
-  },
-  "chatgptChooseModel": {
-    "message": "Choose model"
-  },
-  "chatgptSignInAgain": {
-    "message": "Sign in again"
-  },
-  "chatgptSignOut": {
-    "message": "Sign out"
-  },
-  "chatgptSignedOutDone": {
-    "message": "Signed out."
-  },
-  "chatgptRevocationUnconfirmed": {
-    "message": "The sign-in was removed from this computer, but OpenAI did not confirm that the session ended. You can disconnect the app in ChatGPT settings."
-  },
-  "chatgptWelcomeTitle": {
-    "message": "You're using your ChatGPT plan"
-  },
-  "chatgptWelcomeText": {
-    "message": "Scoring mail from unknown senders in Block Spam now uses your ChatGPT plan. You can review and manage the usage in ChatGPT settings."
-  },
-  "chatgptWelcomeGotIt": {
-    "message": "Got it"
-  },
-  "signInTitle": {
-    "message": "Signing in with ChatGPT"
-  },
-  "signInWaiting": {
-    "message": "Finish signing in in the tab that opened. This page updates by itself when the sign-in completes."
-  },
-  "signInManual": {
-    "message": "Finish signing in in the tab that opened, or in your browser. Then paste the address you were redirected to below."
-  },
-  "signInOpenBrowser": {
-    "message": "Open in my browser instead"
-  },
-  "signInCopy": {
-    "message": "Copy the sign-in address"
-  },
-  "signInPasteHint": {
-    "message": "If this page does not update by itself: at the end of the sign-in the browser tries to open an address that starts with http://127.0.0.1:1455 and shows an error page. That is expected. Copy that address from the address bar and paste it here."
-  },
-  "signInFinish": {
-    "message": "Finish sign-in"
-  },
-  "signInDone": {
-    "message": "Signed in."
-  },
-  "signInFailed": {
-    "message": "Sign-in failed: $1"
-  },
-  "signInNoneInProgress": {
-    "message": "No sign-in is in progress. Start again."
-  },
-  "signInTimedOut": {
-    "message": "The sign-in took too long and was cancelled."
-  },
-  "shortcutsHint": {
-    "message": "The shortcuts act on the selected messages, or on the message shown in a tab or window. Block moves the messages to Junk. Trust moves them back to the Inbox from Junk or from a screening folder. Your own messages are ignored."
-  },
-  "cmdBlockAddress": {
-    "message": "Block the sender's address"
-  },
-  "cmdBlockDomain": {
-    "message": "Block the sender's domain"
-  },
-  "cmdTrustAddress": {
-    "message": "Trust the sender's address"
-  },
-  "cmdTrustDomain": {
-    "message": "Trust the sender's domain"
-  },
-  "shortcutNone": {
-    "message": "not set"
-  },
-  "shortcutsChange": {
-    "message": "Change shortcuts"
-  },
-  "shortcutsRebindHint": {
-    "message": "You can also change them in Thunderbird under Add-ons and Themes, in the gear menu, Manage Extension Shortcuts. On macOS Alt is the Option key."
-  },
-  "smartLabel": {
-    "message": "Smart domain shortcuts"
-  },
-  "smartHint": {
-    "message": "With Smart on, the domain shortcuts block or trust a company as a whole domain and a sender at a public provider by address. With Smart off they always use the domain."
-  },
-  "bareKeysTitle": {
-    "message": "The keys B and W without Alt"
-  },
-  "bareKeysHint": {
-    "message": "Thunderbird lets an add-on capture keys without a modifier only through an Experiment, and every add-on with an Experiment must ask for full access to Thunderbird and your computer. Block Spam never does. If you accept that permission, install the separate Block Spam Keys add-on. It captures B, Shift+B, W and Shift+W in mail windows and passes them on to Block Spam."
+    "message": "Changing this affects future entries only. Entries you add by hand above choose for themselves."
   },
   "logHint": {
-    "message": "The last 5000 decisions. Message bodies are never stored."
+    "message": "The last 5000 decisions. Message texts are never stored."
+  },
+  "logUndoHint": {
+    "message": "To undo a decision, use the button in its row."
+  },
+  "logUndoHintKey": {
+    "message": "To undo a decision, use the button in its row, or select the message and press $1."
+  },
+  "logFilterLabel": {
+    "message": "Show:"
   },
   "logAll": {
     "message": "All"
@@ -713,8 +542,14 @@
   "logObserved": {
     "message": "Observed"
   },
+  "logSearch": {
+    "message": "Search sender or subject"
+  },
+  "logSearchLabel": {
+    "message": "Search the log by sender or subject"
+  },
   "logClear": {
-    "message": "Clear log"
+    "message": "Clear log…"
   },
   "logClearTitle": {
     "message": "Clear the log?"
@@ -722,17 +557,26 @@
   "logClearText": {
     "message": "All logged decisions are deleted. The lists are not affected."
   },
+  "logClearConfirm": {
+    "message": "Clear log"
+  },
   "logCount": {
-    "message": "$1 of $2 entries"
+    "message": "Showing $1 of $2."
   },
   "logEmpty": {
     "message": "Nothing logged yet."
   },
+  "logNoMatch": {
+    "message": "No entry matches."
+  },
   "logUnknownSender": {
     "message": "unknown sender"
   },
-  "logVia": {
-    "message": "$1 (forwarded by $2)"
+  "logNoSubject": {
+    "message": "(no subject)"
+  },
+  "logForwardedBy": {
+    "message": "forwarded by"
   },
   "logObservedBadge": {
     "message": "observed"
@@ -743,23 +587,14 @@
   "colTime": {
     "message": "Time"
   },
-  "colAccount": {
-    "message": "Account"
-  },
-  "colSender": {
-    "message": "Sender"
-  },
-  "colSubject": {
-    "message": "Subject"
+  "colMessage": {
+    "message": "Sender and subject"
   },
   "colOutcome": {
-    "message": "Outcome"
+    "message": "Decision"
   },
   "colScore": {
     "message": "Score"
-  },
-  "colReason": {
-    "message": "Reason"
   },
   "outcome_trusted": {
     "message": "Trusted"
@@ -783,13 +618,22 @@
     "message": "Error"
   },
   "action_junk": {
-    "message": "to Junk"
+    "message": "moved to Junk"
   },
   "action_screening": {
-    "message": "to screening"
+    "message": "moved to the screening folder"
   },
   "action_inbox": {
-    "message": "to Inbox"
+    "message": "moved to the Inbox"
+  },
+  "actionObserved_junk": {
+    "message": "would go to Junk"
+  },
+  "actionObserved_screening": {
+    "message": "would go to the screening folder"
+  },
+  "actionObserved_inbox": {
+    "message": "would go to the Inbox"
   },
   "reason_white_address": {
     "message": "The address is on the white list"
@@ -810,10 +654,10 @@
     "message": "The AI score is not above the cutoff"
   },
   "reason_no_ai": {
-    "message": "No AI access point is enabled"
+    "message": "No AI service is switched on"
   },
   "reason_ai_failed": {
-    "message": "All AI access points failed"
+    "message": "All AI services failed"
   },
   "reason_sender_unparsed": {
     "message": "The sender could not be read"
@@ -833,140 +677,203 @@
   "reason_failed": {
     "message": "The message could not be handled"
   },
-  "exportTitle": {
-    "message": "Export"
+  "logAdded": {
+    "message": "Added to the black list: $1 ($2)"
   },
-  "exportHint": {
-    "message": "One file with the lists, the settings and the access points without their keys and sign-ins. Entries and folders of an account are saved with the account's email address."
+  "logWouldAdd": {
+    "message": "Would be added to the black list: $1 ($2)"
   },
-  "exportButton": {
-    "message": "Export to a file"
+  "logEntryLine": {
+    "message": "Entry: $1 ($2)"
   },
-  "exportSkipped": {
-    "message": "$1 items of accounts that no longer exist were left out."
+  "logScoredBy": {
+    "message": "Scored by $1"
   },
-  "importTitle": {
-    "message": "Import"
+  "logScoreTitle": {
+    "message": "Spam probability $1"
   },
-  "importHint": {
-    "message": "Merge adds the entries of the file to your lists and leaves settings and access points untouched. Replace overwrites lists, settings and access points: keys must be entered again and the ChatGPT sign-in repeated. Importing never switches protection on."
+  "scopeAllLower": {
+    "message": "all accounts"
   },
-  "importMerge": {
-    "message": "Merge lists"
+  "scopeOnlyAccount": {
+    "message": "only $1"
   },
-  "importReplace": {
-    "message": "Replace everything"
+  "logTrust": {
+    "message": "Trust"
   },
-  "importButton": {
-    "message": "Import"
+  "logBlock": {
+    "message": "Block"
   },
-  "importChooseFile": {
-    "message": "Choose a file first."
+  "logMoveInbox": {
+    "message": "Move to Inbox"
   },
-  "importNotJson": {
-    "message": "This file is not a Block Spam export."
+  "logMoveJunk": {
+    "message": "Move to Junk"
   },
-  "importReplaceTitle": {
-    "message": "Replace lists, settings and access points?"
+  "logTrustedNow": {
+    "message": "Trusted now"
   },
-  "importReplaceText": {
-    "message": "Your current lists, settings and access points are replaced by the file. Keys and sign-ins are removed from this computer."
+  "logTrustedNowTitle": {
+    "message": "$1 is on the white list. The message was never moved."
   },
-  "importReplaceConfirm": {
-    "message": "Replace"
+  "logTrustTitle": {
+    "message": "Trust $1"
   },
-  "importDone": {
-    "message": "Import finished"
+  "logTrustMoveTitle": {
+    "message": "Trust $1 and move the message back to the Inbox"
   },
-  "importEntries": {
-    "message": "Entries added: $1, moved from the other list: $2, already there: $3."
+  "logBlockTitle": {
+    "message": "Block $1 and move the message to Junk"
   },
-  "importReplaced": {
-    "message": "Settings were replaced. Access points imported: $1. Enter their keys again."
+  "logMoveInboxTitle": {
+    "message": "Move to Inbox: $1 is already trusted, so only the message is moved back"
   },
-  "importSkippedAccount": {
-    "message": "Skipped $1: no account with the address $2."
+  "logMoveJunkTitle": {
+    "message": "Move to Junk: $1 is already blocked, so only the message is moved"
   },
-  "importSkippedFolder": {
-    "message": "Skipped folder $1: it does not exist here."
+  "logDoneTrusted": {
+    "message": "$1 is on the white list now."
   },
-  "privacyTitle": {
-    "message": "What leaves this computer"
+  "logDoneBlocked": {
+    "message": "$1 is on the black list now."
+  },
+  "logAlreadyTrusted": {
+    "message": "$1 was already on the white list."
+  },
+  "logAlreadyBlocked": {
+    "message": "$1 was already on the black list."
+  },
+  "logMovedInbox": {
+    "message": "The message is back in the Inbox."
+  },
+  "logMovedJunk": {
+    "message": "The message was moved to Junk."
+  },
+  "logMoveNotFound": {
+    "message": "The message was not found, so nothing was moved."
+  },
+  "logMoveNoInbox": {
+    "message": "The account has no Inbox, so the message stays where it is."
+  },
+  "logMoveNoJunk": {
+    "message": "The account has no Junk folder, so the message stays where it is."
+  },
+  "logMoveFailed": {
+    "message": "The message could not be moved: $1"
+  },
+  "logUndone": {
+    "message": "Undone."
+  },
+  "learningHint": {
+    "message": "Everyone you write to goes on the white list: the whole domain for a company, the single address at a public mail provider."
+  },
+  "learningMore": {
+    "message": "Learning reads only the recipients of your sent mail, never uses AI, and never overrides a block you set by hand. It works whether protection is on or off."
+  },
+  "sentFoldersTitle": {
+    "message": "Sent folders"
+  },
+  "sentFoldersHint": {
+    "message": "These folders are watched for new sent mail, also mail sent from a phone or from webmail, and are read by the scan."
+  },
+  "chooseFolder": {
+    "message": "Choose a folder"
+  },
+  "addFolder": {
+    "message": "Add folder"
+  },
+  "noFolders": {
+    "message": "No folders."
+  },
+  "folderToAdd": {
+    "message": "Folder to add for $1"
+  },
+  "incomingHint": {
+    "message": "New mail in monitored folders is checked when it arrives, when Thunderbird starts and every 5 minutes, also when it was read on another device first."
+  },
+  "monitoredTitle": {
+    "message": "Monitored folders"
+  },
+  "monitoredHint": {
+    "message": "The Inbox of every account is always monitored. Add folders that receive new mail directly, for example through a server-side rule."
+  },
+  "monitoredAlways": {
+    "message": "always"
+  },
+  "noVerdictTitle": {
+    "message": "Mail without an AI verdict"
+  },
+  "noVerdictLabel": {
+    "message": "When no AI service is set up or all of them failed:"
+  },
+  "noVerdictLeave": {
+    "message": "Leave the message where it is"
+  },
+  "noVerdictJunk": {
+    "message": "Move it to Junk"
+  },
+  "noVerdictScreening": {
+    "message": "Move it to the screening folder"
+  },
+  "screeningTitle": {
+    "message": "Screening folder"
+  },
+  "screeningHint": {
+    "message": "A folder between the Inbox and Junk for mail from unknown senders. When a sender is added to the white list, their messages move from there to the Inbox."
+  },
+  "screeningNone": {
+    "message": "None"
+  },
+  "screeningCreate": {
+    "message": "Create folder"
+  },
+  "screeningCreateFor": {
+    "message": "Create folder for $1"
+  },
+  "screeningCreated": {
+    "message": "Screening folder: $1"
+  },
+  "screeningFolderName": {
+    "message": "Screening"
+  },
+  "aiLead": {
+    "message": "Only mail from senders who are on neither list is sent to an AI service. Mail from senders on your white list is never sent anywhere."
+  },
+  "aiLeadTopic": {
+    "message": "what is sent"
+  },
+  "aiHint": {
+    "message": "The AI receives the sender, the Reply-To address if there is one, the recipients, the subject, the date and the first 20,000 characters of the text, and can answer with nothing but a probability from 0.00 to 1.00."
+  },
+  "aiSecretsHint": {
+    "message": "API keys and sign-in tokens are stored unencrypted in your Thunderbird profile. They are never written to the log and never exported."
   },
   "privacyText": {
-    "message": "Only the text described under AI, only to access points you added, only for mail from senders who are on neither list, plus messages you score yourself as a test. There is no telemetry and no other network request."
+    "message": "Nothing else leaves this computer, apart from messages you score yourself as a test. There is no telemetry and no other network request."
   },
-  "popupRecent": {
-    "message": "Last decisions"
+  "servicesTitle": {
+    "message": "AI services"
   },
-  "popupSettings": {
-    "message": "Settings"
+  "servicesHint": {
+    "message": "Services are tried from top to bottom and the first valid score is final. When one fails or runs out of quota, the next one takes over."
   },
-  "popupPause": {
-    "message": "Pause protection"
+  "servicesNone": {
+    "message": "No AI service yet. Without one, mail from unknown senders follows the setting under Incoming mail."
   },
-  "popupResume": {
-    "message": "Switch protection on"
+  "serviceAddLabel": {
+    "message": "Add a service:"
   },
-  "popupNoDecisions": {
-    "message": "No decisions yet."
+  "presetGroup_decision": {
+    "message": "Decision models: cheapest and fastest"
   },
-  "popupDataProblem": {
-    "message": "Data problem. Open settings."
+  "presetGroup_chat": {
+    "message": "Chat models: most accurate"
   },
-  "popupScoreSelected": {
-    "message": "Score selected messages"
+  "presetGroup_plan": {
+    "message": "Your ChatGPT plan"
   },
-  "popupScoreConfirm": {
-    "message": "Selected messages: $1. Their content will be sent to the configured AI, also for senders on your lists. Nothing is moved and no entry is created. The scores appear in the log."
-  },
-  "popupScoreTooMany": {
-    "message": "Select at most $1 messages to score them in one run."
-  },
-  "popupScoreSend": {
-    "message": "Send and score"
-  },
-  "popupScoring": {
-    "message": "Scoring..."
-  },
-  "popupScoreDone": {
-    "message": "Scored: $1. Without a score: $2. See the log in settings."
-  },
-  "popupNothingSelected": {
-    "message": "Select one or more messages in the message list first."
-  },
-  "popupNoAi": {
-    "message": "No AI access point is enabled."
-  },
-  "notifyBlocked": {
-    "message": "Blocked: $1"
-  },
-  "notifyTrusted": {
-    "message": "Trusted: $1"
-  },
-  "notifyMore": {
-    "message": "$1 and $2 more"
-  },
-  "notifyUnknownSender": {
-    "message": "No entry was added for $1 forwarded messages, because the original sender could not be determined."
-  },
-  "notifyMovedToJunk": {
-    "message": "Moved to Junk: $1"
-  },
-  "notifyMovedToInbox": {
-    "message": "Moved to the Inbox: $1"
-  },
-  "notifyOwnIgnored": {
-    "message": "Ignored your own messages: $1"
-  },
-  "notifyMoveFailed": {
-    "message": "Some messages could not be moved: $1"
-  },
-  "notifyNothingChanged": {
-    "message": "Nothing changed."
-  },
-  "notifyNoInbox": {
-    "message": "The account has no Inbox folder"
+  "presetGroup_local": {
+    "message": "On this computer"
   },
   "preset_jev": {
     "message": "Jev (TypeSafe)"
@@ -999,16 +906,334 @@
     "message": "LM Studio"
   },
   "preset_custom": {
-    "message": "Custom (OpenAI-compatible)"
+    "message": "Other OpenAI-compatible service"
   },
   "preset_anthropic": {
-    "message": "Claude (Anthropic API key)"
+    "message": "Claude (Anthropic)"
   },
   "preset_chatgpt": {
     "message": "ChatGPT plan"
   },
-  "screeningFolderName": {
-    "message": "Screening"
+  "presetHint_jev": {
+    "message": "The decision model of TypeSafe. It can answer with nothing but a probability, and it is the cheapest and fastest choice."
+  },
+  "presetHint_openrouter_decisions": {
+    "message": "Jev and other decision models through an OpenRouter account."
+  },
+  "presetHint_cloudflare_clef": {
+    "message": "The decision model of Cloudflare, billed through your Cloudflare account. It needs your account id and an API token."
+  },
+  "presetHint_local_systemone": {
+    "message": "A decision model that basal serves on this computer, for example Bielik-One. No mail leaves the computer."
+  },
+  "presetHint_openai_decisions": {
+    "message": "The Decisions endpoint of OpenAI with gpt-6-luna. It uses an OpenAI API key."
+  },
+  "presetHint_openai": {
+    "message": "The chat models of OpenAI, with an API key."
+  },
+  "presetHint_gemini": {
+    "message": "Gemini, with an API key from Google AI Studio."
+  },
+  "presetHint_openrouter": {
+    "message": "Any chat model through an OpenRouter account."
+  },
+  "presetHint_ollama": {
+    "message": "A model that Ollama runs on this computer. No mail leaves the computer."
+  },
+  "presetHint_lmstudio": {
+    "message": "A model that LM Studio runs on this computer. No mail leaves the computer."
+  },
+  "presetHint_custom": {
+    "message": "Any service or local bridge that speaks the OpenAI chat format. You enter its address."
+  },
+  "presetHint_anthropic": {
+    "message": "Claude, with an Anthropic API key. The Max, Ultra and Team plans include monthly API credits."
+  },
+  "presetHint_chatgpt": {
+    "message": "ChatGPT Plus, Pro or Business. You sign in on the page of OpenAI. No API key is needed, and the use counts against your plan."
+  },
+  "getKey": {
+    "message": "Get a key"
+  },
+  "documentation": {
+    "message": "Documentation"
+  },
+  "apUseNamed": {
+    "message": "Use $1"
+  },
+  "apDisabled": {
+    "message": "Switched off"
+  },
+  "apNeedsAttention": {
+    "message": "Needs attention."
+  },
+  "apCoolingDown": {
+    "message": "Paused until $1 after a rate limit. The next service takes over meanwhile."
+  },
+  "apLastError": {
+    "message": "Last problem: $1"
+  },
+  "apNoModel": {
+    "message": "no model"
+  },
+  "apTest": {
+    "message": "Test"
+  },
+  "apTestNamed": {
+    "message": "Test $1"
+  },
+  "apTesting": {
+    "message": "Testing…"
+  },
+  "apTestScore": {
+    "message": "Works: the sample spam email scored $1."
+  },
+  "apTestFailed": {
+    "message": "Test failed: $1"
+  },
+  "apRemoveTitle": {
+    "message": "Remove $1?"
+  },
+  "apRemoveText": {
+    "message": "The service and its key or sign-in are deleted from this computer."
+  },
+  "moveUpNamed": {
+    "message": "Move $1 up"
+  },
+  "moveDownNamed": {
+    "message": "Move $1 down"
+  },
+  "editorAddTitle": {
+    "message": "Add: $1"
+  },
+  "editorEditTitle": {
+    "message": "Edit: $1"
+  },
+  "fieldName": {
+    "message": "Name"
+  },
+  "fieldEndpoint": {
+    "message": "Address"
+  },
+  "fieldModel": {
+    "message": "Model"
+  },
+  "fieldKey": {
+    "message": "API key"
+  },
+  "endpointFixed": {
+    "message": "Set by the provider."
+  },
+  "endpointHint_systemone": {
+    "message": "The full address of the decision endpoint. For Cloudflare, replace <account id> with your account id."
+  },
+  "endpointHint_openai_chat": {
+    "message": "The base address, without /chat/completions. Only addresses on this computer may use http."
+  },
+  "modelHint_systemone": {
+    "message": "Leave empty for a local server that serves a single model."
+  },
+  "modelHint_openai_decisions": {
+    "message": "The decision model, for example gpt-6-luna."
+  },
+  "modelHint_openai_chat": {
+    "message": "The model name as the provider spells it. Load models lists what the server offers."
+  },
+  "modelHint_anthropic": {
+    "message": "A Claude model id, for example claude-opus-5-5, or claude-haiku-5-5 for lower cost."
+  },
+  "modelHint_chatgpt": {
+    "message": "Load models lists the models of your ChatGPT account."
+  },
+  "keyPlaceholder": {
+    "message": "Paste the key"
+  },
+  "keyKeep": {
+    "message": "Saved. Leave empty to keep it."
+  },
+  "keyHint": {
+    "message": "Stored unencrypted in your Thunderbird profile. Servers on this computer usually need no key."
+  },
+  "loadModels": {
+    "message": "Load models"
+  },
+  "loadModelsBusy": {
+    "message": "Loading…"
+  },
+  "loadModelsDone": {
+    "message": "Models loaded: $1. Type or pick one in the Model field."
+  },
+  "loadModelsNone": {
+    "message": "The server listed no models."
+  },
+  "problem_name_missing": {
+    "message": "Give the service a name."
+  },
+  "problem_endpoint_invalid": {
+    "message": "The address is not valid."
+  },
+  "problem_endpoint_insecure": {
+    "message": "The address must start with https. Only localhost and 127.0.0.1 may use http."
+  },
+  "problem_endpoint_placeholder": {
+    "message": "Replace the placeholder in the address with your own value."
+  },
+  "problem_model_missing": {
+    "message": "Enter a model."
+  },
+  "problem_key_missing": {
+    "message": "Enter an API key."
+  },
+  "type_systemone": {
+    "message": "Decision model"
+  },
+  "type_openai_decisions": {
+    "message": "OpenAI Decisions"
+  },
+  "type_openai_chat": {
+    "message": "Chat model"
+  },
+  "type_anthropic": {
+    "message": "Claude"
+  },
+  "type_chatgpt": {
+    "message": "ChatGPT plan"
+  },
+  "consentTitle": {
+    "message": "Send mail from unknown senders to this service?"
+  },
+  "consentText": {
+    "message": "Block Spam will send mail from senders who are on neither list to $1, in the background, to get a spam probability."
+  },
+  "consentWhat": {
+    "message": "What is sent: the sender, the Reply-To address if there is one, the recipients, the subject, the date and the first 20,000 characters of the text. Attachments, remote content and other headers are never sent."
+  },
+  "consentNever": {
+    "message": "Mail from senders on your white list is never sent anywhere."
+  },
+  "consentAgree": {
+    "message": "Agree and save"
+  },
+  "consentAgreeLoad": {
+    "message": "Agree and load models"
+  },
+  "localServerHint": {
+    "message": "A server on this computer rejects requests from add-ons unless it is told to allow the origin of this add-on:"
+  },
+  "localServerHow": {
+    "message": "For Ollama set OLLAMA_ORIGINS to this value. For basal pass it to --cors-origins."
+  },
+  "cutoffTitle": {
+    "message": "Cutoff"
+  },
+  "cutoffLabel": {
+    "message": "A message is spam when its score is greater than:"
+  },
+  "cutoffHint": {
+    "message": "From 0.00 to 1.00. The default is 0.85. A higher cutoff lets more spam through, a lower one risks blocking wanted mail."
+  },
+  "promptTitle": {
+    "message": "Prompt"
+  },
+  "promptHint": {
+    "message": "The question the AI answers about each email. Decision models get it as their instructions, chat models as their system prompt."
+  },
+  "outputLineLabel": {
+    "message": "For chat models this line is always added. It cannot be changed:"
+  },
+  "promptSave": {
+    "message": "Save prompt"
+  },
+  "promptDiscard": {
+    "message": "Discard changes"
+  },
+  "promptRestore": {
+    "message": "Restore default"
+  },
+  "chatgptConsentTitle": {
+    "message": "Use your ChatGPT plan"
+  },
+  "chatgptConsentText": {
+    "message": "Block Spam will send mail from senders who are on neither list to OpenAI, in the background, to get a spam probability. These requests use your ChatGPT plan."
+  },
+  "chatgptConsentManage": {
+    "message": "You sign in on the page of OpenAI. Block Spam never sees your password. You can review and limit the usage in ChatGPT settings at any time."
+  },
+  "chatgptContinue": {
+    "message": "Continue with ChatGPT"
+  },
+  "chatgptDefaultName": {
+    "message": "ChatGPT plan"
+  },
+  "chatgptNamedAccount": {
+    "message": "ChatGPT plan ($1)"
+  },
+  "chatgptUsingPlan": {
+    "message": "Using ChatGPT plan."
+  },
+  "chatgptUsingPlanAs": {
+    "message": "Using the ChatGPT plan of $1."
+  },
+  "chatgptSignedOut": {
+    "message": "Not signed in."
+  },
+  "chatgptManageUsage": {
+    "message": "Manage usage"
+  },
+  "chatgptSignInAgain": {
+    "message": "Sign in again"
+  },
+  "chatgptSignOut": {
+    "message": "Sign out"
+  },
+  "chatgptRevocationTitle": {
+    "message": "The session may still be open"
+  },
+  "chatgptRevocationUnconfirmed": {
+    "message": "The sign-in was removed from this computer, but OpenAI did not confirm that the session ended. You can disconnect the app in ChatGPT settings."
+  },
+  "chatgptWelcomeTitle": {
+    "message": "You're using your ChatGPT plan"
+  },
+  "chatgptWelcomeText": {
+    "message": "Scoring mail from unknown senders in Block Spam now uses your ChatGPT plan. You can review and manage the usage in ChatGPT settings."
+  },
+  "chatgptWelcomeGotIt": {
+    "message": "Got it"
+  },
+  "signInTitle": {
+    "message": "Signing in with ChatGPT"
+  },
+  "signInWaiting": {
+    "message": "Finish signing in in the tab that opened. This page updates by itself when the sign-in completes."
+  },
+  "signInManual": {
+    "message": "Finish signing in in the tab that opened, or in your browser. Then paste the address you were redirected to below."
+  },
+  "signInOpenBrowser": {
+    "message": "Open in my browser instead"
+  },
+  "signInCopy": {
+    "message": "Copy the sign-in address"
+  },
+  "signInPasteHint": {
+    "message": "If this page does not update by itself: at the end of the sign-in the browser tries to open an address that starts with http://127.0.0.1:1455 and shows an error page. That is expected. Copy that address from the address bar and paste it here."
+  },
+  "signInAddressLabel": {
+    "message": "Address you were redirected to"
+  },
+  "signInFinish": {
+    "message": "Finish sign-in"
+  },
+  "signInFailed": {
+    "message": "Sign-in failed: $1"
+  },
+  "signInNoneInProgress": {
+    "message": "No sign-in is in progress. Start again."
+  },
+  "signInTimedOut": {
+    "message": "The sign-in took too long and was cancelled."
   },
   "signInError_state_mismatch": {
     "message": "The address belongs to a different sign-in attempt."
@@ -1038,12 +1263,351 @@
     "message": "The ID token is not valid: $1"
   },
   "signInError_account_mismatch": {
-    "message": "A different ChatGPT account signed in. Sign in with the account of this access point, or add a new access point."
+    "message": "A different ChatGPT account signed in. Sign in with the account of this service, or add a new service."
   },
   "signInError_plan_not_enabled": {
-    "message": "Permission to use your ChatGPT plan was not granted, so the access point cannot be used. Start the sign-in again and allow plan use."
+    "message": "Permission to use your ChatGPT plan was not granted, so the service cannot be used. Start the sign-in again and allow plan use."
   },
-  "permissionTryAgain": {
-    "message": "Thunderbird refused part of the permission request. Press the button again: Block Spam will then ask for less."
+  "shortcutsHint": {
+    "message": "The shortcuts act on the selected messages, or on the message shown in a tab or window. Block moves the messages to Junk. Trust moves them back to the Inbox from Junk or from a screening folder."
+  },
+  "shortcutsMore": {
+    "message": "Your own messages are ignored. The shortcuts also work in observation mode and while protection is off. A desktop notification says what was added."
+  },
+  "cmdBlockAddress": {
+    "message": "Block the sender's address"
+  },
+  "cmdBlockDomain": {
+    "message": "Block the sender's domain"
+  },
+  "cmdTrustAddress": {
+    "message": "Trust the sender's address"
+  },
+  "cmdTrustDomain": {
+    "message": "Trust the sender's domain"
+  },
+  "colCommand": {
+    "message": "Command"
+  },
+  "colShortcut": {
+    "message": "Shortcut"
+  },
+  "shortcutNone": {
+    "message": "not set"
+  },
+  "shortcutsChange": {
+    "message": "Change shortcuts…"
+  },
+  "shortcutsRebindHint": {
+    "message": "Opens Thunderbird's own list of shortcuts. You also find it under Add-ons and Themes, in the gear menu, Manage Extension Shortcuts."
+  },
+  "smartTitle": {
+    "message": "Domain shortcuts"
+  },
+  "smartLabel": {
+    "message": "Smart: use the address for senders at public mail providers"
+  },
+  "smartHint": {
+    "message": "With Smart on, the domain shortcuts block or trust a company as a whole domain and a sender at a provider such as gmail.com by address. With Smart off they always use the domain."
+  },
+  "otherWaysTitle": {
+    "message": "Without shortcuts"
+  },
+  "otherWaysPopupName": {
+    "message": "Toolbar button."
+  },
+  "otherWaysPopup": {
+    "message": "Select one or more messages and click the Block Spam button in the toolbar. The panel shows the sender with buttons to block and to trust."
+  },
+  "otherWaysMenuName": {
+    "message": "Context menu."
+  },
+  "otherWaysMenu": {
+    "message": "Right-click a message in the message list and choose Block Spam."
+  },
+  "otherWaysLogName": {
+    "message": "Log."
+  },
+  "otherWaysLog": {
+    "message": "Every decision has a button in its row that undoes it."
+  },
+  "otherWaysLogLink": {
+    "message": "Open the log"
+  },
+  "bareKeysTitle": {
+    "message": "The keys B and W on their own"
+  },
+  "bareKeysHint": {
+    "message": "Thunderbird lets an add-on capture keys without a modifier only through an Experiment, and an add-on with an Experiment must ask for full access to Thunderbird and your computer. Block Spam never does."
+  },
+  "bareKeysFile": {
+    "message": "If you accept that permission, install the separate add-on Block Spam Keys from the file:"
+  },
+  "bareKeysInstall": {
+    "message": "To install it, open Add-ons and Themes, click the gear menu and choose Install Add-on From File. It captures $1 in mail windows and passes them on to Block Spam."
+  },
+  "publicTitle": {
+    "message": "Public mail providers"
+  },
+  "publicHint": {
+    "message": "At a public provider such as gmail.com every address is a different person, so the lists hold single addresses there. For any other domain the whole company is trusted or blocked as one domain."
+  },
+  "publicMore": {
+    "message": "The built-in list has $1 providers. Changing it affects future entries only."
+  },
+  "publicDomainLabel": {
+    "message": "Domain:"
+  },
+  "publicInvalid": {
+    "message": "Enter a domain such as example.com."
+  },
+  "publicIsPublic": {
+    "message": "$1 is treated as a public provider: entries are made per address."
+  },
+  "publicIsCustom": {
+    "message": "$1 is treated as a company domain: entries are made for the whole domain."
+  },
+  "publicMakePublic": {
+    "message": "Treat as public"
+  },
+  "publicMakeCustom": {
+    "message": "Treat as company domain"
+  },
+  "publicAddedTitle": {
+    "message": "Treated as public by you"
+  },
+  "publicRemovedTitle": {
+    "message": "Treated as company domains by you"
+  },
+  "forwardingTitle": {
+    "message": "Forwarding mailboxes"
+  },
+  "forwardingHint": {
+    "message": "Some mailboxes forward mail to you in their own name, so the message shows the forwarding mailbox as its sender. Add them here: their messages are then judged by the original sender."
+  },
+  "forwardingHowTo": {
+    "message": "How to tell: if a forwarded message shows the original author as its sender, nothing needs to be configured. If it shows the mailbox that forwarded it, add that mailbox here once."
+  },
+  "forwardingMore": {
+    "message": "The trust of a forwarding mailbox is never passed on: a message whose original sender cannot be found counts as mail from an unknown sender."
+  },
+  "forwardingMailboxLabel": {
+    "message": "Mailbox address:"
+  },
+  "forwardLabelsTitle": {
+    "message": "Labels of forwarded headers"
+  },
+  "forwardLabelsHint": {
+    "message": "When the original sender is not in the message headers, it is read from the first line of the text that starts with one of these labels. Separate the labels with commas."
+  },
+  "forwardLabelsMore": {
+    "message": "Only after that is an attached message looked at. Add the label your forwarding mailbox writes before the original sender."
+  },
+  "exportTitle": {
+    "message": "Export"
+  },
+  "exportHint": {
+    "message": "One file with the lists, the settings and the AI services, without their keys and sign-ins. Entries and folders of an account are saved with the account's email address."
+  },
+  "exportButton": {
+    "message": "Export to a file…"
+  },
+  "exportDone": {
+    "message": "The file was handed to Thunderbird for saving."
+  },
+  "exportSkipped": {
+    "message": "Exported. Items of accounts that no longer exist were left out: $1."
+  },
+  "importTitle": {
+    "message": "Import"
+  },
+  "importHint": {
+    "message": "Merge adds the entries of the file to your lists and leaves settings and AI services untouched. Replace overwrites lists, settings and AI services."
+  },
+  "importMore": {
+    "message": "After Replace, keys must be entered again and the ChatGPT sign-in repeated. Importing never switches protection on. Items that belong to an account follow the account with the same email address here. The others are skipped and reported."
+  },
+  "importChoose": {
+    "message": "Choose file…"
+  },
+  "importNoFile": {
+    "message": "No file chosen."
+  },
+  "importModeLabel": {
+    "message": "Mode:"
+  },
+  "importMerge": {
+    "message": "Merge lists"
+  },
+  "importReplace": {
+    "message": "Replace everything"
+  },
+  "importButton": {
+    "message": "Import"
+  },
+  "importChooseFile": {
+    "message": "Choose a file first."
+  },
+  "importNotJson": {
+    "message": "This file is not a Block Spam export."
+  },
+  "importReplaceTitle": {
+    "message": "Replace lists, settings and AI services?"
+  },
+  "importReplaceText": {
+    "message": "Your current lists, settings and AI services are replaced by the file. Keys and sign-ins are removed from this computer."
+  },
+  "importReplaceConfirm": {
+    "message": "Replace"
+  },
+  "importDone": {
+    "message": "Import finished."
+  },
+  "importEntries": {
+    "message": "Entries added: $1. Moved from the other list: $2. Already there: $3."
+  },
+  "importReplaced": {
+    "message": "The settings were replaced. AI services imported: $1. Enter their keys again."
+  },
+  "importSkippedAccount": {
+    "message": "Skipped $1: no account with the address $2."
+  },
+  "importSkippedFolder": {
+    "message": "Skipped the folder $1: it does not exist here."
+  },
+  "popupSettings": {
+    "message": "Settings"
+  },
+  "popupDataProblem": {
+    "message": "Data problem"
+  },
+  "popupDataProblemText": {
+    "message": "Block Spam could not read its stored data. Protection is off until this is resolved in the settings."
+  },
+  "popupOpenSettings": {
+    "message": "Open settings"
+  },
+  "popupSetupTitle": {
+    "message": "Setup is not finished"
+  },
+  "popupSetupText": {
+    "message": "Scan your sent mail first, so that mail from people you write to is never blocked or sent to an AI."
+  },
+  "popupOpenSetup": {
+    "message": "Open setup"
+  },
+  "popupNoSelection": {
+    "message": "Select a message to block or trust its sender here."
+  },
+  "popupSelectedOne": {
+    "message": "Selected message"
+  },
+  "popupSelectedMany_one": {
+    "message": "$1 message selected"
+  },
+  "popupSelectedMany_few": {
+    "message": "$1 messages selected"
+  },
+  "popupSelectedMany_many": {
+    "message": "$1 messages selected"
+  },
+  "popupDomains": {
+    "message": "Whole domains:"
+  },
+  "popupDomain": {
+    "message": "Whole domain"
+  },
+  "popupBlockShort": {
+    "message": "Block"
+  },
+  "popupTrustShort": {
+    "message": "Trust"
+  },
+  "popupBlock": {
+    "message": "Block sender"
+  },
+  "popupTrust": {
+    "message": "Trust sender"
+  },
+  "popupBlockMany": {
+    "message": "Block senders"
+  },
+  "popupTrustMany": {
+    "message": "Trust senders"
+  },
+  "popupBlockDomainNamed": {
+    "message": "Block the whole domain $1"
+  },
+  "popupTrustDomainNamed": {
+    "message": "Trust the whole domain $1"
+  },
+  "popupPublicNote": {
+    "message": "This is a public mail provider, so only this address is blocked or trusted."
+  },
+  "popupOwnAddress": {
+    "message": "This is one of your own addresses."
+  },
+  "popupUnknownSender": {
+    "message": "The original sender is not known. The message is moved, but no entry is added."
+  },
+  "popupRecent": {
+    "message": "Last decisions"
+  },
+  "popupNoDecisions": {
+    "message": "No decisions yet."
+  },
+  "popupRowLabel": {
+    "message": "$1: $2, $3. Show in the log."
+  },
+  "popupScoreSelected": {
+    "message": "Score selected messages…"
+  },
+  "popupScoreConfirm": {
+    "message": "Selected messages: $1. Their content will be sent to the configured AI, also for senders on your lists. Nothing is moved and no entry is created. The scores appear in the log."
+  },
+  "popupScoreTooMany": {
+    "message": "Select at most $1 messages to score them in one run."
+  },
+  "popupScoreSend": {
+    "message": "Send and score"
+  },
+  "popupScoring": {
+    "message": "Scoring…"
+  },
+  "popupScoreDone": {
+    "message": "Scored: $1. Without a score: $2. The scores are in the log."
+  },
+  "popupNothingSelected": {
+    "message": "Select one or more messages in the message list first."
+  },
+  "notifyBlocked": {
+    "message": "Blocked: $1"
+  },
+  "notifyTrusted": {
+    "message": "Trusted: $1"
+  },
+  "notifyMore": {
+    "message": "$1 and $2 more"
+  },
+  "notifyUnknownSender": {
+    "message": "Forwarded messages whose original sender is not known: $1. No entry was added for them."
+  },
+  "notifyMovedToJunk": {
+    "message": "Moved to Junk: $1"
+  },
+  "notifyMovedToInbox": {
+    "message": "Moved to the Inbox: $1"
+  },
+  "notifyOwnIgnored": {
+    "message": "Ignored your own messages: $1"
+  },
+  "notifyMoveFailed": {
+    "message": "Some messages could not be moved: $1"
+  },
+  "notifyNothingChanged": {
+    "message": "Nothing changed."
+  },
+  "notifyNoInbox": {
+    "message": "The account has no Inbox folder"
   }
 }

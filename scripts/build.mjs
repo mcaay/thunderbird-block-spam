@@ -68,7 +68,7 @@ await build({
 await writeManifest(path.join(root, "src/manifest.json"), path.join(main, "manifest.json"));
 await cp(path.join(root, "src/_locales"), path.join(main, "_locales"), { recursive: true });
 await cp(path.join(root, "src/icons"), path.join(main, "icons"), { recursive: true });
-for (const file of ["options/options.html", "options/options.css", "popup/popup.html", "popup/popup.css"]) {
+for (const file of ["common.css", "options/options.html", "options/options.css", "popup/popup.html", "popup/popup.css"]) {
   await cp(path.join(root, "src", file), path.join(main, file));
 }
 for (const file of ["LICENSE", "THIRD_PARTY_LICENSES.md"]) {

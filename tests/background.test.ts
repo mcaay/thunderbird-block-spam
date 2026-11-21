@@ -442,24 +442,33 @@ describe("the models of a service that is not saved yet", () => {
   });
 });
 
-describe("showing a log entry from the popup", () => {
-  it("tells an open settings page at once and hands the entry to a page that opens, once", async () => {
+describe("showing something in the settings page from the popup", () => {
+  const target = { pane: "log", logKey: "entry-1" };
+
+  it("tells an open settings page at once and hands the target to a page that opens, once", async () => {
     const fake = new FakeBrowser({ [KEY_SETTINGS]: defaultSettings(Date.now()) });
     const background = await loadBackground(fake, fakeFetch({}).fetch);
-    expect(await background.send("takeLogFocus", {})).toEqual({ ok: true, result: { key: null } });
-    expect(await background.send("showLogEntry", { key: "entry-1" })).toEqual({ ok: true, result: null });
-    expect(fake.pageEvents).toEqual([{ blockSpamEvent: "logFocus", key: "entry-1" }]);
-    expect(await background.send("takeLogFocus", {})).toEqual({ ok: true, result: { key: "entry-1" } });
-    expect(await background.send("takeLogFocus", {})).toEqual({ ok: true, result: { key: null } });
+    expect(await background.send("takeSettingsTarget", {})).toEqual({ ok: true, result: { target: null } });
+    expect(await background.send("showInSettings", target)).toEqual({ ok: true, result: null });
+    expect(fake.pageEvents).toEqual([{ blockSpamEvent: "show", target }]);
+    expect(await background.send("takeSettingsTarget", {})).toEqual({ ok: true, result: { target } });
+    expect(await background.send("takeSettingsTarget", {})).toEqual({ ok: true, result: { target: null } });
   });
 
-  it("forgets the entry when no page asked for it within half a minute", async () => {
+  it("forgets the target when no page asked for it within half a minute", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     const fake = new FakeBrowser({ [KEY_SETTINGS]: defaultSettings(Date.now()) });
     const background = await loadBackground(fake, fakeFetch({}).fetch);
-    await background.send("showLogEntry", { key: "entry-1" });
+    await background.send("showInSettings", { pane: "overview", logKey: null });
     vi.setSystemTime(Date.now() + 31_000);
-    expect(await background.send("takeLogFocus", {})).toEqual({ ok: true, result: { key: null } });
+    expect(await background.send("takeSettingsTarget", {})).toEqual({ ok: true, result: { target: null } });
+  });
+
+  it("refuses a target that names no pane", async () => {
+    const fake = new FakeBrowser({ [KEY_SETTINGS]: defaultSettings(Date.now()) });
+    const background = await loadBackground(fake, fakeFetch({}).fetch);
+    expect(await background.send("showInSettings", { pane: 7, logKey: null } as never)).toMatchObject({ ok: false });
+    expect(fake.pageEvents).toEqual([]);
   });
 });
 

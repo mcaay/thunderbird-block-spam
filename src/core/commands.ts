@@ -1,17 +1,14 @@
 // Shortcut commands: block and trust, by address or by domain.
 
 import { smartTarget } from "./address";
+import type { CommandName } from "./commandNames";
 import type { EffectiveSender } from "./forward";
 import { keyOf, matchSender } from "./lists";
 import type { AppState } from "./state";
 import type { ListName, MessageInfo, Target } from "./types";
 
-export const COMMANDS = ["block-address", "block-domain", "trust-address", "trust-domain"] as const;
-export type CommandName = (typeof COMMANDS)[number];
-
-export function isCommandName(value: unknown): value is CommandName {
-  return typeof value === "string" && (COMMANDS as readonly string[]).includes(value);
-}
+export { COMMANDS, isCommandName } from "./commandNames";
+export type { CommandName } from "./commandNames";
 
 export interface CommandMessage {
   message: MessageInfo;

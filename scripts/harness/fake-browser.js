@@ -7,6 +7,7 @@
 //   __fake.tick()                                  run the 5 minute job now
 //   __fake.newMail("account1://INBOX", { author: "x@y.example", body: "..." })
 //   __fake.select(__fake.ids("account1://INBOX")); __fake.command("block-domain")
+//   __fake.menu("trust-domain")                    the same through the context menu
 
 (() => {
   const MESSAGES = window.__HARNESS_MESSAGES;
@@ -130,6 +131,7 @@
   const onNewMail = makeEvent();
   const onCommand = makeEvent();
   const onAlarm = makeEvent();
+  const onMenu = makeEvent();
   const granted = { permissions: new Set(), origins: new Set() };
   const selected = [];
   const mailTab = { id: 1, windowId: 1, type: "mail", active: true };
@@ -181,8 +183,17 @@
       },
     },
     messages: {
-      query: async (info) =>
-        list(folderById(info.folderId), (message) => (!info.fromDate || message.date >= info.fromDate) && (!info.toDate || message.date <= info.toDate)),
+      query: async (info) => {
+        if (info.headerMessageId !== undefined) {
+          // The lookup of one message by its Message-ID, across the folders of an account.
+          const found = [];
+          for (const folder of folders.filter((item) => !info.accountId || item.accountId === info.accountId)) {
+            found.push(...folder.messages.filter((message) => message.headerMessageId === info.headerMessageId).map((message) => header(message, folder)));
+          }
+          return { id: null, messages: found };
+        }
+        return list(folderById(info.folderId), (message) => (!info.fromDate || message.date >= info.fromDate) && (!info.toDate || message.date <= info.toDate));
+      },
       list: async (folderId) => list(folderById(folderId)),
       continueList: async () => ({ id: null, messages: [] }),
       abortList: async () => {},
@@ -240,9 +251,19 @@
       },
       query: async () => [mailTab],
       get: async (id) => ({ ...mailTab, id }),
+      update: async (id) => ({ ...mailTab, id }),
       remove: async (id) => log("tabs.remove", id),
     },
-    windows: { openDefaultBrowser: async (url) => log("openDefaultBrowser", url) },
+    windows: { openDefaultBrowser: async (url) => log("openDefaultBrowser", url), update: async () => ({}) },
+    menus: {
+      create: (properties, callback) => {
+        log("menu item", properties.id);
+        callback?.();
+        return properties.id;
+      },
+      removeAll: async () => {},
+      onClicked: onMenu,
+    },
     alarms: {
       create: (name, info) => log("alarm created", name, JSON.stringify(info)),
       get: async () => undefined,
@@ -267,6 +288,7 @@
       // Like Thunderbird today: no data_collection in the answer, the feature is off.
       getAll: async () => ({ permissions: [...granted.permissions], origins: [...granted.origins] }),
       onAdded: makeEvent(),
+      onRemoved: makeEvent(),
     },
     storage: {
       local: {
@@ -307,6 +329,7 @@
     },
     runtime: {
       id: ADDON_ID,
+      lastError: null,
       getURL: (path) => path,
       getManifest: () => ({ version: "0.0.0", name: "Block Spam", optional_permissions: ["accountsFolders", "webRequest"] }),
       getPlatformInfo: async () => ({ os: "harness" }),
@@ -326,6 +349,7 @@
         const values = Array.isArray(substitutions) ? substitutions : [substitutions];
         return (MESSAGES[name]?.message ?? "").replace(/\$(\d)/g, (_match, index) => values[Number(index) - 1] ?? "");
       },
+      getUILanguage: () => "en",
     },
   };
 
@@ -345,6 +369,18 @@
     },
     /** Presses a shortcut: block-address, block-domain, trust-address or trust-domain. */
     command: (name) => onCommand.fire(name, mailTab),
+    /** Chooses a command from the context menu of the message list, for the selected messages. */
+    menu: (name) =>
+      onMenu.fire({
+        menuItemId: name,
+        selectedMessages: {
+          id: null,
+          messages: selected.map((id) => {
+            const { folder, message } = locate(id);
+            return header(message, folder);
+          }),
+        },
+      }),
     /** Fires the 5 minute alarm. */
     tick: () => onAlarm.fire({ name: "tick" }),
     /** Delivers a new message and fires messages.onNewMailReceived. */
