@@ -358,9 +358,10 @@ async function completeAttempt(pending: StoredSignIn, callbackUrl: string): Prom
   try {
     const auth = await withKeepAlive(() => completeSignIn(httpFetch, callbackUrl, pending, Date.now()));
     if (!current()) {
-      // The user cancelled or started again while the code was exchanged: end the new session.
+      // The user cancelled or started again while the code was exchanged: end the new
+      // session, and report that this attempt is over rather than a success.
       await revoke(auth).catch(() => false);
-      return;
+      throw new Error(t("signInNoneInProgress"));
     }
     // The attempt is complete. Ending it now (signIn is cleared at once) means that a
     // sign-in started from here on is never touched by this one.

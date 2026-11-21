@@ -215,10 +215,12 @@ describe("ChatGPT sign-in", () => {
     await settle();
     expect(await background.send("cancelSignIn", {})).toEqual({ ok: true, result: null });
     openai.release();
-    await finishing;
+    expect(await finishing).toEqual({ ok: false, error: "signInNoneInProgress" });
     await settle();
     expect(chatgptPoints(fake)).toEqual([]);
     expect(openai.revoked()).toEqual(["refresh-new"]);
+    // The cancelled attempt leaves no error on the sign-in panel.
+    expect(await background.send("getStatus", {})).toMatchObject({ ok: true, result: { signIn: { url: null, error: "" } } });
   });
 
   it("does not let a failing old attempt end the attempt that replaced it", async () => {
