@@ -279,7 +279,7 @@
     "message": "Forwarded header labels"
   },
   "forwardLabelsHint": {
-    "message": "When the original sender is not in the message headers or in an attached message, it is read from the first line of the text that starts with one of these labels. Separate labels with commas."
+    "message": "When the original sender is not in the message headers, it is read from the first line of the text that starts with one of these labels, and only after that from an attached message. Add the label your forwarding mailbox writes before the original sender. Separate labels with commas."
   },
   "learningHint": {
     "message": "Everyone you write to goes on the white list: the whole domain for a company, the single address at a public provider. Learning reads only the recipients of your sent mail, never uses AI, and never overrides a block you set by hand."
