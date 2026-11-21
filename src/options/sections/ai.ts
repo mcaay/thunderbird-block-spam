@@ -1,7 +1,7 @@
 // AI: access points (add from a preset, edit, remove, reorder, enable, test), the
 // ChatGPT plan sign-in, the prompt editor and the cutoff.
 
-import { USAGE_URL } from "../../ai/chatgptAuth";
+import { CHATGPT_ORIGINS, USAGE_URL } from "../../ai/chatgptAuth";
 import { originPattern, validateEndpoint } from "../../ai/http";
 import { checkDefinition, FIXED_ENDPOINTS, normalizeDefinition, PRESETS } from "../../ai/presets";
 import type { AccessPointDefinition, Preset } from "../../ai/presets";
@@ -15,8 +15,6 @@ import { button, byId, dialog, formatScore, formatTime, guard, h, option, replac
 import { LOOPBACK_ORIGIN, requestAccess } from "../permissions";
 import type { Model } from "../model";
 import type { Section } from "../section";
-
-const CHATGPT_ORIGINS = ["https://auth.openai.com/*", "https://api.openai.com/*"];
 
 function hostOf(endpoint: string): string {
   const checked = validateEndpoint(endpoint);

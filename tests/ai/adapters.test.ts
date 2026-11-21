@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { createAi } from "../../src/ai";
+import { createAi, requiredOrigins } from "../../src/ai";
 import { ANTHROPIC_MESSAGES_URL, scoreAnthropic } from "../../src/ai/anthropic";
+import { CHATGPT_RESPONSES_URL } from "../../src/ai/chatgpt";
 import {
   errorCodeFromBody,
   errorMessageFromBody,
@@ -437,7 +438,7 @@ describe("adapter registry", () => {
       }
       return jsonResponse({ content: [{ type: "text", text: "0.8" }], stop_reason: "end_turn" });
     });
-    const ai = createAi({ fetch: http.fetch, now: () => NOW, persist: async () => undefined });
+    const ai = createAi({ fetch: http.fetch, now: () => NOW, persist: async () => undefined, hasHostPermission: async () => true });
     expect(await ai.score(accessPoint({ type: "openai-chat" }), PROMPT, PAYLOAD)).toBe(0.2);
     expect(await ai.score(accessPoint({ type: "systemone", endpoint: "https://api.typesafe.ai/v1/systemone" }), PROMPT, PAYLOAD)).toBe(0.4);
     expect(await ai.score(accessPoint({ type: "openai-decisions", endpoint: OPENAI_DECISIONS_URL }), PROMPT, PAYLOAD)).toBe(0.6);
@@ -448,5 +449,40 @@ describe("adapter registry", () => {
     expect(insecure.kind).toBe("transient");
     expect(http.requests.length).toBe(before);
     expect(await ai.listModels(accessPoint({ type: "systemone" }))).toEqual([]);
+  });
+
+  it("sends nothing to a host without a granted host permission", async () => {
+    const http = fakeFetch(() => jsonResponse({ choices: [{ message: { content: "0.2" } }], data: [{ id: "m" }] }));
+    const asked: string[] = [];
+    const granted = new Set(["https://api.example.com/*"]);
+    const ai = createAi({
+      fetch: http.fetch,
+      now: () => NOW,
+      persist: async () => undefined,
+      hasHostPermission: async (pattern) => {
+        asked.push(pattern);
+        return granted.has(pattern);
+      },
+    });
+    expect(await ai.score(accessPoint({ type: "openai-chat" }), PROMPT, PAYLOAD)).toBe(0.2);
+
+    const collector = accessPoint({ type: "openai-chat", endpoint: "https://collector.example/v1" });
+    const refused = await failure(ai.score(collector, PROMPT, PAYLOAD));
+    expect(refused.kind).toBe("auth");
+    expect(refused.message).toContain("https://collector.example/*");
+    expect((await failure(ai.listModels(collector))).kind).toBe("auth");
+    expect(http.requests).toHaveLength(1);
+
+    // Provider-bound types are checked for the host they really contact, whatever the stored endpoint says.
+    asked.length = 0;
+    await failure(ai.score(accessPoint({ type: "anthropic", endpoint: "https://api.example.com/v1" }), PROMPT, PAYLOAD));
+    expect(asked).toEqual(["https://api.anthropic.com/*"]);
+    asked.length = 0;
+    await failure(ai.score(accessPoint({ type: "chatgpt", endpoint: CHATGPT_RESPONSES_URL, model: "m" }), PROMPT, PAYLOAD));
+    expect(asked).toEqual(["https://auth.openai.com/*"]);
+    expect(requiredOrigins(accessPoint({ type: "chatgpt" }))).toEqual(["https://auth.openai.com/*", "https://api.openai.com/*"]);
+    expect(requiredOrigins(accessPoint({ type: "systemone", endpoint: "http://localhost:8000/v1/systemone" }))).toEqual(["http://localhost/*"]);
+    expect(requiredOrigins(accessPoint({ type: "systemone", endpoint: "http://remote.example/v1" }))).toBeNull();
+    expect(http.requests).toHaveLength(1);
   });
 });

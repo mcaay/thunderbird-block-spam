@@ -69,7 +69,12 @@ async function start(): Promise<void> {
   try {
     const raw = await store.all();
     const state = await AppState.load(raw, store, BUNDLED_PUBLIC_DOMAINS, Date.now());
-    const ai = createAi({ fetch: httpFetch, now: Date.now, persist: () => state.saveAccessPoints() });
+    const ai = createAi({
+      fetch: httpFetch,
+      now: Date.now,
+      persist: () => state.saveAccessPoints(),
+      hasHostPermission: (pattern) => browser.permissions.contains({ origins: [pattern] }),
+    });
     const engine = new Engine({
       state,
       mail,

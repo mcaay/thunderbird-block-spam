@@ -22,6 +22,8 @@ export const PLAN_SCOPE = "chatgpt.tokens.use.direct";
 export const REGISTRATION_CLIENT_ID = "dynamic_agent_client";
 export const AGENT_NAME = "Block Spam";
 export const USAGE_URL = "https://chatgpt.com/settings/usage";
+/** The hosts a ChatGPT plan access point talks to: sign-in and refresh, and the API. */
+export const CHATGPT_ORIGINS: readonly string[] = ["https://auth.openai.com/*", "https://api.openai.com/*"];
 
 /** How long a started sign-in stays valid. */
 export const SIGN_IN_TIMEOUT_MS = 15 * 60 * 1000;

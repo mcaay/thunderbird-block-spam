@@ -76,6 +76,7 @@ Where the documentation left a question open, the source code of Thunderbird (`t
 - **Anthropic default model.** `claude-opus-5-5` is the default that Anthropic's own guidance names. `claude-haiku-5-5` is much cheaper and can be typed into the model field; the hint under the field says so.
 - **HTTP 402** (payment required) is treated like HTTP 429: a quota error with a cool-down.
 - **A successful Test** clears "needs attention" and the cool-down, like saving the access point does.
+- **The host permission is the record of consent.** Before every request the background checks `permissions.contains` for the host it contacts: the fixed endpoint of a provider-bound type, both OpenAI hosts for the ChatGPT plan. Without the permission the request is not sent and the access point needs attention. The permission is granted only by saving the access point in the editor, after the consent dialog, so Test and the enable checkbox cannot activate an imported access point, and removing a host permission in the Add-ons Manager stops the requests to that host.
 - **Loopback** means `localhost` and `127.0.0.1`. IPv6 loopback is not offered, because its match pattern could not be verified.
 - **The reply of an LLM is parsed strictly**, as specified. A model that wraps its answer in reasoning tags fails and the next access point is tried.
 - **Server-side refusal fallbacks of the Anthropic API are not used.** The chain of access points is the fallback mechanism of this design, and a beta parameter that not every model accepts would break user-chosen models.
