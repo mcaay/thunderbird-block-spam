@@ -51,13 +51,19 @@ section > p:last-child {
   color: var(--description);
 }
 
-.selection .row.domain {
-  gap: 4px 6px;
-  margin-bottom: 0;
+/* The whole-domain variant: quieter, under the two main buttons. */
+.selection .domain {
+  margin-top: 8px;
 }
 
-.selection .row.domain .description {
-  margin: 0 2px 0 0;
+.selection .domain .description {
+  margin: 0 0 3px;
+  overflow-wrap: anywhere;
+}
+
+.selection .domain .row {
+  gap: 6px;
+  margin: 0;
 }
 
 .result {

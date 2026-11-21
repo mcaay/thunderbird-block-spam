@@ -71,6 +71,9 @@
   "removeNamed": {
     "message": "Usuń $1"
   },
+  "removeNamedIn": {
+    "message": "Usuń $1 ($2)"
+  },
   "editNamed": {
     "message": "Edytuj $1"
   },
@@ -823,6 +826,9 @@
   },
   "screeningNone": {
     "message": "Brak"
+  },
+  "screeningFor": {
+    "message": "Folder do sprawdzenia konta $1"
   },
   "screeningCreate": {
     "message": "Utwórz folder"

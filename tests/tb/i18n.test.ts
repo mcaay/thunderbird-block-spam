@@ -59,6 +59,17 @@ describe("plural forms", () => {
   });
 });
 
+describe("numbers in messages", () => {
+  it("are written the way the language of the strings writes them", async () => {
+    const english = await withLocale("en", { read: "Messages read: $1 of $2." });
+    expect(english.t("read", 12000, "many")).toBe("Messages read: 12,000 of many.");
+    const polish = await withLocale("pl", { read: "Przeczytane wiadomości: $1." });
+    // Polish groups thousands with a no-break space, from five digits on.
+    expect(polish.t("read", 12000).replace(/\s/g, " ")).toBe("Przeczytane wiadomości: 12 000.");
+    expect(polish.t("read", 4000)).toBe("Przeczytane wiadomości: 4000.");
+  });
+});
+
 describe("messages", () => {
   it("returns the key when a message is missing, and builds code keys without hyphens", async () => {
     const { t, tCode } = await withLocale("en", { outcome_no_verdict: "No verdict" });

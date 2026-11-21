@@ -89,7 +89,7 @@ export function incomingSection(shell: Shell): Section {
               "select",
               {
                 id,
-                attrs: { "data-focus": "select" },
+                attrs: { "data-focus": "select", "aria-label": t("screeningFor", account.name) },
                 onchange: () => {
                   const folder = account.folders.find((candidate) => candidate.path === select.value);
                   created.delete(account.id);

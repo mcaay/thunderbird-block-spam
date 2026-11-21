@@ -137,10 +137,14 @@ async function drawSelection(tabId: number | null, quiet = false): Promise<void>
     parts.push(h("h2", { text: tn("popupSelectedMany", count) }));
     domainRow = h(
       "div",
-      { class: "row domain" },
-      h("span", { class: "description", text: t("popupDomains") }),
-      commandButton(t("popupBlockShort"), t("cmdBlockDomain"), "block-domain", tabId, "small"),
-      commandButton(t("popupTrustShort"), t("cmdTrustDomain"), "trust-domain", tabId, "small"),
+      { class: "domain" },
+      h("div", { class: "description", text: t("popupDomains") }),
+      h(
+        "div",
+        { class: "row" },
+        commandButton(t("popupBlockShort"), t("cmdBlockDomain"), "block-domain", tabId, "small"),
+        commandButton(t("popupTrustShort"), t("cmdTrustDomain"), "trust-domain", tabId, "small"),
+      ),
     );
   } else if (sender !== null) {
     parts.push(h("h2", { text: t("popupSelectedOne") }));
@@ -162,10 +166,14 @@ async function drawSelection(tabId: number | null, quiet = false): Promise<void>
       const domain = sender.domainTarget.value;
       domainRow = h(
         "div",
-        { class: "row domain" },
-        h("span", { class: "description" }, t("popupDomain"), " ", address(domain), ":"),
-        commandButton(t("popupBlockShort"), t("popupBlockDomainNamed", domain), "block-domain", tabId, "small"),
-        commandButton(t("popupTrustShort"), t("popupTrustDomainNamed", domain), "trust-domain", tabId, "small"),
+        { class: "domain" },
+        h("div", { class: "description" }, t("popupDomain"), " ", address(domain), ":"),
+        h(
+          "div",
+          { class: "row" },
+          commandButton(t("popupBlockShort"), t("popupBlockDomainNamed", domain), "block-domain", tabId, "small"),
+          commandButton(t("popupTrustShort"), t("popupTrustDomainNamed", domain), "trust-domain", tabId, "small"),
+        ),
       );
     } else {
       domainRow = h("p", { class: "description", text: t("popupPublicNote") });
@@ -192,7 +200,7 @@ function decisionRow(entry: LogEntry, now: number): HTMLElement {
   const sender = entry.sender === "" ? (entry.via === "" ? t("logUnknownSender") : entry.via) : entry.sender;
   // Tests and observed decisions moved nothing: they say so, and their dot is hollow.
   const marker = entry.test ? t("logTestBadge") : entry.observed ? t("logObservedBadge") : "";
-  const outcome = `${tCode("outcome", entry.outcome)}${entry.score === null ? "" : ` ${formatScore(entry.score, stringsLocale())}`}${marker === "" ? "" : `, ${marker}`}`;
+  const outcome = `${tCode("outcome", entry.outcome)}${entry.score === null ? "" : ` ${formatScore(entry.score, stringsLocale())}`}${marker === "" ? "" : ` (${marker})`}`;
   const time = formatShortTime(entry.time, now);
   const row = h(
     "button",

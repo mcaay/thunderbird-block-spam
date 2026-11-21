@@ -51,7 +51,7 @@ export function folderEditors(accounts: readonly AccountView[], options: FolderE
               ? [h("li", { class: "empty", text: t("noFolders") })]
               : chosen.map((folder) => {
                   const removable = options.removable(account, folder);
-                  const remove = removable ? iconButton("close", t("removeNamed", folder.name), () => options.onRemove(account, folder), "quiet") : null;
+                  const remove = removable ? iconButton("close", t("removeNamedIn", folder.name, account.name), () => options.onRemove(account, folder), "quiet") : null;
                   if (remove !== null) {
                     remove.dataset.focus = `remove:${folder.path}`;
                   }

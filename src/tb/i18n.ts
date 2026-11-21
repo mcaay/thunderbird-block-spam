@@ -1,10 +1,14 @@
 // All user-visible strings live in _locales. This is the only way to read them.
 
-/** Returns the localized message, with $1, $2... replaced by the substitutions. */
+/**
+ * Returns the localized message, with $1, $2... replaced by the substitutions.
+ * Numbers are written the way the language of the strings writes them: 12,000 in
+ * English, 12 000 in Polish.
+ */
 export function t(key: string, ...substitutions: (string | number)[]): string {
   const message = browser.i18n.getMessage(
     key,
-    substitutions.map((value) => String(value)),
+    substitutions.map((value) => (typeof value === "number" ? value.toLocaleString(stringsLocale()) : value)),
   );
   return message === "" ? key : message;
 }

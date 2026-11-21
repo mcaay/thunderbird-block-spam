@@ -117,7 +117,12 @@ export function aiSection(shell: Shell): Section {
   /** What the page put into the cutoff field last. Anything else in it is an edit. */
   let cutoffShown: string | null = null;
 
-  const prompt = h("textarea", { rows: 14, id: "prompt", oninput: () => drawPromptState(), attrs: { "aria-describedby": "prompt-hint", spellcheck: "false" } });
+  const prompt = h("textarea", {
+    rows: 14,
+    id: "prompt",
+    oninput: () => drawPromptState(),
+    attrs: { "aria-labelledby": "prompt-title", "aria-describedby": "prompt-hint", spellcheck: "false" },
+  });
   const promptError = fieldError(prompt, "prompt-error");
   let promptStored = "";
   const promptStatus = inlineStatus();
@@ -164,7 +169,7 @@ export function aiSection(shell: Shell): Section {
     h("div", { class: "row" }, h("label", { for: "cutoff", text: t("cutoffLabel") }), cutoff, cutoffStatus.element),
     cutoffError.element,
     description(t("cutoffHint")),
-    h("h2", { text: t("promptTitle") }),
+    h("h2", { text: t("promptTitle"), id: "prompt-title" }),
     h("div", { class: "description", id: "prompt-hint", text: t("promptHint") }),
     prompt,
     promptError.element,

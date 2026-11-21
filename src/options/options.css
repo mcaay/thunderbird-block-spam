@@ -118,8 +118,14 @@ main {
   max-width: 800px;
 }
 
+/* The title takes the focus when its pane is opened. The ring then hugs the words, not the whole line. */
+.pane > h1 {
+  width: fit-content;
+}
+
 .pane > h1:focus-visible {
   outline-offset: 4px;
+  border-radius: 2px;
 }
 
 .lead {
@@ -494,6 +500,7 @@ td {
 thead th {
   font-size: 0.9em;
   font-weight: 600;
+  white-space: nowrap;
   color: var(--deemphasized);
 }
 
@@ -567,11 +574,11 @@ table.log .col-time {
 }
 
 table.log .col-outcome {
-  width: 308px;
+  width: 304px;
 }
 
 table.log .col-score {
-  width: 50px;
+  width: 58px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -619,7 +626,7 @@ table.log .detail {
 }
 
 .outcome-line .badge {
-  margin-inline-start: 5px;
+  margin-inline-start: 2px;
 }
 
 /* The score has its own column. In the stacked layout of narrow windows it follows the outcome. */
