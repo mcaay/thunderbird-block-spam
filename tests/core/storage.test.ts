@@ -126,8 +126,17 @@ describe("payload", () => {
 });
 
 describe("processed set", () => {
-  it("identifies a message by account and Message-ID", async () => {
-    expect(await processedId(message({ accountId: "account1", headerMessageId: "abc@host" }))).toBe("account1 abc@host");
+  it("identifies a message by account, Message-ID, author and date", async () => {
+    const base = { accountId: "account1", headerMessageId: "abc@host", author: "A <a@one.example>", date: 1000 };
+    const first = await processedId(message(base));
+    expect(first).toMatch(/^account1 #[0-9a-f]{24}$/);
+    // A copy of the same message has the same identity.
+    expect(await processedId(message(base))).toBe(first);
+    // Another message that reuses the Message-ID does not.
+    expect(await processedId(message({ ...base, author: "spam@two.example" }))).not.toBe(first);
+    expect(await processedId(message({ ...base, date: 2000 }))).not.toBe(first);
+    expect(await processedId(message({ ...base, headerMessageId: "other@host" }))).not.toBe(first);
+    expect(await processedId(message({ ...base, accountId: "account2" }))).not.toBe(first);
   });
 
   it("falls back to a hash of date, author and subject", async () => {

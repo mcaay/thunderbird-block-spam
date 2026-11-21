@@ -81,6 +81,25 @@ describe("tick", () => {
     expect(h.mail.ids(INBOX1)).toEqual([tooOld.id]);
   });
 
+  it("judges a message that reuses the Message-ID of one already handled, and a copy only once", async () => {
+    const h = await harness();
+    h.protect();
+    h.state.accessPoints = [accessPoint()];
+    h.state.addEntry({ list: "black", kind: "domain", value: "blocked.example", scope: "all", source: "manual" }, 1);
+    const projects = h.mail.addFolder({ accountId: "account1", path: "/Projects" });
+    h.state.settings.monitoredFoldersAdded = [projects];
+    const date = h.clock.now + MINUTE;
+    h.mail.put(INBOX1, { author: "a@one.example", headerMessageId: "reused@x", date });
+    const spam = h.mail.put(INBOX1, { author: "spam@blocked.example", headerMessageId: "reused@x", date: date + 1 });
+    // A copy rule put the first message into a second monitored folder as well.
+    h.mail.put(projects, { author: "a@one.example", headerMessageId: "reused@x", date });
+    h.clock.now += 5 * MINUTE;
+    await h.engine.tick();
+    expect(h.mail.ids(JUNK1)).toEqual([spam.id]);
+    expect(h.ai.calls).toHaveLength(1);
+    expect(h.log().map((entry) => entry.sender)).toEqual(["a@one.example", "spam@blocked.example"]);
+  });
+
   it("handles a message again after an interrupted run, because only finished messages are recorded", async () => {
     const h = await harness();
     h.protect();

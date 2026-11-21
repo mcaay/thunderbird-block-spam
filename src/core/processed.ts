@@ -17,14 +17,17 @@ export function dayKey(timestamp: number): string {
 }
 
 /**
- * Identity of a message: the account id plus the Message-ID header. A message
- * without a Message-ID is identified by a hash of its date, author and subject.
+ * Identity of a message: the account id plus a hash of the Message-ID header, the
+ * author and the date. Copies of one message (in two folders, after a resync) share
+ * all three; another message that reuses the Message-ID does not, so it cannot hide
+ * behind one that was already handled. A message without a Message-ID is identified
+ * by its date, author and subject.
  */
 export async function processedId(message: MessageInfo): Promise<string> {
-  if (message.headerMessageId !== "") {
-    return `${message.accountId} ${message.headerMessageId}`;
-  }
-  const text = `${message.date}\n${message.author}\n${message.subject}`;
+  const text =
+    message.headerMessageId !== ""
+      ? `id\n${message.headerMessageId}\n${message.author}\n${message.date}`
+      : `${message.date}\n${message.author}\n${message.subject}`;
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
   const hex = Array.from(new Uint8Array(digest).slice(0, 12), (byte) => byte.toString(16).padStart(2, "0")).join("");
   return `${message.accountId} #${hex}`;
