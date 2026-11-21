@@ -183,6 +183,22 @@ describe("decision for one message", () => {
       ]);
     });
 
+    it("reads nothing when every enabled access point cools down or needs attention", async () => {
+      const h = await protectedHarness();
+      h.state.accessPoints = [
+        accessPoint({ id: "a", cooldownUntil: h.clock.now + HOUR }),
+        accessPoint({ id: "b", needsAttention: true }),
+        accessPoint({ id: "c", enabled: false }),
+      ];
+      h.state.settings.noVerdictAction = "junk";
+      const msg = h.mail.put(INBOX1, { author: "x@unknown.example", date: arrived(h) });
+      await h.engine.tick();
+      expect(h.mail.bodyReads + h.mail.headerReads).toBe(0);
+      expect(h.ai.calls).toHaveLength(0);
+      expect(h.mail.ids(JUNK1)).toEqual([msg.id]);
+      expect(h.log()).toMatchObject([{ outcome: "no-verdict", action: "junk", reason: "ai-failed", detail: "" }]);
+    });
+
     it("moves to the screening folder of the account", async () => {
       const h = await protectedHarness();
       h.mail.addFolder(SCREEN1);

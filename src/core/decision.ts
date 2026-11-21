@@ -1,7 +1,7 @@
 // The decision for one incoming message (design section 5.2).
 
 import { smartTarget } from "./address";
-import { runChain } from "./chain";
+import { isAvailable, runChain } from "./chain";
 import type { ChainResult } from "./chain";
 import { resolveEffectiveSender } from "./forward";
 import type { EffectiveSender } from "./forward";
@@ -218,6 +218,11 @@ export async function decideMessage(deps: DecisionDeps, message: MessageInfo): P
 
   if (!state.accessPoints.some((point) => point.enabled)) {
     return noVerdict(REASONS.noAi, "");
+  }
+  // Every enabled access point cools down or needs attention: the chain would skip
+  // them all, so headers and body are not read for nothing.
+  if (!state.accessPoints.some((point) => isAvailable(point, now()))) {
+    return noVerdict(REASONS.aiFailed, "");
   }
 
   const payload = await reader.payload(effective);
