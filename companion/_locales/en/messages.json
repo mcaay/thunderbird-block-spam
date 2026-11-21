@@ -1,0 +1,8 @@
+{
+  "extensionName": {
+    "message": "Block Spam Keys"
+  },
+  "extensionDescription": {
+    "message": "Optional companion of Block Spam: block and trust senders with the keys B and W, without a modifier. Thunderbird only allows this through an Experiment, so this add-on needs full access."
+  }
+}

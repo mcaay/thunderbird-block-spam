@@ -1,0 +1,20 @@
+[
+  {
+    "namespace": "bareKeys",
+    "description": "Captures the keys B, Shift+B, W and Shift+W in mail windows, never in text fields.",
+    "events": [
+      {
+        "name": "onCommand",
+        "type": "function",
+        "description": "Fired when one of the keys is pressed in a mail tab or a message window.",
+        "parameters": [
+          {
+            "name": "command",
+            "type": "string",
+            "description": "One of block-address, block-domain, trust-address and trust-domain."
+          }
+        ]
+      }
+    ]
+  }
+]
