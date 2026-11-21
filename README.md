@@ -60,8 +60,8 @@ Nothing is ever deleted. Every failure leaves mail where it is.
 - Connect multiple AI subscriptions or keys as fallback (when your limits run out on the main one, the next one keeps AI functioning).
 - An editable prompt, with a button that restores the default.
 - **Observation mode:** decisions are computed and logged, but no message is moved and the AI adds nothing to the black list. The recommended way to try a model, a prompt or a cutoff before trusting them.
-- A log of the last 5000 decisions, with a filter and a search by sender or subject. Each decision can be undone in its row: "Trust" puts the sender on the white list and moves the message back to the Inbox, "Block" does the opposite. Message bodies are never stored.
-- "Score selected messages" in the toolbar popup, to tune the prompt and the cutoff on real mail: up to 50 messages at a time, after a confirmation that says how many.
+- A log of the last 5000 decisions, with a filter and a search by sender or subject. Each decision can be undone in its row: "Trust domain" or "Trust address" puts the sender on the white list and moves the message back to the Inbox, "Block domain" or "Block address" does the opposite, and "Show message" opens the message itself. Message bodies are never stored.
+- "Test AI on selected messages" in the toolbar popup, to tune the prompt and the cutoff on real mail: up to 50 messages at a time, after a confirmation that says how many.
 - Export and import of the lists, the settings and the AI services (without keys), to move to another computer.
 - A settings page that looks and works like Thunderbird's own Settings, in the light and the dark theme, in English and in Polish.
 
@@ -97,13 +97,13 @@ Requires Thunderbird 153 or newer.
 
 The Overview of the settings page lists three steps, each with its button. Until the first one is done, the toolbar popup says "Setup is not finished" and leads there.
 
-1. **Scan your sent mail.** The button starts the scan in place and shows its progress. This puts the people you already write to on the white list.
+1. **Scan your sent mail.** The button starts the scan in place and shows its progress. This puts the people you already write to on the white list. The step is done when the scan has ended.
 2. **Optional: add an AI service.** The button opens the AI pane on the list of services to choose from.
 3. **Switch protection on.** Mail that arrived before protection was switched on is never touched. If an AI service is on before the scan was run, Block Spam asks first and offers the scan.
 
-Consider switching on **observation mode** first and watching the log for a few days.
+Consider ticking **observation mode**, the option right under the protection switch, first and watching the log for a few days. It can be ticked before protection is on.
 
-Once protection is on, the Overview and the popup show its state, the time of the last check, today's figures and whether the AI services work. When something needs you (a rejected key, an account without a Junk folder), the state reads "On, with problems" and a warning leads to the fix.
+Once protection is on, the Overview and the popup show its state, the time of the last check, today's figures and whether the AI services work. When something needs you (a rejected key, an account without a Junk folder), the state reads "On, with problems" and a warning leads to the fix. You do not have to open anything to notice: the Block Spam button in the toolbar gets a badge and says how many problems there are, and a desktop notification tells you once when an AI service first needs attention.
 
 The settings page opens from the toolbar popup (Settings), or from Add-ons and Themes.
 
@@ -112,7 +112,7 @@ The settings page opens from the toolbar popup (Settings), or from Add-ons and T
 
 All of these do the same two things: put the sender on a list and move the message (Block to Junk, Trust back to the Inbox from Junk or from a screening folder).
 
-- **Toolbar popup.** Select one or more messages and click the Block Spam button in the toolbar. The popup shows the sender with "Block sender" and "Trust sender", and a quieter pair for the whole domain. Afterwards it says what was added.
+- **Toolbar popup.** Select one or more messages and click the Block Spam button in the toolbar. For one message the popup says which list entry decides its sender and what Block Spam decided about the message, with "Block sender" and "Trust sender" and a quieter pair for the whole domain. Afterwards it says what was added and offers Undo.
 - **Context menu.** Right-click a message in the message list and choose Block Spam.
 - **Keyboard shortcuts:**
 	- `Alt` + `B` ⮕ add the address to the BLACK LIST and move the message to Junk
@@ -122,6 +122,10 @@ All of these do the same two things: put the sender on a list and move the messa
 	- On macOS `Alt` is the Option key, and the settings page shows the keys as `⌥B` and so on. All four can be changed in Thunderbird under "Manage Extension Shortcuts".
 	- The bare keys `B` and `W` need the optional companion add-on, see [Bare keys B and W](#bare-keys-b-and-w).
 - **Log.** Settings, Log lists every decision. The button in a row undoes that decision, and the row offers Undo for the button itself. A click on one of the last decisions in the popup opens that entry in the log.
+
+**Undo.** Every block or trust made by hand can be taken back: the popup shows the last command at its top with Undo, also when the command was made with a shortcut or from the context menu, until it is undone, dismissed or replaced by the next one. Undo restores the lists exactly and moves the messages back.
+
+The pane Settings, Block and trust lists all of these ways with the current shortcuts.
 
 With the **Smart** setting (on by default) the whole-domain variants handle a company as a whole domain and a sender at a public provider by address.
 
@@ -192,7 +196,7 @@ Spam that reaches you through another mailbox's automatic forwarding or copy rul
 
 Thunderbird lets an add-on capture keys without a modifier only through an Experiment API, and every add-on that contains an Experiment must ask for full access to Thunderbird and your computer. Block Spam never does.
 
-If you accept that permission, install the separate companion add-on `block-spam-keys-<version>.xpi` from this repository (Add-ons and Themes, gear menu, "Install Add-on From File"). The Shortcuts pane of the settings page names the file as well. It contains only the key capture: `B`, `Shift` + `B`, `W` and `Shift` + `W` in mail windows, never in text fields. See [companion/README.md](companion/README.md). It is best effort: Thunderbird plans to stop running Experiments on the Release channel from the 2027 ESR.
+If you accept that permission, install the separate companion add-on `block-spam-keys-<version>.xpi` (Add-ons and Themes, gear menu, "Install Add-on From File"). The file is packaged inside Block Spam: the pane Settings, Block and trust has the button "Save the companion add-on file…" next to these steps. A build also writes it to `dist/`. It contains only the key capture: `B`, `Shift` + `B`, `W` and `Shift` + `W` in mail windows, never in text fields. See [companion/README.md](companion/README.md). It is best effort: Thunderbird plans to stop running Experiments on the Release channel from the 2027 ESR.
 
 
 ## Privacy and permissions
