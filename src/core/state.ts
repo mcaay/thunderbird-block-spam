@@ -4,8 +4,19 @@
 import { buildPublicDomains } from "./address";
 import { addEntry, entriesFromArray, removeEntry } from "./lists";
 import type { AddResult, EntryMap, NewEntry } from "./lists";
-import { appendLog, EMPTY_LOG_META, logChunkKey, validateLogMeta } from "./log";
-import type { LogMeta } from "./log";
+import {
+  EMPTY_LOG_META,
+  KEY_ACCESS_POINTS,
+  KEY_ENTRIES,
+  KEY_LOG_META,
+  KEY_META,
+  KEY_SETTINGS,
+  logChunkKey,
+  PREFIX_PROCESSED_IN,
+  PREFIX_PROCESSED_SENT,
+} from "./keys";
+import type { LogMeta } from "./keys";
+import { appendLog, validateLogMeta } from "./log";
 import type { KeyValueStore } from "./ports";
 import { ProcessedSet } from "./processed";
 import {
@@ -21,14 +32,16 @@ import {
 } from "./settings";
 import type { AccessPoint, LogEntry, Settings } from "./types";
 
-export const KEY_SETTINGS = "settings";
-export const KEY_ENTRIES = "entries";
-export const KEY_ACCESS_POINTS = "accessPoints";
-export const KEY_META = "meta";
-export const KEY_LOG_META = "logMeta";
-export const PREFIX_PROCESSED_IN = "processed:in:";
-export const PREFIX_PROCESSED_SENT = "processed:sent:";
-export const PREFIX_LOG = "log:";
+export {
+  KEY_ACCESS_POINTS,
+  KEY_ENTRIES,
+  KEY_LOG_META,
+  KEY_META,
+  KEY_SETTINGS,
+  PREFIX_LOG,
+  PREFIX_PROCESSED_IN,
+  PREFIX_PROCESSED_SENT,
+} from "./keys";
 
 export type ProcessedKind = "in" | "sent";
 

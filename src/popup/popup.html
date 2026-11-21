@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Block Spam</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <img src="../icons/icon.svg" alt="" width="22" height="22" />
+      <strong data-i18n="extensionName"></strong>
+      <span id="status"></span>
+    </header>
+    <div class="row">
+      <button id="toggle" type="button" hidden></button>
+    </div>
+    <h2 data-i18n="popupRecent"></h2>
+    <div id="recent"></div>
+    <div id="score"></div>
+    <footer>
+      <button id="open-settings" type="button" class="link" data-i18n="popupSettings"></button>
+    </footer>
+    <script src="popup.js"></script>
+  </body>
+</html>

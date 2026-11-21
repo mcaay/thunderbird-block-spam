@@ -1,5 +1,6 @@
 // The decision log: stored in chunks and capped at 5000 entries. Message bodies are never stored.
 
+import type { LogMeta } from "./keys";
 import { ValidationError } from "./settings";
 import type { LogEntry } from "./types";
 
@@ -9,18 +10,8 @@ export const LOG_MAX_CHUNKS = LOG_MAX_ENTRIES / LOG_CHUNK_SIZE;
 export const LOG_SUBJECT_LIMIT = 200;
 export const LOG_DETAIL_LIMIT = 300;
 
-export interface LogMeta {
-  /** Index of the oldest chunk. */
-  first: number;
-  /** Index of the newest chunk. */
-  last: number;
-}
-
-export function logChunkKey(index: number): string {
-  return `log:${index}`;
-}
-
-export const EMPTY_LOG_META: LogMeta = { first: 0, last: 0 };
+export { EMPTY_LOG_META, logChunkKey } from "./keys";
+export type { LogMeta } from "./keys";
 
 export interface LogWrite {
   meta: LogMeta;
