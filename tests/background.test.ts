@@ -4,11 +4,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CHATGPT_MODELS_URL } from "../src/ai/chatgpt";
 import { CHATGPT_ORIGINS, DISCOVERY_URL, ISSUER, JWKS_URL, TOKEN_URL } from "../src/ai/chatgptAuth";
-import { KEY_ACCESS_POINTS, KEY_SETTINGS } from "../src/core/keys";
+import { KEY_ACCESS_POINTS, KEY_ENTRIES, KEY_SETTINGS } from "../src/core/keys";
 import { defaultSettings } from "../src/core/settings";
 import type { AccessPoint } from "../src/core/types";
 import { FakeBrowser, loadBackground } from "./helpers/browser";
-import type { Background } from "./helpers/browser";
+import type { Background, FakeEvent } from "./helpers/browser";
 import { accessPoint } from "./helpers/harness";
 import { fakeFetch, jsonResponse, tokenFactory } from "./helpers/http";
 import type { Handler, RecordedRequest } from "./helpers/http";
@@ -117,6 +117,25 @@ describe("host permissions", () => {
     fake.granted.add("https://collector.example/*");
     expect(await background.send("testAccessPoint", { id: "imported" })).toEqual({ ok: true, result: { ok: true, score: 0.97 } });
     expect(http.requests.map((request) => request.url)).toEqual([`${COLLECTOR}/chat/completions`]);
+  });
+});
+
+describe("startup", () => {
+  it("sweeps the screening folders when Thunderbird starts, not on every alarm", async () => {
+    const settings = { ...defaultSettings(Date.now()), screeningFolders: [{ accountId: "account1", path: "/Screening" }] };
+    const entries = [
+      { list: "white", kind: "domain", value: "mycompany.example", scope: "all", source: "identity", addedAt: 1 },
+      { list: "white", kind: "domain", value: "customer.example", scope: "all", source: "sent", addedAt: 2 },
+    ];
+    const fake = new FakeBrowser({ [KEY_SETTINGS]: settings, [KEY_ENTRIES]: entries });
+    fake.folderMessages.set("f-screening", [FakeBrowser.header(7, "Anna <anna@customer.example>", "f-screening")]);
+    const background = await loadBackground(fake, fakeFetch({}).fetch);
+    background.fire(fake.api.alarms.onAlarm as unknown as FakeEvent, { name: "tick" });
+    await settle();
+    expect(fake.moves).toEqual([]);
+    background.fire(fake.api.runtime.onStartup as unknown as FakeEvent);
+    await settle();
+    expect(fake.moves).toEqual([{ ids: [7], folderId: "f-inbox" }]);
   });
 });
 

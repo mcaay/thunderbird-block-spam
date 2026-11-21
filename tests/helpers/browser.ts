@@ -33,6 +33,7 @@ const FOLDERS: tb.MailFolder[] = [
   { id: "f-inbox", accountId: ACCOUNT_ID, name: "Inbox", path: "/INBOX", specialUse: ["inbox"], isRoot: false, isVirtual: false, isUnified: false, isTag: false },
   { id: "f-sent", accountId: ACCOUNT_ID, name: "Sent", path: "/Sent", specialUse: ["sent"], isRoot: false, isVirtual: false, isUnified: false, isTag: false },
   { id: "f-junk", accountId: ACCOUNT_ID, name: "Junk", path: "/Junk", specialUse: ["junk"], isRoot: false, isVirtual: false, isUnified: false, isTag: false },
+  { id: "f-screening", accountId: ACCOUNT_ID, name: "Screening", path: "/Screening", specialUse: [], isRoot: false, isVirtual: false, isUnified: false, isTag: false },
 ];
 const IDENTITY: tb.MailIdentity = { id: "identity1", accountId: ACCOUNT_ID, email: "me@mycompany.example", name: "Me" };
 const PAGE_SIZE = 100;
@@ -44,6 +45,9 @@ export class FakeBrowser {
   readonly granted = new Set<string>();
   /** Messages selected in the mail tab with id 1. */
   selected: tb.MessageHeader[] = [];
+  /** All messages of a folder, by folder id, as messages.list returns them. */
+  readonly folderMessages = new Map<string, tb.MessageHeader[]>();
+  readonly moves: { ids: number[]; folderId: string }[] = [];
   readonly openedTabs: string[] = [];
   readonly closedTabs: number[] = [];
   readonly notifications: string[] = [];
@@ -83,7 +87,7 @@ export class FakeBrowser {
       },
       messages: {
         query: async () => empty,
-        list: async () => empty,
+        list: async (folderId: string) => page([...(this.folderMessages.get(folderId) ?? [])]),
         continueList: async (id: string) => {
           const rest = this.lists.get(id) ?? [];
           this.lists.delete(id);
@@ -95,7 +99,9 @@ export class FakeBrowser {
         getHeaders: async () => ({}),
         listAttachments: async () => [],
         listInlineTextParts: async () => [{ contentType: "text/plain", content: "Hello" }],
-        move: async () => undefined,
+        move: async (ids: number[], folderId: string) => {
+          this.moves.push({ ids: [...ids], folderId });
+        },
         onNewMailReceived: new FakeEvent(),
       },
       messengerUtilities: {
@@ -189,8 +195,8 @@ export class FakeBrowser {
     this.api = api as unknown as tb.Browser;
   }
 
-  /** A message header in the Inbox of account1. */
-  static header(id: number, author: string): tb.MessageHeader {
+  /** A message header in a folder of account1, the Inbox unless another folder id is given. */
+  static header(id: number, author: string, folderId = "f-inbox"): tb.MessageHeader {
     return {
       id,
       author,
@@ -202,7 +208,7 @@ export class FakeBrowser {
       headerMessageId: `msg-${id}@test`,
       size: 1000,
       external: false,
-      folder: FOLDERS[1],
+      folder: FOLDERS.find((folder) => folder.id === folderId),
     };
   }
 }

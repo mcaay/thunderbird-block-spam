@@ -114,7 +114,13 @@ function need(): App {
 // ---------------------------------------------------------------------------
 // Triggers: startup, the 5 minute alarm and new mail run the same idempotent job.
 
-function requestTick(): void {
+/** Set by Thunderbird's startup and by an installation or update: the next tick also sweeps the screening folders. */
+let sweepOnTick = false;
+
+function requestTick(startup = false): void {
+  if (startup) {
+    sweepOnTick = true;
+  }
   queue.add(
     () =>
       withKeepAlive(async () => {
@@ -123,7 +129,10 @@ function requestTick(): void {
           return;
         }
         mail.resetCache();
-        await app.engine.tick();
+        // Read when the tick runs, so a tick that was already waiting picks it up too.
+        const sweep = sweepOnTick;
+        sweepOnTick = false;
+        await app.engine.tick({ sweep });
       }),
     "tick",
   );
@@ -135,10 +144,10 @@ async function ensureAlarm(): Promise<void> {
   }
 }
 
-browser.runtime.onStartup.addListener(requestTick);
+browser.runtime.onStartup.addListener(() => requestTick(true));
 
 browser.runtime.onInstalled.addListener((details) => {
-  requestTick();
+  requestTick(true);
   if (details.reason === "install") {
     void browser.runtime.openOptionsPage().catch(() => undefined);
   }

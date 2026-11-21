@@ -70,7 +70,7 @@ Where the documentation left a question open, the source code of Thunderbird (`t
 - **A processed record of a message dated in the future** is filed under the message's date instead of today, so it cannot expire while the message would still be returned by the date query.
 - **Buckets are pruned after a completed tick**, never before one.
 - **An unexpected failure while handling a message** is logged and the message is marked as processed, like a failed move. It is not retried.
-- **The screening sweep** checks every message in the screening folders against the lists and moves white list matches to the Inbox. It runs after each change that adds a white list entry and is logged with the outcome `released`.
+- **The screening sweep** checks every message in the screening folders against the lists and moves white list matches to the Inbox. It runs after each change that adds a white list entry and is logged with the outcome `released`. The request for a sweep lives in memory only, so the tick at Thunderbird's startup, after installation and after an update always sweeps: a sweep that was due when Thunderbird closed is not left waiting for the next white list addition.
 - **The log entry has two extra fields:** `via` (the forwarding mailbox of a wrapped forward) and `action` (what was done, or would have been done in observation mode).
 - **The AI payload's `From` line is the address only**, as the specification defines the effective sender, without the display name.
 - **One Junk folder per account:** the first folder with the junk special use.

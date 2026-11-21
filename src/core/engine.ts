@@ -143,10 +143,17 @@ export class Engine {
   /**
    * The idempotent job behind startup and the 5 minute alarm: identities, the Sent
    * folder watch, incoming mail while protection is on, and the screening sweep.
+   *
+   * With sweep, the screening folders are checked even when no white list entry was
+   * added since the last sweep. The request for a sweep lives in memory only, so one
+   * that was due when Thunderbird closed would otherwise wait for the next addition.
    */
-  async tick(): Promise<void> {
+  async tick(options: { sweep?: boolean } = {}): Promise<void> {
     const { state, now } = this.deps;
     const started = now();
+    if (options.sweep === true) {
+      state.whiteAdded = true;
+    }
     const context = await this.context();
 
     if (syncIdentities(state.entries, context.own, state.publicDomains, started) > 0) {

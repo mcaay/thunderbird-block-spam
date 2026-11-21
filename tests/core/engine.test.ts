@@ -383,6 +383,20 @@ describe("screening sweep", () => {
     expect(h.mail.ids(SCREEN1)).toEqual([later.id]);
   });
 
+  it("checks the screening folders at startup also without a new white list entry", async () => {
+    const h = await screening();
+    await h.engine.tick();
+    // An entry stored just before Thunderbird closed, whose sweep never ran.
+    h.state.addEntry({ list: "white", kind: "domain", value: "customer.example", scope: "all", source: "sent" }, 1);
+    h.state.whiteAdded = false;
+    const anna = h.mail.put(SCREEN1, { author: "anna@customer.example" });
+    h.clock.now += 5 * MINUTE;
+    await h.engine.tick();
+    expect(h.mail.ids(SCREEN1)).toEqual([anna.id]);
+    await h.engine.tick({ sweep: true });
+    expect(h.mail.ids(INBOX1)).toEqual([anna.id]);
+  });
+
   it("logs a failed move and leaves the message in screening", async () => {
     const h = await screening();
     const anna = h.mail.put(SCREEN1, { author: "anna@customer.example" });
