@@ -7,6 +7,7 @@ import { folderKey } from "../core/ports";
 import type { AccountInfo, FolderRef, Identity, MessageInfo } from "../core/types";
 
 const PAGE_SIZE = 100;
+const HEADER_TIMEOUT_MS = 30 * 1000;
 
 /** Converts a message header. Returns null for messages that are not in a folder (opened from a file). */
 export function toMessageInfo(header: tb.MessageHeader): MessageInfo | null {
@@ -137,12 +138,24 @@ export class ThunderbirdMail implements MailPort {
   }
 
   async headers(messageId: number): Promise<Record<string, string[]>> {
-    const raw = await browser.messages.getHeaders(messageId);
-    const headers: Record<string, string[]> = {};
-    for (const [name, values] of Object.entries(raw)) {
-      headers[name.toLowerCase()] = Array.isArray(values) ? values.map(String) : [String(values)];
+    // A chunked IMAP fetch can leave getHeaders pending indefinitely. Let the
+    // existing missing-header fallback run instead of blocking the whole queue.
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const raw = await Promise.race([
+        browser.messages.getHeaders(messageId),
+        new Promise<never>((_resolve, reject) => {
+          timer = setTimeout(() => reject(new Error("Timed out reading message headers")), HEADER_TIMEOUT_MS);
+        }),
+      ]);
+      const headers: Record<string, string[]> = {};
+      for (const [name, values] of Object.entries(raw)) {
+        headers[name.toLowerCase()] = Array.isArray(values) ? values.map(String) : [String(values)];
+      }
+      return headers;
+    } finally {
+      clearTimeout(timer);
     }
-    return headers;
   }
 
   async attachedMessageFrom(messageId: number): Promise<string | null> {

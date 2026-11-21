@@ -139,6 +139,31 @@ describe("startup", () => {
   });
 });
 
+describe("incoming mail with unavailable headers", () => {
+  it("scores a large message without the stalled headers and continues the queue", async () => {
+    const now = Date.now();
+    const settings = { ...defaultSettings(now - 1000), protection: true, protectionOnAt: now - 1000 };
+    const point = accessPoint({ id: "ai", type: "openai-chat", endpoint: COLLECTOR });
+    const entries = [{ list: "black", kind: "domain", value: "blocked.example", scope: "all", source: "manual", addedAt: now }];
+    const fake = new FakeBrowser({ [KEY_SETTINGS]: settings, [KEY_ACCESS_POINTS]: [point], [KEY_ENTRIES]: entries });
+    fake.granted.add("https://collector.example/*");
+    fake.api.messages.getHeaders = vi.fn(() => new Promise<Record<string, string[]>>(() => undefined));
+    const large = { ...FakeBrowser.header(1, "sender@large.example"), date: new Date(now), size: 6 * 1024 * 1024 };
+    const next = { ...FakeBrowser.header(2, "sender@blocked.example"), date: new Date(now) };
+    const http = fakeFetch(() => jsonResponse({ choices: [{ message: { content: "0.1" } }] }));
+    const background = await loadBackground(fake, http.fetch);
+    background.fire(fake.api.messages.onNewMailReceived as unknown as FakeEvent, large.folder, { id: null, messages: [large, next] });
+    await settle();
+    expect(http.requests).toHaveLength(0);
+    expect(fake.moves).toEqual([]);
+
+    await vi.advanceTimersByTimeAsync(30_000);
+    await settle();
+    expect(http.requests).toHaveLength(1);
+    expect(fake.moves).toEqual([{ ids: [2], folderId: "f-junk" }]);
+  });
+});
+
 describe("reset", () => {
   it("ends the ChatGPT sessions it can still read before it deletes the data", async () => {
     const broken = { ...defaultSettings(Date.now()), cutoff: 7 };
