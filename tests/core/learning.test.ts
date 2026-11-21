@@ -155,6 +155,27 @@ describe("black list conflicts", () => {
     expect(entries.get(entryKey("address", "sales@example.com", "all"))?.list).toBe("black");
     expect(entries.get(entryKey("domain", "example.com", "all"))?.list).toBe("white");
   });
+
+  it("rule 2: an AI block with another key that still decides the recipient is removed", () => {
+    // From when example.com was a public domain: the AI blocked the address.
+    const address: EntryMap = new Map();
+    black(address, { kind: "address", value: "john@example.com", source: "ai" });
+    expect(learnRecipient(context(address), "john@example.com")).toBe("added");
+    expect([...address.values()]).toMatchObject([{ list: "white", kind: "domain", value: "example.com" }]);
+
+    // From when new entries were per account: the AI blocked the domain in account1.
+    const scoped: EntryMap = new Map();
+    black(scoped, { kind: "domain", value: "example.com", scope: "account1", source: "ai" });
+    expect(learnRecipient(context(scoped), "john@example.com")).toBe("added");
+    expect(scoped.has(entryKey("domain", "example.com", "account1"))).toBe(false);
+
+    // An entry that already existed counts as replaced when an AI block behind it goes.
+    const known: EntryMap = new Map();
+    addEntry(known, { list: "white", kind: "domain", value: "example.com", scope: "all", source: "scan" }, 1);
+    black(known, { kind: "domain", value: "example.com", scope: "account1", source: "ai" });
+    expect(learnRecipient(context(known), "john@example.com")).toBe("replaced");
+    expect(known.size).toBe(1);
+  });
 });
 
 describe("identities", () => {

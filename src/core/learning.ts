@@ -1,7 +1,7 @@
 // White list learning from recipients and identities. Headers only, no AI.
 
 import { parseSender, smartTarget } from "./address";
-import { addEntry, entryKey } from "./lists";
+import { addEntry, entryKey, keyOf, matchSender } from "./lists";
 import type { EntryMap } from "./lists";
 import { SCOPE_ALL } from "./types";
 import type { Scope } from "./types";
@@ -57,10 +57,23 @@ export function learnRecipient(ctx: LearnContext, rawAddress: string): LearnStat
     { list: "white", kind: target.kind, value: target.value, scope: ctx.scope, source: ctx.source },
     ctx.now,
   );
+  // The user's own correspondence outranks an AI verdict, also one with another key
+  // that would still decide this recipient: an account-scoped entry while new entries
+  // are shared, or an address entry from when the domain was public. Manual blocks
+  // were excluded above and are never touched.
+  let removed = false;
+  for (;;) {
+    const deciding = matchSender(ctx.entries, recipient, ctx.accountId);
+    if (deciding === null || deciding.list === "white" || deciding.source !== "ai") {
+      break;
+    }
+    ctx.entries.delete(keyOf(deciding));
+    removed = true;
+  }
   if (result === "added") {
     return "added";
   }
-  if (result === "moved") {
+  if (result === "moved" || removed) {
     return "replaced";
   }
   return "known";
