@@ -1,7 +1,7 @@
 // Orchestration of learning, the incoming pipeline, sweeps, scans and commands.
 // Everything here works against ports, so it runs unchanged under test.
 
-import { normalizeAddress } from "./address";
+import { normalizeAddress, smartTarget } from "./address";
 import { AccessPointError } from "./chain";
 import { applyCommand } from "./commands";
 import type { CommandMessage, CommandName, CommandPlan } from "./commands";
@@ -10,13 +10,16 @@ import type { DecisionDeps } from "./decision";
 import { resolveMonitoredFolders, resolveSentFolders } from "./folders";
 import { learnRecipients, syncIdentities } from "./learning";
 import { matchSender } from "./lists";
+import type { AddResult } from "./lists";
+import { applyLogAction, expectsMove } from "./logAction";
+import type { LogAction } from "./logAction";
 import { SAMPLE_PAYLOAD } from "./payload";
 import type { AiPort, MailPort } from "./ports";
 import { folderKey, sameFolder } from "./ports";
 import { processedId } from "./processed";
 import { isSpam } from "./score";
 import type { AppState } from "./state";
-import type { AccessPoint, FolderRef, LogEntry, MessageInfo } from "./types";
+import type { AccessPoint, Entry, FolderRef, ListName, LogEntry, MessageInfo, Scope, Target } from "./types";
 
 /** Queries reach back this far before the previous tick, to catch late arrivals. */
 export const WINDOW_MS = 48 * 60 * 60 * 1000;
@@ -73,6 +76,49 @@ export interface TestScoreSummary {
 }
 
 export type AccessPointTestResult = { ok: true; score: number } | { ok: false; error: string };
+
+/** The sender a command would act on, for the toolbar popup. */
+export interface SenderInfo {
+  /** Effective sender. Empty when it could not be determined. */
+  address: string;
+  /** Forwarding mailbox of a wrapped forward, otherwise empty. */
+  via: string;
+  /** The sender is one of the user's own addresses: commands ignore the message. */
+  own: boolean;
+  /** What the domain commands would add: the domain, or with Smart on the address of a sender at a public provider. */
+  domainTarget: Target | null;
+}
+
+/**
+ * What became of the message of a log action.
+ * - none: the action moves nothing (the decision had moved nothing either).
+ * - not-found: the message is no longer where the decision left it.
+ * - no-folder: the account has no Junk folder, or no Inbox.
+ */
+export type MoveResult = "none" | "moved" | "not-found" | "no-folder" | "failed";
+
+/** Everything needed to take a log action back. */
+export interface LogActionUndo {
+  accountId: string;
+  messageId: string;
+  /** Keys of entries to remove. */
+  remove: string[];
+  /** Entries to put back exactly as they were. */
+  restore: Entry[];
+  /** Where the message came from and where the action put it. Null when it was not moved. */
+  move: { from: FolderRef; to: FolderRef } | null;
+}
+
+export interface LogActionOutcome {
+  list: ListName;
+  target: Target;
+  scope: Scope;
+  result: AddResult;
+  move: MoveResult;
+  /** Why the move failed, for "failed". */
+  failure: string;
+  undo: LogActionUndo;
+}
 
 /**
  * The time at the end of a Received header ("from ... by ...; Tue, 21 Nov 2026
@@ -357,6 +403,7 @@ export class Engine {
         detail: errorText(error),
         observed: state.settings.observation,
         test: false,
+        messageId: message.headerMessageId,
       };
     }
     // One write: the decision is logged and the message recorded as processed together.
@@ -427,6 +474,7 @@ export class Engine {
                 detail: `${match.value} [${match.scope}]`,
                 observed: false,
                 test: false,
+                messageId: message.headerMessageId,
               },
             });
           }
@@ -581,6 +629,141 @@ export class Engine {
     return outcome;
   }
 
+  /** The sender the commands would act on for one message. */
+  async describeSender(message: MessageInfo): Promise<SenderInfo> {
+    const { state, mail } = this.deps;
+    const context = await this.context();
+    const effective = await new MessageReader(mail, message).effectiveSender(state);
+    const sender = effective.sender;
+    if (sender === null) {
+      return { address: "", via: effective.forwarder ?? "", own: false, domainTarget: null };
+    }
+    return {
+      address: sender.address,
+      via: effective.forwarder ?? "",
+      own: context.own.has(sender.address),
+      domainTarget: state.settings.smart ? smartTarget(sender, state.publicDomains) : { kind: "domain", value: sender.domain },
+    };
+  }
+
+  /**
+   * Moves the copies of a message that are in one of the expected folders. A message
+   * the user has filed or deleted since is left alone and reported as not found.
+   */
+  private async moveLogged(
+    accountId: string,
+    messageId: string,
+    isSource: (folder: FolderRef) => boolean,
+    target: FolderRef | null,
+  ): Promise<{ move: MoveResult; failure: string; from: FolderRef | null }> {
+    const { mail } = this.deps;
+    if (target === null) {
+      return { move: "no-folder", failure: "", from: null };
+    }
+    let found: MessageInfo[] = [];
+    try {
+      found = messageId === "" ? [] : await mail.findByMessageId(accountId, messageId);
+    } catch (error) {
+      return { move: "failed", failure: errorText(error), from: null };
+    }
+    const sources = found.filter((message) => message.folder !== null && isSource(message.folder) && !sameFolder(message.folder, target));
+    const from = sources[0]?.folder ?? null;
+    if (from === null) {
+      return { move: "not-found", failure: "", from: null };
+    }
+    try {
+      await mail.move(
+        sources.map((message) => message.id),
+        target,
+      );
+      return { move: "moved", failure: "", from };
+    } catch (error) {
+      return { move: "failed", failure: errorText(error), from: null };
+    }
+  }
+
+  /**
+   * Undoes a logged decision from the log: the list change first, then the move.
+   * Trust moves the message back to the Inbox from Junk or a screening folder, block
+   * moves it to Junk from a monitored or a screening folder. When the message is no
+   * longer there, the lists still change.
+   */
+  async runLogAction(entry: LogEntry, action: LogAction): Promise<LogActionOutcome> {
+    const { state, now } = this.deps;
+    const context = await this.context();
+    const plan = applyLogAction(state, entry, action, context.own, now());
+    if (plan.result !== "unchanged" || plan.undo.restore.length > 0) {
+      await state.saveEntries();
+    }
+
+    const screening = new Set(state.settings.screeningFolders.map(folderKey));
+    let moved: { move: MoveResult; failure: string; from: FolderRef | null } = { move: "none", failure: "", from: null };
+    let target: FolderRef | null = null;
+    if (expectsMove(entry, action)) {
+      if (action === "trust") {
+        target = context.inbox(entry.accountId);
+        moved = await this.moveLogged(
+          entry.accountId,
+          entry.messageId,
+          (folder) => context.isJunk(folder) || screening.has(folderKey(folder)),
+          target,
+        );
+      } else {
+        const monitored = new Set(resolveMonitoredFolders(context.inboxes, state.settings).map(folderKey));
+        target = context.junk(entry.accountId);
+        moved = await this.moveLogged(
+          entry.accountId,
+          entry.messageId,
+          (folder) => monitored.has(folderKey(folder)) || screening.has(folderKey(folder)),
+          target,
+        );
+      }
+    }
+
+    if (state.whiteAdded) {
+      await this.sweepScreening(context);
+    }
+    return {
+      list: plan.list,
+      target: plan.target,
+      scope: plan.scope,
+      result: plan.result,
+      move: moved.move,
+      failure: moved.failure,
+      undo: {
+        accountId: entry.accountId,
+        messageId: entry.messageId,
+        remove: plan.undo.remove,
+        restore: plan.undo.restore,
+        move: moved.move === "moved" && moved.from !== null && target !== null ? { from: moved.from, to: target } : null,
+      },
+    };
+  }
+
+  /** Takes a log action back: the entries exactly as they were, and the message to where it came from. */
+  async undoLogAction(undo: LogActionUndo): Promise<{ move: MoveResult; failure: string }> {
+    const { state } = this.deps;
+    const context = await this.context();
+    for (const key of undo.remove) {
+      state.removeEntry(key);
+    }
+    for (const entry of undo.restore) {
+      state.restoreEntry(entry);
+    }
+    if (undo.remove.length > 0 || undo.restore.length > 0) {
+      await state.saveEntries();
+    }
+    let moved: { move: MoveResult; failure: string } = { move: "none", failure: "" };
+    const move = undo.move;
+    if (move !== null) {
+      moved = await this.moveLogged(undo.accountId, undo.messageId, (folder) => sameFolder(folder, move.to), move.from);
+    }
+    if (state.whiteAdded) {
+      await this.sweepScreening(context);
+    }
+    return { move: moved.move, failure: moved.failure };
+  }
+
   /**
    * Scores the given messages regardless of the lists and writes the scores to the
    * log marked as tests. Moves nothing and creates no entries.
@@ -608,6 +791,7 @@ export class Engine {
         detail: result.attempts.map((attempt) => `${attempt.accessPoint}: ${attempt.error}`).join("; "),
         observed: false,
         test: true,
+        messageId: message.headerMessageId,
       };
       if (result.verdict === null) {
         summary.failed += 1;

@@ -122,7 +122,7 @@ function scoreButton(): HTMLButtonElement {
           showScoreMessage(t("popupNothingSelected"), true);
           return;
         }
-        const { count, limit } = await send("selectedCount", { tabId: tab.id });
+        const { count, limit } = await send("selection", { tabId: tab.id });
         if (count === 0) {
           showScoreMessage(t("popupNothingSelected"), true);
         } else if (count > limit) {

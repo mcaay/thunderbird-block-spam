@@ -179,6 +179,14 @@ export class FakeMail implements MailPort {
     return this.find(messageId).body ?? "Hello";
   }
 
+  async findByMessageId(accountId: string, headerMessageId: string): Promise<MessageInfo[]> {
+    const found: MessageInfo[] = [];
+    for (const folder of this.folders.values()) {
+      found.push(...folder.messages.filter((item) => item.accountId === accountId && item.headerMessageId === headerMessageId));
+    }
+    return found;
+  }
+
   async move(messageIds: number[], target: FolderRef): Promise<void> {
     if (this.failMoves) {
       throw new Error("move refused");

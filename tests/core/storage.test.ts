@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { appendLog, EMPTY_LOG_META, LOG_CHUNK_SIZE, LOG_MAX_CHUNKS, LOG_MAX_ENTRIES, logChunkKey } from "../../src/core/log";
+import { appendLog, EMPTY_LOG_META, LOG_CHUNK_SIZE, LOG_MAX_CHUNKS, LOG_MAX_ENTRIES, logChunkKey, validateLogEntry } from "../../src/core/log";
 import type { LogMeta } from "../../src/core/log";
 import { buildPayload, BODY_LIMIT, truncateBody } from "../../src/core/payload";
 import { dayKey, PROCESSED_PART_SIZE, processedId, ProcessedSet } from "../../src/core/processed";
@@ -28,6 +28,7 @@ function logEntry(index: number): LogEntry {
     detail: "",
     observed: false,
     test: false,
+    messageId: `msg-${index}@test`,
   };
 }
 
@@ -237,6 +238,20 @@ describe("log", () => {
     expect(write.chunk[0]?.subject).toHaveLength(200);
     expect(write.chunk[0]?.detail).toHaveLength(300);
   });
+
+  it("keeps the Message-ID whole, or not at all: a cut one could not be looked up", () => {
+    const kept = appendLog(EMPTY_LOG_META, [], { ...logEntry(1), messageId: "m".repeat(300) });
+    expect(kept.chunk[0]?.messageId).toHaveLength(300);
+    const dropped = appendLog(EMPTY_LOG_META, [], { ...logEntry(1), messageId: "m".repeat(301) });
+    expect(dropped.chunk[0]?.messageId).toBe("");
+  });
+
+  it("loads entries logged before the Message-ID was recorded with an empty one", () => {
+    const { messageId: _unused, ...older } = logEntry(1);
+    expect(validateLogEntry(older, "log:0[0]")).toEqual({ ...logEntry(1), messageId: "" });
+    expect(validateLogEntry(logEntry(2), "log:0[1]").messageId).toBe("msg-2@test");
+    expect(() => validateLogEntry({ ...logEntry(3), messageId: 7 }, "log:0[2]")).toThrowError(ValidationError);
+  });
 });
 
 describe("settings and state", () => {
@@ -367,6 +382,18 @@ describe("settings and state", () => {
     await Promise.all([first, second]);
     expect(store.writes - before).toBe(1);
     expect(store.data[KEY_ENTRIES]).toHaveLength(2);
+  });
+
+  it("puts an entry back exactly as it was, in place of whatever holds its key", async () => {
+    const { state, store } = await makeState();
+    const original = { list: "white", kind: "domain", value: "customer.example", scope: "all", source: "scan", addedAt: 123 } as const;
+    state.addEntry({ list: "black", kind: "domain", value: "customer.example", scope: "all", source: "manual" }, NOW);
+    state.whiteAdded = false;
+    state.restoreEntry(original);
+    await state.saveEntries();
+    expect(store.data[KEY_ENTRIES]).toEqual([original]);
+    // A restored white list entry releases mail from the screening folders like a new one.
+    expect(state.whiteAdded).toBe(true);
   });
 
   it("flags white list additions for the screening sweep", async () => {

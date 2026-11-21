@@ -3,19 +3,36 @@
 
 import type { AccessPointDefinition } from "../ai/presets";
 import type { ModelOption } from "../ai/openaiChat";
+import type { CommandName } from "../core/commands";
 import type { SettingsPatch } from "../core/edit";
-import type { AccessPointTestResult, ScanProgress, TestScoreSummary } from "../core/engine";
+import type {
+  AccessPointTestResult,
+  LogActionOutcome,
+  LogActionUndo,
+  MoveResult,
+  ScanProgress,
+  SenderInfo,
+  TestScoreSummary,
+} from "../core/engine";
 import type { ExportResult, ImportMode, ImportReport } from "../core/exportImport";
+import type { LogAction } from "../core/logAction";
+import type { Entry, EntryKind, ListName, LogEntry } from "../core/types";
 
 export interface Requests {
   getStatus: { request: Record<string, never>; result: Status };
   setProtection: { request: { on: boolean }; result: null };
   updateSettings: { request: { patch: SettingsPatch }; result: { invalid: string[] } };
+  /** Without a kind, a value with a name before an "@" is an address and anything else a domain. */
   addEntry: {
-    request: { list: string; kind: string; value: string; scope: string };
-    result: { value: string; result: string };
+    request: { list: string; kind?: string; value: string; scope: string };
+    result: { value: string; kind: EntryKind; list: ListName; result: string };
   };
   removeEntries: { request: { keys: string[] }; result: { removed: number } };
+  /** Undo of a removal: puts entries back exactly as they were. */
+  restoreEntries: { request: { entries: Entry[] }; result: { restored: number } };
+  /** Undoes the decision of one log entry: trusts or blocks its sender and moves its message. */
+  logAction: { request: { entry: LogEntry; action: LogAction }; result: LogActionOutcome };
+  undoLogAction: { request: { undo: LogActionUndo }; result: { move: MoveResult; failure: string } };
   startScan: { request: { from: number | null; to: number | null }; result: null };
   cancelScan: { request: Record<string, never>; result: null };
   createScreeningFolder: { request: { accountId: string }; result: { path: string } };
@@ -27,6 +44,11 @@ export interface Requests {
   moveAccessPoint: { request: { id: string; direction: -1 | 1 }; result: null };
   testAccessPoint: { request: { id: string }; result: AccessPointTestResult };
   listModels: { request: { id: string }; result: ModelOption[] };
+  /** The models of a definition that is being edited and may not be saved yet. Without a key, the stored one is used. */
+  listModelsFor: {
+    request: { id: string | null; definition: AccessPointDefinition; apiKey: string | null };
+    result: ModelOption[];
+  };
   startSignIn: { request: { accessPointId: string | null; openTab: boolean }; result: { url: string } };
   finishSignIn: { request: { url: string }; result: null };
   cancelSignIn: { request: Record<string, never>; result: null };
@@ -35,9 +57,18 @@ export interface Requests {
   exportData: { request: Record<string, never>; result: ExportResult };
   importData: { request: { file: unknown; mode: ImportMode }; result: ImportReport };
   resetData: { request: Record<string, never>; result: null };
-  /** How many messages are selected, counted up to one more than the limit of a run. */
-  selectedCount: { request: { tabId: number }; result: { count: number; limit: number } };
+  /**
+   * The selection of a tab: how many messages, counted up to one more than the limit
+   * of a scoring run, and for a single message the sender the commands would act on.
+   */
+  selection: { request: { tabId: number }; result: { count: number; limit: number; sender: SenderInfo | null } };
+  /** Runs one of the four shortcut commands on the selection of a tab. The lines say what was done. */
+  runCommand: { request: { command: CommandName; tabId: number }; result: { lines: string[]; failed: boolean } };
   scoreSelected: { request: { tabId: number }; result: TestScoreSummary & { selected: number } };
+  /** Asks the settings page, open or about to open, to show one log entry. */
+  showLogEntry: { request: { key: string }; result: null };
+  /** The log entry the settings page was asked to show, once. */
+  takeLogFocus: { request: Record<string, never>; result: { key: string | null } };
   welcomeShown: { request: Record<string, never>; result: null };
 }
 
@@ -48,7 +79,35 @@ export interface Envelope<Name extends RequestName = RequestName> {
   args: Requests[Name]["request"];
 }
 
-export type Reply<Result> = { ok: true; result: Result } | { ok: false; error: string };
+/** A failed request carries the background's message and, for mistakes a user can make, a code the pages translate. */
+export type Reply<Result> = { ok: true; result: Result } | { ok: false; error: string; code?: string };
+
+/** What the background tells open pages without being asked. */
+export interface PageEvent {
+  blockSpamEvent: "logFocus";
+  key: string;
+}
+
+export function isPageEvent(message: unknown): message is PageEvent {
+  return (
+    typeof message === "object" &&
+    message !== null &&
+    (message as PageEvent).blockSpamEvent === "logFocus" &&
+    typeof (message as PageEvent).key === "string"
+  );
+}
+
+/** A request the background refused. */
+export class RequestError extends Error {
+  /** Set for mistakes a user can make, see ValidationError. Otherwise empty. */
+  readonly code: string;
+
+  constructor(message: string, code = "") {
+    super(message);
+    this.name = "RequestError";
+    this.code = code;
+  }
+}
 
 export interface SignInStatus {
   /** The authorization address of the attempt in progress, or null. */
@@ -79,7 +138,7 @@ export async function send<Name extends RequestName>(
     throw new Error("The background page did not answer.");
   }
   if (!reply.ok) {
-    throw new Error(reply.error);
+    throw new RequestError(reply.error, reply.code ?? "");
   }
   return reply.result;
 }

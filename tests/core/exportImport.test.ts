@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applySettingsPatch, manualEntry } from "../../src/core/edit";
+import { applySettingsPatch, inferKind, manualEntry } from "../../src/core/edit";
 import { accountReference, applyImport, buildExport, EXPORT_FORMAT } from "../../src/core/exportImport";
 import type { ExportFile, ImportContext } from "../../src/core/exportImport";
 import { entriesFromArray, entryKey } from "../../src/core/lists";
@@ -379,5 +379,36 @@ describe("edits from the settings page", () => {
     ]) {
       expect(() => manualEntry(input, accounts), JSON.stringify(input)).toThrowError(ValidationError);
     }
+  });
+
+  it("infers the kind from the value when the page sends none", () => {
+    const accounts = ["account1"];
+    const kindOf = (value: string) => manualEntry({ list: "white", value, scope: "all" }, accounts);
+    expect(kindOf(" Anna@Customer.example ")).toMatchObject({ kind: "address", value: "anna@customer.example" });
+    expect(kindOf("mail.customer.example")).toMatchObject({ kind: "domain", value: "customer.example" });
+    // A domain may be typed the way it appears in an address.
+    expect(kindOf("@customer.example")).toMatchObject({ kind: "domain", value: "customer.example" });
+    expect(inferKind("name@example.com")).toBe("address");
+    expect(inferKind("example.com")).toBe("domain");
+  });
+
+  it("gives the mistakes a user can make a code that the pages translate", () => {
+    const accounts = ["account1"];
+    const codeOf = (run: () => unknown): string => {
+      try {
+        run();
+      } catch (error) {
+        return error instanceof ValidationError ? error.code : "not a validation error";
+      }
+      return "no error";
+    };
+    expect(codeOf(() => manualEntry({ list: "white", value: "not an address", scope: "all" }, accounts))).toBe("entry-invalid");
+    expect(codeOf(() => manualEntry({ list: "white", value: "name@", scope: "all" }, accounts))).toBe("entry-invalid");
+    expect(codeOf(() => manualEntry({ list: "white", value: "", scope: "all" }, accounts))).toBe("entry-invalid");
+    expect(codeOf(() => manualEntry({ list: "white", value: "a@b.example", scope: "account7" }, accounts))).toBe("account-unknown");
+    expect(codeOf(() => applySettingsPatch(base, { cutoff: 1.01 }))).toBe("cutoff-range");
+    expect(codeOf(() => applySettingsPatch(base, { prompt: " " }))).toBe("prompt-empty");
+    // A wrong type is a programming error, not a mistake of the user: it has no code.
+    expect(codeOf(() => manualEntry({ list: "grey", value: "a@b.example", scope: "all" }, accounts))).toBe("");
   });
 });

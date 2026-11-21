@@ -22,6 +22,8 @@ export interface MailPort {
   attachedMessageFrom(messageId: number): Promise<string | null>;
   /** Plain-text body: plain text preferred, otherwise HTML converted to text. */
   bodyText(messageId: number): Promise<string>;
+  /** The messages of an account with this Message-ID header (without angle brackets), in whatever folders they are. */
+  findByMessageId(accountId: string, headerMessageId: string): Promise<MessageInfo[]>;
   /** Moves messages. Rejects when the move fails. */
   move(messageIds: number[], folder: FolderRef): Promise<void>;
 }

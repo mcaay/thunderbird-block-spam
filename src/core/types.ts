@@ -135,6 +135,11 @@ export interface LogEntry {
   detail: string;
   observed: boolean;
   test: boolean;
+  /**
+   * Message-ID header of the message, without angle brackets. Empty when the message
+   * has none, and for entries logged before this field existed: such entries offer no action.
+   */
+  messageId: string;
 }
 
 /** Message metadata supplied by the mail layer. */

@@ -18,7 +18,7 @@ import {
   ValidationError,
 } from "./settings";
 import { SCOPE_ALL } from "./types";
-import type { FolderRef, NewEntryScope, NoVerdictAction, Settings } from "./types";
+import type { EntryKind, FolderRef, NewEntryScope, NoVerdictAction, Settings } from "./types";
 
 export const FORWARD_LABEL_LIMIT = 40;
 
@@ -152,33 +152,43 @@ export function applySettingsPatch(current: Settings, patch: unknown): { setting
 
 export interface ManualEntryInput {
   list: unknown;
-  kind: unknown;
+  /** Left out by the settings page: the kind then follows from the value. */
+  kind?: unknown;
   value: unknown;
   scope: unknown;
 }
 
 /**
+ * The kind of a value typed by the user: with a name before an "@" it is an address,
+ * anything else is a domain, also "@example.com".
+ */
+export function inferKind(raw: string): EntryKind {
+  return raw.trim().lastIndexOf("@") > 0 ? "address" : "domain";
+}
+
+/**
  * An entry added by hand in settings. The scope is chosen explicitly. A domain is
  * stored as its registrable domain, because that is what senders are matched by.
+ * Mistakes a user can make carry a code that the page translates.
  */
 export function manualEntry(input: ManualEntryInput, accountIds: readonly string[]): NewEntry {
   const list = asOneOf(input.list, ["white", "black"] as const, "list");
-  const kind = asOneOf(input.kind, ["address", "domain"] as const, "kind");
   const raw = asString(input.value, "value");
+  const kind = input.kind === undefined ? inferKind(raw) : asOneOf(input.kind, ["address", "domain"] as const, "kind");
   const scope = asString(input.scope, "scope");
   if (scope !== SCOPE_ALL && !accountIds.includes(scope)) {
-    throw new ValidationError("scope: unknown account");
+    throw new ValidationError("scope: unknown account", "account-unknown");
   }
   let value: string | null;
   if (kind === "address") {
     value = normalizeAddress(raw);
     if (value === null) {
-      throw new ValidationError("value: not an email address");
+      throw new ValidationError("value: not an email address", "entry-invalid");
     }
   } else {
     const domain = normalizeDomain(raw);
     if (domain === null) {
-      throw new ValidationError("value: not a domain");
+      throw new ValidationError("value: not a domain", "entry-invalid");
     }
     value = registrableDomain(domain);
   }

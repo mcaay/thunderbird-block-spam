@@ -2,7 +2,7 @@
 // writer; nothing depends on this object surviving, it is rebuilt from storage.
 
 import { buildPublicDomains } from "./address";
-import { addEntry, entriesFromArray, removeEntry } from "./lists";
+import { addEntry, entriesFromArray, keyOf, removeEntry } from "./lists";
 import type { AddResult, EntryMap, NewEntry } from "./lists";
 import {
   EMPTY_LOG_META,
@@ -29,7 +29,7 @@ import {
   validateSettings,
   ValidationError,
 } from "./settings";
-import type { AccessPoint, LogEntry, Settings } from "./types";
+import type { AccessPoint, Entry, LogEntry, Settings } from "./types";
 
 export {
   KEY_ACCESS_POINTS,
@@ -202,6 +202,17 @@ export class AppState {
 
   removeEntry(key: string): boolean {
     return removeEntry(this.entries, key);
+  }
+
+  /**
+   * Puts an entry back exactly as it was, with its source and date, in place of
+   * whatever holds its key now. For Undo. Call saveEntries to store it.
+   */
+  restoreEntry(entry: Entry): void {
+    this.entries.set(keyOf(entry), { ...entry });
+    if (entry.list === "white") {
+      this.whiteAdded = true;
+    }
   }
 
   /** Stores both lists. Calls made in the same turn share one write. */

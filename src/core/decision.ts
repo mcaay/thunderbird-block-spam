@@ -159,6 +159,7 @@ export async function decideMessage(deps: DecisionDeps, message: MessageInfo): P
     detail: "",
     observed: false,
     test: false,
+    messageId: message.headerMessageId,
   };
 
   const finish = async (outcome: Outcome, action: Action, reason: string, detail: string): Promise<LogEntry> => {

@@ -51,6 +51,10 @@ export class FakeBrowser {
   readonly openedTabs: string[] = [];
   readonly closedTabs: number[] = [];
   readonly notifications: string[] = [];
+  /** The context menu items, as menus.create received them. */
+  menuItems: { id?: string; parentId?: string; title?: string; type?: string; contexts?: string[] }[] = [];
+  /** Messages the background sent to open pages. */
+  readonly pageEvents: unknown[] = [];
   readonly api: tb.Browser;
 
   private readonly lists = new Map<string, tb.MessageHeader[]>();
@@ -86,7 +90,15 @@ export class FakeBrowser {
           ),
       },
       messages: {
-        query: async () => empty,
+        // Only the lookup by Message-ID finds messages: the date queries of a tick find none.
+        query: async (query: { accountId?: string; headerMessageId?: string } = {}) =>
+          query.headerMessageId === undefined
+            ? empty
+            : page(
+                [...this.folderMessages.values()]
+                  .flat()
+                  .filter((message) => message.headerMessageId === query.headerMessageId && message.folder?.accountId === query.accountId),
+              ),
         list: async (folderId: string) => page([...(this.folderMessages.get(folderId) ?? [])]),
         continueList: async (id: string) => {
           const rest = this.lists.get(id) ?? [];
@@ -101,6 +113,13 @@ export class FakeBrowser {
         listInlineTextParts: async () => [{ contentType: "text/plain", content: "Hello" }],
         move: async (ids: number[], folderId: string) => {
           this.moves.push({ ids: [...ids], folderId });
+          const target = FOLDERS.find((folder) => folder.id === folderId);
+          for (const [source, messages] of this.folderMessages) {
+            for (const message of messages.filter((item) => ids.includes(item.id))) {
+              this.folderMessages.set(source, (this.folderMessages.get(source) ?? []).filter((item) => item !== message));
+              this.folderMessages.set(folderId, [...(this.folderMessages.get(folderId) ?? []), { ...message, folder: target }]);
+            }
+          }
         },
         onNewMailReceived: new FakeEvent(),
       },
@@ -134,6 +153,16 @@ export class FakeBrowser {
       },
       windows: { openDefaultBrowser: async () => undefined },
       alarms: { create: () => undefined, get: async () => undefined, onAlarm: new FakeEvent() },
+      menus: {
+        create: (properties: { id?: string }) => {
+          this.menuItems.push(properties);
+          return properties.id ?? "";
+        },
+        removeAll: async () => {
+          this.menuItems = [];
+        },
+        onClicked: new FakeEvent(),
+      },
       notifications: {
         create: async (options: { message: string }) => {
           this.notifications.push(options.message);
@@ -150,6 +179,7 @@ export class FakeBrowser {
         contains: async (set: tb.PermissionSet) => (set.origins ?? []).every((origin) => this.granted.has(origin)),
         getAll: async () => ({ origins: [...this.granted], permissions: [] }),
         onAdded: new FakeEvent(),
+        onRemoved: new FakeEvent(),
       },
       webRequest: undefined,
       storage: {
@@ -181,7 +211,9 @@ export class FakeBrowser {
         getManifest: () => ({ version: "1.0.0", name: "Block Spam", optional_permissions: ["accountsFolders", "webRequest"] }),
         getPlatformInfo: async () => ({ os: "linux" }),
         openOptionsPage: async () => undefined,
-        sendMessage: async () => undefined,
+        sendMessage: async (message: unknown) => {
+          this.pageEvents.push(message);
+        },
         onMessage: new FakeEvent(),
         onMessageExternal: new FakeEvent(),
         onInstalled: new FakeEvent(),
@@ -190,6 +222,7 @@ export class FakeBrowser {
       i18n: {
         getMessage: (name: string, substitutions: string[] = []) =>
           substitutions.length === 0 ? name : `${name}(${substitutions.join(", ")})`,
+        getUILanguage: () => "en",
       },
     };
     this.api = api as unknown as tb.Browser;

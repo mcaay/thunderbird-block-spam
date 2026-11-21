@@ -63,16 +63,23 @@ export function defaultSettings(now: number): Settings {
   };
 }
 
-/** Thrown when stored or imported data does not have the expected shape. */
+/**
+ * Thrown when stored, imported or typed data does not have the expected shape. The
+ * message is a diagnostic in English. An error that a user can cause while using the
+ * interface also carries a code, which the pages translate.
+ */
 export class ValidationError extends Error {
-  constructor(message: string) {
+  readonly code: string;
+
+  constructor(message: string, code = "") {
     super(message);
     this.name = "ValidationError";
+    this.code = code;
   }
 }
 
-function fail(path: string, expected: string): never {
-  throw new ValidationError(`${path}: expected ${expected}`);
+function fail(path: string, expected: string, code = ""): never {
+  throw new ValidationError(`${path}: expected ${expected}`, code);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -118,12 +125,12 @@ function asFolderRef(value: unknown, path: string): FolderRef {
 
 export function validateCutoff(value: unknown, path = "cutoff"): number {
   const cutoff = asNumber(value, path);
-  return cutoff >= 0 && cutoff <= 1 ? cutoff : fail(path, "a number from 0.00 to 1.00");
+  return cutoff >= 0 && cutoff <= 1 ? cutoff : fail(path, "a number from 0.00 to 1.00", "cutoff-range");
 }
 
 export function validatePrompt(value: unknown, path = "prompt"): string {
   const prompt = asString(value, path);
-  return prompt.trim() !== "" ? prompt : fail(path, "a prompt that is not empty");
+  return prompt.trim() !== "" ? prompt : fail(path, "a prompt that is not empty", "prompt-empty");
 }
 
 export function validateSettings(value: unknown): Settings {

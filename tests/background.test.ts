@@ -195,16 +195,281 @@ describe("scoring selected messages", () => {
 
   it("tells the popup how many messages are selected and scores them", async () => {
     const { http, background } = await setup(3);
-    expect(await background.send("selectedCount", { tabId: 1 })).toEqual({ ok: true, result: { count: 3, limit: 50 } });
+    expect(await background.send("selection", { tabId: 1 })).toEqual({ ok: true, result: { count: 3, limit: 50, sender: null } });
     expect(await background.send("scoreSelected", { tabId: 1 })).toEqual({ ok: true, result: { selected: 3, scored: 3, failed: 0 } });
     expect(http.requests).toHaveLength(3);
   });
 
   it("refuses more than 50 messages before anything is sent", async () => {
     const { http, background } = await setup(5000);
-    expect(await background.send("selectedCount", { tabId: 1 })).toEqual({ ok: true, result: { count: 51, limit: 50 } });
+    expect(await background.send("selection", { tabId: 1 })).toEqual({ ok: true, result: { count: 51, limit: 50, sender: null } });
     expect(await background.send("scoreSelected", { tabId: 1 })).toEqual({ ok: false, error: "popupScoreTooMany(50)" });
     expect(http.requests).toHaveLength(0);
+  });
+});
+
+describe("block and trust without shortcuts", () => {
+  async function setup(selected: tb.MessageHeader[]) {
+    const fake = new FakeBrowser({ [KEY_SETTINGS]: defaultSettings(Date.now()) });
+    fake.selected = selected;
+    fake.folderMessages.set("f-inbox", selected);
+    const background = await loadBackground(fake, fakeFetch({}).fetch);
+    await settle();
+    return { fake, background };
+  }
+
+  it("tells the popup whose message is selected and what the domain buttons would add", async () => {
+    const { background } = await setup([FakeBrowser.header(1, "Mike <mike@mail.outreach.example>")]);
+    expect(await background.send("selection", { tabId: 1 })).toEqual({
+      ok: true,
+      result: {
+        count: 1,
+        limit: 50,
+        sender: { address: "mike@mail.outreach.example", via: "", own: false, domainTarget: { kind: "domain", value: "outreach.example" } },
+      },
+    });
+  });
+
+  it("runs the command of a popup button on the selection and answers with what was done, without a notification", async () => {
+    const { fake, background } = await setup([FakeBrowser.header(1, "mike@outreach.example"), FakeBrowser.header(2, "anna@outreach.example")]);
+    expect(await background.send("runCommand", { command: "block-domain", tabId: 1 })).toEqual({
+      ok: true,
+      result: { lines: ["notifyBlocked(outreach.example)", "notifyMovedToJunk(2)"], failed: false },
+    });
+    expect(fake.moves).toEqual([{ ids: [1, 2], folderId: "f-junk" }]);
+    expect(fake.storage[KEY_ENTRIES]).toMatchObject([{ list: "black", kind: "domain", value: "outreach.example", source: "manual" }]);
+    expect(fake.notifications).toEqual([]);
+  });
+
+  it("refuses anything but the four commands, and says so when nothing is selected", async () => {
+    const { fake, background } = await setup([]);
+    expect(await background.send("runCommand", { command: "block-address", tabId: 1 })).toEqual({
+      ok: true,
+      result: { lines: ["popupNothingSelected"], failed: true },
+    });
+    expect(await background.send("runCommand", { command: "delete-everything" as never, tabId: 1 })).toMatchObject({ ok: false });
+    expect(fake.moves).toEqual([]);
+  });
+
+  it("offers the four commands in a Block Spam submenu of the message list", async () => {
+    const { fake } = await setup([]);
+    expect(fake.menuItems).toEqual([
+      { id: "block-spam-menu", title: "extensionName", contexts: ["message_list"] },
+      { id: "block-address", parentId: "block-spam-menu", title: "cmdBlockAddress", contexts: ["message_list"] },
+      { id: "block-domain", parentId: "block-spam-menu", title: "cmdBlockDomain", contexts: ["message_list"] },
+      { id: "block-spam-separator", parentId: "block-spam-menu", type: "separator", contexts: ["message_list"] },
+      { id: "trust-address", parentId: "block-spam-menu", title: "cmdTrustAddress", contexts: ["message_list"] },
+      { id: "trust-domain", parentId: "block-spam-menu", title: "cmdTrustDomain", contexts: ["message_list"] },
+    ]);
+  });
+
+  it("runs a menu command on the messages the menu was opened for and confirms with a notification", async () => {
+    const { fake, background } = await setup([]);
+    const clicked = [FakeBrowser.header(5, "friend@gmail.com", "f-junk"), FakeBrowser.header(6, "anna@customer.example", "f-junk")];
+    background.fire(fake.api.menus.onClicked as unknown as FakeEvent, { menuItemId: "trust-domain", selectedMessages: { id: null, messages: clicked } });
+    await settle();
+    expect(fake.moves).toEqual([{ ids: [5, 6], folderId: "f-inbox" }]);
+    expect(fake.storage[KEY_ENTRIES]).toMatchObject([
+      { list: "white", kind: "address", value: "friend@gmail.com", source: "manual" },
+      { list: "white", kind: "domain", value: "customer.example", source: "manual" },
+    ]);
+    expect(fake.notifications).toEqual(["notifyTrusted(friend@gmail.com, customer.example)\nnotifyMovedToInbox(2)"]);
+
+    // Anything that is not one of the commands is ignored.
+    background.fire(fake.api.menus.onClicked as unknown as FakeEvent, { menuItemId: "block-spam-menu", selectedMessages: { id: null, messages: clicked } });
+    await settle();
+    expect(fake.notifications).toHaveLength(1);
+  });
+});
+
+describe("list entries from the settings page", () => {
+  async function setup(entries: unknown[] = []) {
+    const fake = new FakeBrowser({ [KEY_SETTINGS]: defaultSettings(Date.now()), [KEY_ENTRIES]: entries });
+    const background = await loadBackground(fake, fakeFetch({}).fetch);
+    return { fake, background };
+  }
+
+  it("adds an entry whose kind follows from the value", async () => {
+    const { fake, background } = await setup();
+    expect(await background.send("addEntry", { list: "black", value: "Mail.Outreach.example", scope: "all" })).toEqual({
+      ok: true,
+      result: { value: "outreach.example", kind: "domain", list: "black", result: "added" },
+    });
+    expect(await background.send("addEntry", { list: "white", value: "Anna@Customer.example", scope: "all" })).toMatchObject({
+      ok: true,
+      result: { value: "anna@customer.example", kind: "address", list: "white" },
+    });
+    expect(fake.storage[KEY_ENTRIES]).toHaveLength(2);
+  });
+
+  it("answers a value that is neither an address nor a domain with a code for the page to translate", async () => {
+    const { fake, background } = await setup();
+    expect(await background.send("addEntry", { list: "white", value: "not an address", scope: "all" })).toEqual({
+      ok: false,
+      error: "value: not a domain",
+      code: "entry-invalid",
+    });
+    expect(fake.storage[KEY_ENTRIES]).toEqual([]);
+  });
+
+  it("puts removed entries back exactly as they were", async () => {
+    const learned = { list: "white", kind: "domain", value: "customer.example", scope: "all", source: "scan", addedAt: 123 };
+    const { fake, background } = await setup([learned]);
+    expect(await background.send("removeEntries", { keys: ["domain all customer.example"] })).toEqual({ ok: true, result: { removed: 1 } });
+    expect(fake.storage[KEY_ENTRIES]).toEqual([]);
+    expect(await background.send("restoreEntries", { entries: [learned as never] })).toEqual({ ok: true, result: { restored: 1 } });
+    expect(fake.storage[KEY_ENTRIES]).toEqual([learned]);
+  });
+
+  it("restores nothing that is not a valid entry", async () => {
+    const { fake, background } = await setup();
+    const broken = { list: "white", kind: "domain", value: "Not Normalized.example", scope: "all", source: "scan", addedAt: 1 };
+    expect(await background.send("restoreEntries", { entries: [broken as never] })).toMatchObject({ ok: false });
+    expect(await background.send("restoreEntries", { entries: "all of them" as never })).toMatchObject({ ok: false });
+    expect(fake.storage[KEY_ENTRIES]).toEqual([]);
+  });
+});
+
+describe("undoing a decision from the log", () => {
+  const spam = {
+    time: 1,
+    accountId: "account1",
+    account: "Work",
+    sender: "growth@leadgen.example",
+    via: "",
+    subject: "Quick question",
+    outcome: "spam",
+    action: "junk",
+    score: 0.97,
+    accessPoint: "Jev",
+    reason: "ai-above",
+    detail: "leadgen.example [all]",
+    observed: false,
+    test: false,
+    messageId: "msg-7@test",
+  } as const;
+
+  async function setup() {
+    const blocked = { list: "black", kind: "domain", value: "leadgen.example", scope: "all", source: "ai", addedAt: 5 };
+    const fake = new FakeBrowser({ [KEY_SETTINGS]: defaultSettings(Date.now()), [KEY_ENTRIES]: [blocked] });
+    fake.folderMessages.set("f-junk", [FakeBrowser.header(7, "Growth <growth@leadgen.example>", "f-junk")]);
+    const background = await loadBackground(fake, fakeFetch({}).fetch);
+    return { fake, background, blocked };
+  }
+
+  it("trusts the sender of the entry, moves its message back to the Inbox, and can be taken back", async () => {
+    const { fake, background, blocked } = await setup();
+    const done = await background.send("logAction", { entry: spam, action: "trust" });
+    expect(done).toMatchObject({
+      ok: true,
+      result: { list: "white", target: { kind: "domain", value: "leadgen.example" }, scope: "all", result: "moved", move: "moved" },
+    });
+    expect(fake.storage[KEY_ENTRIES]).toMatchObject([{ list: "white", kind: "domain", value: "leadgen.example", source: "manual" }]);
+    expect(fake.moves).toEqual([{ ids: [7], folderId: "f-inbox" }]);
+
+    if (!done.ok) {
+      throw new Error(done.error);
+    }
+    expect(await background.send("undoLogAction", { undo: done.result.undo })).toEqual({ ok: true, result: { move: "moved", failure: "" } });
+    expect(fake.storage[KEY_ENTRIES]).toEqual([blocked]);
+    expect(fake.moves[1]).toEqual({ ids: [7], folderId: "f-junk" });
+  });
+
+  it("still changes the lists when the message is gone, and says that it was not found", async () => {
+    const { fake, background } = await setup();
+    fake.folderMessages.clear();
+    expect(await background.send("logAction", { entry: spam, action: "trust" })).toMatchObject({ ok: true, result: { result: "moved", move: "not-found" } });
+    expect(fake.storage[KEY_ENTRIES]).toMatchObject([{ list: "white", value: "leadgen.example" }]);
+    expect(fake.moves).toEqual([]);
+  });
+
+  it("refuses an unknown action, an entry that is not a log entry and an undo that is not one", async () => {
+    const { fake, background, blocked } = await setup();
+    expect(await background.send("logAction", { entry: spam, action: "delete" as never })).toMatchObject({ ok: false });
+    expect(await background.send("logAction", { entry: { ...spam, outcome: "deleted" } as never, action: "trust" })).toMatchObject({ ok: false });
+    expect(await background.send("undoLogAction", { undo: { accountId: "account1", messageId: "m", remove: [], restore: [{ list: "white" }], move: null } as never })).toMatchObject({ ok: false });
+    expect(fake.storage[KEY_ENTRIES]).toEqual([blocked]);
+    expect(fake.moves).toEqual([]);
+  });
+
+  it("answers an action on one of the user's own addresses with a code", async () => {
+    const { background } = await setup();
+    expect(await background.send("logAction", { entry: { ...spam, outcome: "trusted", action: "none", sender: "me@mycompany.example" }, action: "block" })).toMatchObject({
+      ok: false,
+      code: "own-address",
+    });
+  });
+});
+
+describe("the models of a service that is not saved yet", () => {
+  const draft = { type: "openai-chat", name: "New", enabled: true, endpoint: COLLECTOR, model: "" } as const;
+
+  it("asks the host of the unsaved definition with the key being typed, and stores nothing", async () => {
+    const fake = new FakeBrowser({ [KEY_SETTINGS]: defaultSettings(Date.now()) });
+    fake.granted.add("https://collector.example/*");
+    const http = fakeFetch(() => jsonResponse({ data: [{ id: "model-a" }, { id: "models/model-b" }] }));
+    const background = await loadBackground(fake, http.fetch);
+    expect(await background.send("listModelsFor", { id: null, definition: draft, apiKey: "typed-key" })).toEqual({
+      ok: true,
+      result: [
+        { id: "model-a", label: "model-a" },
+        { id: "model-b", label: "model-b" },
+      ],
+    });
+    expect(http.requests.map((request) => [request.url, request.headers.authorization])).toEqual([[`${COLLECTOR}/models`, "Bearer typed-key"]]);
+    expect(fake.storage[KEY_ACCESS_POINTS]).toBeUndefined();
+  });
+
+  it("sends nothing to a host this computer has not granted", async () => {
+    const fake = new FakeBrowser({ [KEY_SETTINGS]: defaultSettings(Date.now()) });
+    const http = fakeFetch(() => jsonResponse({ data: [{ id: "model-a" }] }));
+    const background = await loadBackground(fake, http.fetch);
+    expect(await background.send("listModelsFor", { id: null, definition: draft, apiKey: "typed-key" })).toMatchObject({ ok: false });
+    expect(http.requests).toHaveLength(0);
+  });
+
+  it("uses the stored key of the service being edited when none was typed", async () => {
+    const saved = accessPoint({ id: "saved", type: "openai-chat", endpoint: COLLECTOR, apiKey: "stored-key" });
+    const fake = new FakeBrowser({ [KEY_SETTINGS]: defaultSettings(Date.now()), [KEY_ACCESS_POINTS]: [saved] });
+    fake.granted.add("https://collector.example/*");
+    const http = fakeFetch(() => jsonResponse({ data: [{ id: "model-a" }] }));
+    const background = await loadBackground(fake, http.fetch);
+    await background.send("listModelsFor", { id: "saved", definition: draft, apiKey: null });
+    expect(http.requests[0]?.headers.authorization).toBe("Bearer stored-key");
+    // The stored service is not changed by looking at a draft of it.
+    expect(stored(fake)).toEqual([saved]);
+    expect(await background.send("listModelsFor", { id: "gone", definition: draft, apiKey: null })).toEqual({ ok: false, error: "errorAccessPointGone" });
+  });
+});
+
+describe("showing a log entry from the popup", () => {
+  it("tells an open settings page at once and hands the entry to a page that opens, once", async () => {
+    const fake = new FakeBrowser({ [KEY_SETTINGS]: defaultSettings(Date.now()) });
+    const background = await loadBackground(fake, fakeFetch({}).fetch);
+    expect(await background.send("takeLogFocus", {})).toEqual({ ok: true, result: { key: null } });
+    expect(await background.send("showLogEntry", { key: "entry-1" })).toEqual({ ok: true, result: null });
+    expect(fake.pageEvents).toEqual([{ blockSpamEvent: "logFocus", key: "entry-1" }]);
+    expect(await background.send("takeLogFocus", {})).toEqual({ ok: true, result: { key: "entry-1" } });
+    expect(await background.send("takeLogFocus", {})).toEqual({ ok: true, result: { key: null } });
+  });
+
+  it("forgets the entry when no page asked for it within half a minute", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const fake = new FakeBrowser({ [KEY_SETTINGS]: defaultSettings(Date.now()) });
+    const background = await loadBackground(fake, fakeFetch({}).fetch);
+    await background.send("showLogEntry", { key: "entry-1" });
+    vi.setSystemTime(Date.now() + 31_000);
+    expect(await background.send("takeLogFocus", {})).toEqual({ ok: true, result: { key: null } });
+  });
+});
+
+describe("import", () => {
+  it("answers a file that is not valid with a code, so the page can say so in the user's language", async () => {
+    const fake = new FakeBrowser({ [KEY_SETTINGS]: defaultSettings(Date.now()) });
+    const background = await loadBackground(fake, fakeFetch({}).fetch);
+    const reply = await background.send("importData", { file: { format: "something else" }, mode: "merge" });
+    expect(reply).toMatchObject({ ok: false, code: "import-invalid" });
+    expect(fake.storage[KEY_ENTRIES]).toBeUndefined();
   });
 });
 

@@ -22,7 +22,7 @@
   "background": {
     "scripts": ["background.js"]
   },
-  "permissions": ["accountsRead", "messagesRead", "messagesMove", "compose", "storage", "alarms", "notifications"],
+  "permissions": ["accountsRead", "messagesRead", "messagesMove", "compose", "storage", "alarms", "notifications", "menus"],
   "optional_permissions": ["accountsFolders", "webRequest"],
   "optional_host_permissions": ["https://*/*", "http://localhost/*", "http://127.0.0.1/*"],
   "options_ui": {

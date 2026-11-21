@@ -138,7 +138,9 @@ declare namespace tb {
     };
     messages: {
       query(queryInfo: {
+        accountId?: string;
         folderId?: string;
+        headerMessageId?: string;
         fromDate?: Date;
         toDate?: Date;
         messagesPerPage?: number;
@@ -186,6 +188,20 @@ declare namespace tb {
       get(name: string): Promise<{ name: string } | undefined>;
       onAlarm: WebExtEvent<(alarm: { name: string }) => void>;
     };
+    menus: {
+      create(
+        properties: {
+          id?: string;
+          parentId?: string;
+          title?: string;
+          type?: "normal" | "separator";
+          contexts?: string[];
+        },
+        callback?: () => void,
+      ): string | number;
+      removeAll(): Promise<void>;
+      onClicked: WebExtEvent<(info: { menuItemId: string | number; selectedMessages?: MessageList }, tab?: Tab) => void>;
+    };
     notifications: {
       create(options: { type: "basic"; title: string; message: string; iconUrl?: string }): Promise<string>;
     };
@@ -194,6 +210,7 @@ declare namespace tb {
       contains(permissions: PermissionSet): Promise<boolean>;
       getAll(): Promise<PermissionSet>;
       onAdded: WebExtEvent<(permissions: PermissionSet) => void>;
+      onRemoved: WebExtEvent<(permissions: PermissionSet) => void>;
     };
     /** Present only after the optional webRequest permission was granted. */
     webRequest?: {
@@ -210,6 +227,8 @@ declare namespace tb {
     };
     runtime: {
       id: string;
+      /** Set while the callback of a failed call runs. Reading it marks the error as handled. */
+      lastError?: { message?: string } | null;
       getURL(path: string): string;
       getManifest(): { version: string; name: string; optional_permissions?: string[] };
       getPlatformInfo(): Promise<{ os: string }>;
@@ -222,6 +241,7 @@ declare namespace tb {
     };
     i18n: {
       getMessage(name: string, substitutions?: string | string[]): string;
+      getUILanguage(): string;
     };
   }
 }

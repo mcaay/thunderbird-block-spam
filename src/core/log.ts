@@ -10,6 +10,8 @@ export const LOG_MAX_ENTRIES = 5000;
 export const LOG_MAX_CHUNKS = LOG_MAX_ENTRIES / LOG_CHUNK_SIZE;
 export const LOG_SUBJECT_LIMIT = 200;
 export const LOG_DETAIL_LIMIT = 300;
+/** A longer Message-ID is not stored: it could not be looked up when cut. */
+export const LOG_MESSAGE_ID_LIMIT = 300;
 
 export { EMPTY_LOG_META, logChunkKey } from "./keys";
 export type { LogMeta } from "./keys";
@@ -31,6 +33,7 @@ export function appendLog(meta: LogMeta, lastChunk: readonly LogEntry[], entry: 
     ...entry,
     subject: entry.subject.slice(0, LOG_SUBJECT_LIMIT),
     detail: entry.detail.slice(0, LOG_DETAIL_LIMIT),
+    messageId: entry.messageId.length > LOG_MESSAGE_ID_LIMIT ? "" : entry.messageId,
   };
   if (lastChunk.length < LOG_CHUNK_SIZE) {
     return { meta, chunkIndex: meta.last, chunk: [...lastChunk, trimmed], removeChunks: [] };
@@ -81,5 +84,7 @@ export function validateLogEntry(value: unknown, path: string): LogEntry {
     detail: asString(record.detail, `${path}.detail`),
     observed: asBoolean(record.observed, `${path}.observed`),
     test: asBoolean(record.test, `${path}.test`),
+    // Entries logged before the field existed have none. They load with an empty value.
+    messageId: record.messageId === undefined ? "" : asString(record.messageId, `${path}.messageId`),
   };
 }

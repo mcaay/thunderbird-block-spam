@@ -1,4 +1,7 @@
 {
+  "localeCode": {
+    "message": "en"
+  },
   "extensionName": {
     "message": "Block Spam"
   },

@@ -17,24 +17,27 @@ import {
 import type { PendingSignIn } from "./ai/chatgptAuth";
 import { isLoopbackHost, validateEndpoint } from "./ai/http";
 import { checkDefinition, checkImportedDefinition, KEY_REQUIRED_TYPES, newAccessPoint, normalizeDefinition } from "./ai/presets";
-import { isCommandName } from "./core/commands";
+import { COMMANDS, isCommandName } from "./core/commands";
 import type { CommandName } from "./core/commands";
 import { errorText } from "./core/decision";
 import { applySettingsPatch, manualEntry } from "./core/edit";
 import { Engine } from "./core/engine";
-import type { CommandOutcome, ScanProgress } from "./core/engine";
+import type { CommandOutcome, LogActionUndo, ScanProgress } from "./core/engine";
 import { applyImport, buildExport } from "./core/exportImport";
 import { KEY_ACCESS_POINTS } from "./core/keys";
+import { validateLogEntry } from "./core/log";
+import { isLogAction } from "./core/logAction";
 import { folderKey } from "./core/ports";
 import { SerialQueue } from "./core/queue";
+import { asArray, asRecord, asString, validateEntry, ValidationError } from "./core/settings";
 import { AppState } from "./core/state";
-import type { AccessPoint, ChatGptAuth } from "./core/types";
+import type { AccessPoint, ChatGptAuth, FolderRef, MessageInfo } from "./core/types";
 import { BUNDLED_PUBLIC_DOMAINS } from "./data/publicDomains";
 import { t, tCode } from "./tb/i18n";
 import { hold, withKeepAlive } from "./tb/keepAlive";
-import { messagePages, messagesOfTab, ThunderbirdMail } from "./tb/mail";
+import { collect, messagePages, messagesOfTab, ThunderbirdMail } from "./tb/mail";
 import { COMPANION_ID, KEY_PENDING_SIGN_IN } from "./tb/protocol";
-import type { Envelope, Reply, RequestName, Requests, Status } from "./tb/protocol";
+import type { Envelope, PageEvent, Reply, RequestName, Requests, Status } from "./tb/protocol";
 import { BrowserStore } from "./tb/store";
 
 const TICK_ALARM = "tick";
@@ -216,7 +219,8 @@ browser.compose.onAfterSend.addListener((_tab, sendInfo) => {
 });
 
 // ---------------------------------------------------------------------------
-// Shortcuts. The optional companion add-on sends the same four command names.
+// The four commands: shortcuts, the context menu of the message list, the buttons of
+// the toolbar popup, and the optional companion add-on all run the same code.
 
 function listTargets(outcome: CommandOutcome): string {
   const values = outcome.plan.targets.map((target) => target.value);
@@ -224,7 +228,8 @@ function listTargets(outcome: CommandOutcome): string {
   return values.length > NOTIFICATION_TARGETS ? t("notifyMore", shown, values.length - NOTIFICATION_TARGETS) : shown;
 }
 
-async function notifyCommand(outcome: CommandOutcome): Promise<void> {
+/** What a command did, one fact per line. */
+function commandLines(outcome: CommandOutcome): string[] {
   const { plan } = outcome;
   const lines: string[] = [];
   if (plan.targets.length > 0) {
@@ -248,33 +253,87 @@ async function notifyCommand(outcome: CommandOutcome): Promise<void> {
   if (lines.length === 0) {
     lines.push(t("notifyNothingChanged"));
   }
+  return lines;
+}
+
+async function notifyCommand(outcome: CommandOutcome): Promise<void> {
   await browser.notifications.create({
     type: "basic",
     title: t("extensionName"),
-    message: lines.join("\n"),
+    message: commandLines(outcome).join("\n"),
     iconUrl: browser.runtime.getURL("icons/icon.svg"),
   });
 }
 
-async function runCommand(command: CommandName, tab: tb.Tab | undefined): Promise<void> {
+/** Runs a command on the given messages. Null when there is nothing to act on. */
+async function executeCommand(command: CommandName, messages: MessageInfo[]): Promise<CommandOutcome | null> {
   await ready;
-  if (app === null) {
-    return;
-  }
-  const messages = await messagesOfTab(tab);
-  if (messages.length === 0) {
-    return;
+  if (app === null || messages.length === 0) {
+    return null;
   }
   const engine = app.engine;
   mail.resetCache();
-  const outcome = await withKeepAlive(() => engine.runCommand(command, messages));
-  await notifyCommand(outcome);
+  return withKeepAlive(() => engine.runCommand(command, messages));
+}
+
+/** A command from a shortcut, the context menu or the companion: a desktop notification confirms it. */
+async function runCommand(command: CommandName, messages: MessageInfo[]): Promise<void> {
+  const outcome = await executeCommand(command, messages);
+  if (outcome !== null) {
+    await notifyCommand(outcome);
+  }
 }
 
 browser.commands.onCommand.addListener((command, tab) => {
   if (isCommandName(command)) {
-    void runCommand(command, tab).catch((error) => console.error("Block Spam: the shortcut failed", error));
+    void (async () => runCommand(command, await messagesOfTab(tab)))().catch((error) =>
+      console.error("Block Spam: the shortcut failed", error),
+    );
   }
+});
+
+// The context menu of the message list: a "Block Spam" submenu with the four commands.
+
+const MENU_ROOT = "block-spam-menu";
+const MENU_SEPARATOR = "block-spam-separator";
+const COMMAND_LABELS: Record<CommandName, string> = {
+  "block-address": "cmdBlockAddress",
+  "block-domain": "cmdBlockDomain",
+  "trust-address": "cmdTrustAddress",
+  "trust-domain": "cmdTrustDomain",
+};
+
+/**
+ * Builds the menu each time the background page starts, so that it exists after an
+ * installation, an update and a restart alike, in the language Thunderbird runs in.
+ */
+async function setupMenus(): Promise<void> {
+  // Reading lastError marks a failed call as handled. An item that failed is simply missing.
+  const handled = (): void => void browser.runtime.lastError;
+  await browser.menus.removeAll();
+  browser.menus.create({ id: MENU_ROOT, title: t("extensionName"), contexts: ["message_list"] }, handled);
+  for (const command of COMMANDS) {
+    if (command === "trust-address") {
+      browser.menus.create({ id: MENU_SEPARATOR, parentId: MENU_ROOT, type: "separator", contexts: ["message_list"] }, handled);
+    }
+    browser.menus.create(
+      { id: command, parentId: MENU_ROOT, title: t(COMMAND_LABELS[command]), contexts: ["message_list"] },
+      handled,
+    );
+  }
+}
+
+void setupMenus().catch((error) => console.error("Block Spam: the context menu could not be created", error));
+
+browser.menus.onClicked.addListener((info) => {
+  const command = info.menuItemId;
+  const selected = info.selectedMessages;
+  if (!isCommandName(command) || selected === undefined) {
+    return;
+  }
+  void (async () => runCommand(command, await collect(selected)))().catch((error) =>
+    console.error("Block Spam: the menu command failed", error),
+  );
 });
 
 browser.runtime.onMessageExternal.addListener((message, sender) => {
@@ -285,7 +344,7 @@ browser.runtime.onMessageExternal.addListener((message, sender) => {
   }
   return (async () => {
     const [tab] = await browser.tabs.query({ active: true, lastFocusedWindow: true });
-    await runCommand(command, tab);
+    await runCommand(command, await messagesOfTab(tab));
     return { ok: true };
   })();
 });
@@ -467,6 +526,27 @@ function findPoint(state: AppState, id: string): AccessPoint {
   return point;
 }
 
+/** The log entry the settings page was asked to show. Kept until the page takes it, for a short while. */
+let logFocus: { key: string; at: number } | null = null;
+const LOG_FOCUS_MS = 30 * 1000;
+
+function asFolderRef(value: unknown, path: string): FolderRef {
+  const record = asRecord(value, path);
+  return { accountId: asString(record.accountId, `${path}.accountId`), path: asString(record.path, `${path}.path`) };
+}
+
+function asLogActionUndo(value: unknown): LogActionUndo {
+  const record = asRecord(value, "undo");
+  const move = record.move === null ? null : asRecord(record.move, "undo.move");
+  return {
+    accountId: asString(record.accountId, "undo.accountId"),
+    messageId: asString(record.messageId, "undo.messageId"),
+    remove: asArray(record.remove, "undo.remove", asString),
+    restore: asArray(record.restore, "undo.restore", validateEntry),
+    move: move === null ? null : { from: asFolderRef(move.from, "undo.move.from"), to: asFolderRef(move.to, "undo.move.to") },
+  };
+}
+
 type Handlers = {
   [Name in RequestName]: (
     args: Requests[Name]["request"],
@@ -516,7 +596,7 @@ const handlers: Handlers = {
     await state.saveEntries();
     mail.resetCache();
     await withKeepAlive(() => engine.sweepIfNeeded());
-    return { value: entry.value, result };
+    return { value: entry.value, kind: entry.kind, list: entry.list, result };
   },
 
   async removeEntries({ keys }) {
@@ -529,6 +609,35 @@ const handlers: Handlers = {
     }
     await state.saveEntries();
     return { removed };
+  },
+
+  async restoreEntries({ entries }) {
+    const { state, engine } = need();
+    const restored = asArray(entries, "entries", validateEntry);
+    for (const entry of restored) {
+      state.restoreEntry(entry);
+    }
+    await state.saveEntries();
+    mail.resetCache();
+    await withKeepAlive(() => engine.sweepIfNeeded());
+    return { restored: restored.length };
+  },
+
+  async logAction({ entry: raw, action }) {
+    const { engine } = need();
+    const entry = validateLogEntry(raw, "entry");
+    if (!isLogAction(action)) {
+      throw new ValidationError("action: expected trust or block");
+    }
+    mail.resetCache();
+    return withKeepAlive(() => engine.runLogAction(entry, action));
+  },
+
+  async undoLogAction({ undo: raw }) {
+    const { engine } = need();
+    const undo = asLogActionUndo(raw);
+    mail.resetCache();
+    return withKeepAlive(() => engine.undoLogAction(undo));
   },
 
   async startScan({ from, to }) {
@@ -664,6 +773,25 @@ const handlers: Handlers = {
     return withKeepAlive(() => ai.listModels(point));
   },
 
+  async listModelsFor({ id, definition: raw, apiKey: newKey }) {
+    const { state, ai } = need();
+    const existing = id === null ? null : findPoint(state, id);
+    const definition = normalizeDefinition(raw);
+    if (existing !== null && existing.type !== definition.type) {
+      throw new Error(t("errorTypeChange"));
+    }
+    if (definition.type === "chatgpt") {
+      // The models of a ChatGPT plan belong to its sign-in, which only a stored service has.
+      if (existing === null) {
+        throw new Error(t("errorChatgptNeedsSignIn"));
+      }
+      return withKeepAlive(() => ai.listModels(existing));
+    }
+    // Never stored: only this request sees the key that is being typed.
+    const point = newAccessPoint(existing?.id ?? "unsaved", definition, (newKey ?? existing?.apiKey ?? "").trim());
+    return withKeepAlive(() => ai.listModels(point));
+  },
+
   async startSignIn({ accessPointId, openTab }, sender) {
     const { state } = need();
     const point = accessPointId === null ? null : findPoint(state, accessPointId);
@@ -746,20 +874,26 @@ const handlers: Handlers = {
       }
     }
     const previous = [...state.accessPoints];
-    const report = applyImport(state, file, mode === "replace" ? "replace" : "merge", {
-      accounts,
-      folders,
-      newId: () => crypto.randomUUID(),
-      checkAccessPoint: checkImportedDefinition,
-      needsSecret: (definition) => {
-        const endpoint = validateEndpoint(definition.endpoint);
-        return (
-          definition.type === "chatgpt" ||
-          KEY_REQUIRED_TYPES.includes(definition.type) ||
-          !(endpoint.ok && isLoopbackHost(endpoint.url.hostname))
-        );
-      },
-    });
+    let report;
+    try {
+      report = applyImport(state, file, mode === "replace" ? "replace" : "merge", {
+        accounts,
+        folders,
+        newId: () => crypto.randomUUID(),
+        checkAccessPoint: checkImportedDefinition,
+        needsSecret: (definition) => {
+          const endpoint = validateEndpoint(definition.endpoint);
+          return (
+            definition.type === "chatgpt" ||
+            KEY_REQUIRED_TYPES.includes(definition.type) ||
+            !(endpoint.ok && isLoopbackHost(endpoint.url.hostname))
+          );
+        },
+      });
+    } catch (error) {
+      // The page says in the user's language that the file is not valid, and adds the detail.
+      throw error instanceof ValidationError && error.code === "" ? new ValidationError(error.message, "import-invalid") : error;
+    }
     state.whiteAdded = true;
     await state.saveSettings();
     await state.saveEntries();
@@ -797,9 +931,27 @@ const handlers: Handlers = {
     return null;
   },
 
-  async selectedCount({ tabId }) {
+  async selection({ tabId }) {
+    const { engine } = need();
     const messages = await messagesOfTab(await browser.tabs.get(tabId), SCORE_SELECTED_LIMIT);
-    return { count: Math.min(messages.length, SCORE_SELECTED_LIMIT + 1), limit: SCORE_SELECTED_LIMIT };
+    const only = messages.length === 1 ? messages[0] : undefined;
+    return {
+      count: Math.min(messages.length, SCORE_SELECTED_LIMIT + 1),
+      limit: SCORE_SELECTED_LIMIT,
+      sender: only === undefined ? null : await engine.describeSender(only),
+    };
+  },
+
+  async runCommand({ command, tabId }) {
+    need();
+    if (!isCommandName(command)) {
+      throw new ValidationError("command: expected one of the four commands");
+    }
+    const outcome = await executeCommand(command, await messagesOfTab(await browser.tabs.get(tabId)));
+    if (outcome === null) {
+      return { lines: [t("popupNothingSelected")], failed: true };
+    }
+    return { lines: commandLines(outcome), failed: outcome.failures.length > 0 };
   },
 
   async scoreSelected({ tabId }) {
@@ -822,6 +974,21 @@ const handlers: Handlers = {
     } finally {
       scoring = false;
     }
+  },
+
+  async showLogEntry({ key }) {
+    logFocus = { key: asString(key, "key"), at: Date.now() };
+    // A settings page that is already open shows the entry at once. One that is about
+    // to open asks with takeLogFocus.
+    const event: PageEvent = { blockSpamEvent: "logFocus", key: logFocus.key };
+    void browser.runtime.sendMessage(event).catch(() => undefined);
+    return null;
+  },
+
+  async takeLogFocus() {
+    const focus = logFocus;
+    logFocus = null;
+    return { key: focus !== null && Date.now() - focus.at < LOG_FOCUS_MS ? focus.key : null };
   },
 
   async welcomeShown() {
@@ -861,7 +1028,8 @@ browser.runtime.onMessage.addListener((message, sender) => {
       const handler = handlers[message.blockSpam] as (args: unknown, sender: tb.MessageSender) => Promise<unknown>;
       return { ok: true, result: await handler(message.args ?? {}, sender) };
     } catch (error) {
-      return { ok: false, error: errorText(error) };
+      const code = error instanceof ValidationError ? error.code : "";
+      return code === "" ? { ok: false, error: errorText(error) } : { ok: false, error: errorText(error), code };
     }
   })();
 });

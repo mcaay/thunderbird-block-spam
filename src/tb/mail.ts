@@ -179,13 +179,18 @@ export class ThunderbirdMail implements MailPort {
     return "";
   }
 
+  async findByMessageId(accountId: string, headerMessageId: string): Promise<MessageInfo[]> {
+    // A message exists once per folder it was copied to, so the first page is plenty.
+    return collect(await browser.messages.query({ accountId, headerMessageId, messagesPerPage: PAGE_SIZE }), PAGE_SIZE);
+  }
+
   async move(messageIds: number[], folder: FolderRef): Promise<void> {
     await browser.messages.move(messageIds, await this.folderId(folder));
   }
 }
 
 /** The messages of a list, across its pages. Stops reading once there are more than the limit. */
-async function collect(list: tb.MessageList, limit: number): Promise<MessageInfo[]> {
+export async function collect(list: tb.MessageList, limit = Number.POSITIVE_INFINITY): Promise<MessageInfo[]> {
   const messages: MessageInfo[] = [];
   for await (const page of messagePages(list)) {
     messages.push(...page);
