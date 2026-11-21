@@ -154,6 +154,8 @@ The settings page and the popup were rebuilt after a UX and UI review (`reviews/
 - **The status line is computed, not stored:** the time of the last check, today's figures from the log (`src/core/stats.ts`) and how many AI services would be asked now.
 - **One list of problems** (`src/core/problems.ts`) feeds the warnings of the Overview, the state "On, with problems" and the popup. Every warning has a button that leads to its fix.
 - **Switching protection on too early asks first.** With an AI service on and nothing but the user's own addresses on the white list, a dialog offers "Scan first" (the default), "Switch on anyway" and Cancel.
+- **A scan that ran to its end counts, also when it found nobody.** A mailbox that has sent nothing yet would otherwise never finish step 1, and the warning and the question about the first scan would never go away. The state of a scan lives in memory, so this holds until Thunderbird is restarted. The popup leaves its setup state as soon as protection is on.
+- **Leaving the page with an unsaved prompt asks first** (`beforeunload`): Thunderbird then shows its own question whether to leave the page.
 
 ### Lists
 
@@ -170,7 +172,7 @@ The settings page and the popup were rebuilt after a UX and UI review (`reviews/
   - "Block" for Passed, Trusted and Released, and for mail without a verdict that stayed: the smart target goes on the black list and the message moves to Junk. Where a white list entry decides the sender, only the address is blocked, so a trusted domain stays trusted.
   - The entry is a manual one, and older entries of the other list that would still decide the sender are removed, as after a shortcut.
   - When the message is no longer found, the lists change anyway and the row says so.
-- **Tests have no action.** A test score is not a decision, and the decision about the same message is in the log next to it.
+- **Tests and errors have no action.** A test score is not a decision, and the decision about the same message is in the log next to it. An entry about a failure decided nothing either.
 - **An observed decision changes the lists only.** Nothing was moved, so nothing is moved back.
 - **A row whose sender already is on the list the button would add to** offers only the move ("Move to Inbox", "Move to Junk"), or says "Trusted now" when there is nothing to move.
 - **The row answers in place** with what was changed and an Undo, which restores the lists exactly and moves the message back (request `undoLogAction`).
