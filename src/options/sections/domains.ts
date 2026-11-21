@@ -6,6 +6,7 @@ import { BUNDLED_PUBLIC_DOMAINS } from "../../data/publicDomains";
 import { t } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
 import { button, byId, guard, h, replace, toast } from "../dom";
+import { mayRedraw, sameLabels } from "../fields";
 import type { Model } from "../model";
 import type { Section } from "../section";
 
@@ -128,7 +129,8 @@ export function forwardingSection(): Section {
   const input = h("input", { type: "email", placeholder: "office@example.com" });
   const list = h("div");
   const labels = h("input", { type: "text" });
-  let labelsSaved = "";
+  /** What the page put into the labels field last. Anything else in it is an edit. */
+  let labelsShown: string | null = null;
 
   const add = (): void => {
     const settings = model?.settings;
@@ -190,10 +192,10 @@ export function forwardingSection(): Section {
         ),
       );
       const stored = settings.forwardLabels.join(", ");
-      if (labels.value === labelsSaved || document.activeElement !== labels) {
+      if (mayRedraw({ value: labels.value, focused: document.activeElement === labels }, labelsShown, stored, sameLabels)) {
         labels.value = stored;
+        labelsShown = stored;
       }
-      labelsSaved = stored;
     },
   };
 }

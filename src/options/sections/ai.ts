@@ -12,6 +12,7 @@ import type { AccessPoint } from "../../core/types";
 import { t, tCode } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
 import { button, byId, dialog, formatScore, formatTime, guard, h, option, replace, toast } from "../dom";
+import { mayRedraw, sameNumber } from "../fields";
 import { LOOPBACK_ORIGIN, requestAccess } from "../permissions";
 import type { Model } from "../model";
 import type { Section } from "../section";
@@ -50,6 +51,8 @@ export function aiSection(startPolling: () => void): Section {
   const prompt = h("textarea", { rows: 14, id: "prompt" });
   let promptSaved = "";
   const cutoff = h("input", { type: "number", id: "cutoff", min: "0", max: "1", step: "0.01" });
+  /** What the page put into the cutoff field last. Anything else in it is an edit. */
+  let cutoffShown: string | null = null;
 
   replace(
     root,
@@ -517,8 +520,10 @@ export function aiSection(startPolling: () => void): Section {
         prompt.value = settings.prompt;
       }
       promptSaved = settings.prompt;
-      if (document.activeElement !== cutoff) {
-        cutoff.value = settings.cutoff.toFixed(2);
+      const storedCutoff = settings.cutoff.toFixed(2);
+      if (mayRedraw({ value: cutoff.value, focused: document.activeElement === cutoff }, cutoffShown, storedCutoff, sameNumber)) {
+        cutoff.value = storedCutoff;
+        cutoffShown = storedCutoff;
       }
       maybeWelcome();
     },
