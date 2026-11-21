@@ -66,6 +66,14 @@ describe("HTTP helpers", () => {
     expect(parseRetryAfter("-5", NOW)).toBeNull();
   });
 
+  it("caps Retry-After at a day, also when the number of seconds overflows", () => {
+    const day = 24 * 60 * 60 * 1000;
+    expect(parseRetryAfter("1e306", NOW)).toBe(day);
+    expect(parseRetryAfter(String(3 * 24 * 60 * 60), NOW)).toBe(day);
+    expect(parseRetryAfter("Fri, 31 Dec 9999 23:59:59 GMT", NOW)).toBe(day);
+    expect(parseRetryAfter("Infinity", NOW)).toBeNull();
+  });
+
   it("finds the error message of each provider's error shape", () => {
     expect(errorMessageFromBody({ error: { message: "Incorrect API key", type: "invalid_request_error", code: "invalid_api_key" } })).toBe(
       "invalid_api_key: invalid_request_error: Incorrect API key",

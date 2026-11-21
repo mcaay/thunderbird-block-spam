@@ -3,6 +3,8 @@
 import type { AccessPoint } from "./types";
 
 export const DEFAULT_COOLDOWN_MS = 10 * 60 * 1000;
+/** A cool-down never lasts longer, whatever a server asks for. */
+export const MAX_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 export const REQUEST_TIMEOUT_MS = 30 * 1000;
 
 /**
@@ -51,6 +53,13 @@ export interface ChainOptions {
    * only when it refuses the sample as well.
    */
   probe?: (point: AccessPoint) => Promise<number>;
+}
+
+/** At most a day, and always a number that can be stored and validated again. */
+function cooldownMs(retryAfterMs: number | null): number {
+  return retryAfterMs !== null && Number.isFinite(retryAfterMs) && retryAfterMs >= 0
+    ? Math.min(retryAfterMs, MAX_COOLDOWN_MS)
+    : DEFAULT_COOLDOWN_MS;
 }
 
 function asFailure(error: unknown): AccessPointError {
@@ -103,7 +112,7 @@ export async function runChain(
         );
       }
       if (failure.kind === "quota") {
-        point.cooldownUntil = now() + (failure.retryAfterMs ?? DEFAULT_COOLDOWN_MS);
+        point.cooldownUntil = now() + cooldownMs(failure.retryAfterMs);
       } else if (failure.kind === "auth") {
         point.needsAttention = true;
       }

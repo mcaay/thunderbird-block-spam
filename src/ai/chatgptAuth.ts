@@ -30,6 +30,8 @@ export const SIGN_IN_TIMEOUT_MS = 15 * 60 * 1000;
 const CLOCK_SKEW_MS = 5000;
 /** Refresh this long before the access token expires. */
 export const REFRESH_MARGIN_MS = 5 * 60 * 1000;
+/** A longer token lifetime from the server is shortened to this. */
+export const MAX_TOKEN_LIFETIME_S = 30 * 24 * 60 * 60;
 
 export type SignInErrorCode =
   | "state-mismatch"
@@ -220,7 +222,11 @@ function readTokenResponse(body: unknown): TokenResponse | null {
   if (typeof record.access_token !== "string" || record.access_token === "") {
     return null;
   }
-  const expiresIn = typeof record.expires_in === "number" && record.expires_in > 0 ? record.expires_in : 3600;
+  // JSON can hold a lifetime that overflows to Infinity, which could not be stored.
+  const expiresIn =
+    typeof record.expires_in === "number" && Number.isFinite(record.expires_in) && record.expires_in > 0
+      ? Math.min(record.expires_in, MAX_TOKEN_LIFETIME_S)
+      : 3600;
   return {
     accessToken: record.access_token,
     refreshToken: typeof record.refresh_token === "string" ? record.refresh_token : "",

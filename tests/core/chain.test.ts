@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { AccessPointError, DEFAULT_COOLDOWN_MS, isAvailable, REQUEST_TIMEOUT_MS, runChain } from "../../src/core/chain";
+import { AccessPointError, DEFAULT_COOLDOWN_MS, isAvailable, MAX_COOLDOWN_MS, REQUEST_TIMEOUT_MS, runChain } from "../../src/core/chain";
+import { validateAccessPoints } from "../../src/core/settings";
 import type { AccessPoint } from "../../src/core/types";
 import { accessPoint, harness, HOUR, INBOX1, quota, transient, unauthorized } from "../helpers/harness";
 
@@ -86,6 +87,13 @@ describe("chain", () => {
     expect(result.verdict?.accessPoint).toBe("A");
     expect(list[0]).toMatchObject({ cooldownUntil: 0, lastError: "" });
     expect(result.stateChanged).toBe(true);
+  });
+
+  it("never cools down longer than a day or stores a number that cannot be validated", async () => {
+    const list = points();
+    await runChain(list, scorer({ a: quota(3 * 24 * HOUR), b: quota(Number.POSITIVE_INFINITY), c: quota(Number.NaN) }).score, () => NOW);
+    expect(list.map((point) => point.cooldownUntil)).toEqual([NOW + MAX_COOLDOWN_MS, NOW + DEFAULT_COOLDOWN_MS, NOW + DEFAULT_COOLDOWN_MS]);
+    expect(validateAccessPoints(JSON.parse(JSON.stringify(list)))).toEqual(list);
   });
 
   it("cools down for 10 minutes when no Retry-After is given", async () => {

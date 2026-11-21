@@ -1,7 +1,7 @@
 // HTTP helpers shared by the access point adapters: timeout, error classification
 // and messages that never contain secrets.
 
-import { AccessPointError, REQUEST_TIMEOUT_MS } from "../core/chain";
+import { AccessPointError, MAX_COOLDOWN_MS, REQUEST_TIMEOUT_MS } from "../core/chain";
 
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
@@ -19,17 +19,21 @@ export function safeMessage(message: string, secrets: readonly string[] = []): s
   return text.length > ERROR_MESSAGE_LIMIT ? `${text.slice(0, ERROR_MESSAGE_LIMIT)}...` : text;
 }
 
-/** Retry-After as milliseconds from now: a number of seconds or an HTTP date. Null when absent or invalid. */
+/**
+ * Retry-After as milliseconds from now: a number of seconds or an HTTP date, at
+ * least a second and at most a day. Null when absent or invalid.
+ */
 export function parseRetryAfter(value: string | null, now: number): number | null {
   if (value === null || value.trim() === "") {
     return null;
   }
   const seconds = Number(value);
-  if (Number.isFinite(seconds)) {
-    return seconds >= 0 ? Math.max(1000, Math.round(seconds * 1000)) : null;
+  const wait = Number.isFinite(seconds) ? (seconds >= 0 ? seconds * 1000 : Number.NaN) : Date.parse(value) - now;
+  if (Number.isNaN(wait)) {
+    return null;
   }
-  const date = Date.parse(value);
-  return Number.isNaN(date) ? null : Math.max(1000, date - now);
+  // A huge number of seconds overflows to Infinity, which could not be stored.
+  return Math.min(MAX_COOLDOWN_MS, Math.max(1000, Math.round(wait)));
 }
 
 /** Finds a human-readable error message in the JSON bodies the supported providers return. */

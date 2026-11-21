@@ -6,6 +6,7 @@ import {
   DISCOVERY_URL,
   ISSUER,
   JWKS_URL,
+  MAX_TOKEN_LIFETIME_S,
   needsRefresh,
   parseCallback,
   pkceChallenge,
@@ -367,6 +368,26 @@ describe("refreshing tokens", () => {
       refresh_token: "refresh-1",
       resource: "https://api.openai.com/v1",
     });
+  });
+
+  it("keeps the expiry a number that can be stored, whatever lifetime the server names", async () => {
+    // 1e400 overflows to Infinity and counts as no lifetime; a finite one is capped.
+    for (const [text, lifetime] of [
+      ["1e400", 3600],
+      ["1e12", MAX_TOKEN_LIFETIME_S],
+      ["-1", 3600],
+    ] as const) {
+      const http = fakeFetch({
+        [TOKEN_URL]: () =>
+          new Response(`{"access_token":"access-2","refresh_token":"refresh-2","expires_in":${text}}`, {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          }),
+      });
+      const fresh = await refreshTokens(http.fetch, AUTH, NOW);
+      expect(fresh.expiresAt, text).toBe(NOW + lifetime * 1000);
+      expect(Number.isFinite(fresh.expiresAt)).toBe(true);
+    }
   });
 
   it("asks for a new sign-in when the refresh token is unusable", async () => {
