@@ -240,8 +240,11 @@ export function logSection(): Section {
   }
 
   return {
-    render() {
-      void guard(() => load(false));
+    render(model: Model) {
+      // Stored data that failed validation is not read any further.
+      if (model.status.fatal === null) {
+        void guard(() => load(false));
+      }
     },
   };
 }

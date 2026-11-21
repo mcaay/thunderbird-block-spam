@@ -162,7 +162,7 @@ Pending for every provider. One Test and one real message each:
 - [ ] Cutoff: values outside 0.00 to 1.00 are refused.
 - [ ] Log: entries appear, the filter works, Clear empties it.
 - [ ] Data: export, then import with Merge and with Replace on a second profile. Account-scoped entries follow the account with the same email address.
-- [ ] Stored data that is not valid (edit the add-on's storage by hand in a test profile): protection is off, the page shows the error with "Download the raw data" and "Reset", and Reset gives a working add-on again.
+- [ ] Stored data that is not valid (edit the add-on's storage by hand in a test profile, for example replace an older `log:` chunk with text): protection is off, the page shows the error with "Download the raw data" and "Reset", the popup shows the data problem, and Reset gives a working add-on again.
 
 ### B11. The popup
 

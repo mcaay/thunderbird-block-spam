@@ -16,7 +16,7 @@ import {
   PREFIX_PROCESSED_SENT,
 } from "./keys";
 import type { LogMeta } from "./keys";
-import { appendLog, validateLogMeta } from "./log";
+import { appendLog, validateLogEntry, validateLogMeta } from "./log";
 import type { KeyValueStore } from "./ports";
 import { ProcessedSet } from "./processed";
 import {
@@ -24,7 +24,6 @@ import {
   asRecord,
   asString,
   defaultSettings,
-  isRecord,
   validateAccessPoints,
   validateEntries,
   validateSettings,
@@ -144,12 +143,18 @@ export class AppState {
       }
     }
 
+    // Every chunk the pages read is checked, not only the newest one that is appended to.
     const logMeta = raw[KEY_LOG_META] === undefined ? EMPTY_LOG_META : validateLogMeta(raw[KEY_LOG_META]);
-    const rawChunk = raw[logChunkKey(logMeta.last)];
-    if (rawChunk !== undefined && !(Array.isArray(rawChunk) && rawChunk.every(isRecord))) {
-      throw new ValidationError(`${logChunkKey(logMeta.last)}: expected a list of log entries`);
+    let lastLogChunk: LogEntry[] = [];
+    for (let index = logMeta.first; index <= logMeta.last; index += 1) {
+      const key = logChunkKey(index);
+      if (raw[key] !== undefined) {
+        const chunk = asArray(raw[key], key, validateLogEntry);
+        if (index === logMeta.last) {
+          lastLogChunk = chunk;
+        }
+      }
     }
-    const lastLogChunk = (rawChunk ?? []) as unknown as LogEntry[];
 
     if (Object.keys(fresh).length > 0) {
       await store.set(fresh);

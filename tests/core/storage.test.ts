@@ -402,6 +402,15 @@ describe("settings and state", () => {
       { settings: good, "processed:in:2026-11-21": [1, 2] },
       { settings: good, logMeta: { first: 3, last: 1 } },
       { settings: good, logMeta: { first: 0, last: 0 }, "log:0": "text" },
+      // Every chunk the pages read is checked, and every field of its entries.
+      { settings: good, logMeta: { first: 0, last: 1 }, "log:0": "broken older chunk", "log:1": [] },
+      { settings: good, logMeta: { first: 0, last: 0 }, "log:0": [{}] },
+      { settings: good, logMeta: { first: 0, last: 0 }, "log:0": [{ ...logEntry(1), score: "high" }] },
+      { settings: good, logMeta: { first: 0, last: 0 }, "log:0": [{ ...logEntry(1), outcome: "deleted" }] },
+      // A range that the pages would loop over without end.
+      { settings: good, logMeta: { first: 0, last: 1e9 } },
+      { settings: good, logMeta: { first: 0, last: 2 ** 60 } },
+      { settings: good, logMeta: { first: 0.5, last: 1 } },
     ];
     for (const raw of cases) {
       const store = new MemoryStore();
@@ -412,6 +421,18 @@ describe("settings and state", () => {
       expect(store.writes).toBe(0);
       expect(store.data).toEqual(raw);
     }
+  });
+
+  it("loads a full log and keeps appending to its newest chunk", async () => {
+    const chunk = (from: number, count: number): LogEntry[] => Array.from({ length: count }, (_, index) => logEntry(from + index));
+    const { state, store } = await makeState({
+      settings: defaultSettings(NOW),
+      logMeta: { first: 3, last: 3 + LOG_MAX_CHUNKS - 1 },
+      [logChunkKey(3)]: chunk(0, LOG_CHUNK_SIZE),
+      [logChunkKey(3 + LOG_MAX_CHUNKS - 1)]: [{ ...logEntry(9), score: 0.91, outcome: "spam", action: "junk", observed: true }],
+    });
+    await state.log(logEntry(10));
+    expect(store.data[logChunkKey(3 + LOG_MAX_CHUNKS - 1)]).toHaveLength(2);
   });
 
   it("prunes processed buckets and clears the log", async () => {

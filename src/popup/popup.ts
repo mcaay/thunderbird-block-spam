@@ -138,14 +138,11 @@ function scoreButton(): HTMLButtonElement {
 }
 
 async function draw(): Promise<void> {
-  const [status, stored, entries] = await Promise.all([
-    send("getStatus", {}),
-    browser.storage.local.get([KEY_SETTINGS, KEY_ACCESS_POINTS]),
-    recentDecisions(),
-  ]);
+  const [status, stored] = await Promise.all([send("getStatus", {}), browser.storage.local.get([KEY_SETTINGS, KEY_ACCESS_POINTS])]);
   const settings = status.fatal === null ? ((stored[KEY_SETTINGS] as Settings | undefined) ?? null) : null;
   drawStatus(status, settings);
-  drawRecent(entries);
+  // Stored data that failed validation is not read any further.
+  drawRecent(status.fatal === null ? await recentDecisions() : []);
   const hasAi = ((stored[KEY_ACCESS_POINTS] as AccessPoint[] | undefined) ?? []).some((point) => point.enabled);
   scoreBox.hidden = status.fatal !== null;
   if (scoreBox.childElementCount === 0) {
