@@ -33,4 +33,4 @@ It reads no mail, stores nothing and makes no network request.
 
 ## Build and install
 
-`npm run build` in the repository root writes `dist/block-spam-keys-<version>.xpi`. Install it in Thunderbird under Add-ons and Themes, gear menu, Install Add-on From File.
+`npm run build` in the repository root writes `dist/block-spam-keys-<version>.xpi`. The same file is packaged inside Block Spam: its settings page saves it with the button "Save the companion add-on file…" in the pane "Block and trust". Install it in Thunderbird under Add-ons and Themes, gear menu, Install Add-on From File.
