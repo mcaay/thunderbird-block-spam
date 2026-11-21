@@ -135,5 +135,6 @@ Where the documentation left a question open, the source code of Thunderbird (`t
 
 - A message that exists in two monitored folders of one account (the same Message-ID, author and date) is handled once.
 - A sender's display name is not used anywhere, also not for the AI.
+- For a forwarding mailbox the From of an attached message is read before the forwarder's labelled body line, as specification section 6 orders it. An inline forward carries the original's attachments, so an attached message from another sender decides whom such a forward is from. Changing the order waits for a check in Thunderbird and for the owner (review finding S5, see the manual test checklist, B7).
 - The tick finds mail by its `Date` header, which the sender writes. Mail dated more than 48 hours before the previous tick, or before protection was switched on, is handled only by the fast path, which looks at the arrival time in the newest `Received` header. If the new mail event does not fire for such a message, it is not handled.
 - The companion suppresses `B` and `W` also when the main add-on is disabled. Remove or disable the companion in that case.

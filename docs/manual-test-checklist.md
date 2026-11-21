@@ -102,6 +102,7 @@ Pending for every provider. One Test and one real message each:
 - [ ] Mail that was already in the Inbox before protection was switched on is not touched.
 - [ ] A message from a blacklisted sender with a `Date` header years in the past, sent while protection is on, still goes to Junk when it arrives (the new mail event reads its `Received` header).
 - [ ] Observation mode: nothing is moved, nothing is added by the AI, the log shows what would have happened.
+- [ ] A message whose display name is an encoded word that decodes to another address, for example `From: =?UTF-8?Q?ceo=40partner=2Eexample_=3Cceo=40partner=2Eexample=3E?= <spam@evil.example>`: the log must show `spam@evil.example` as the sender. If it shows `ceo@partner.example`, the decoded author string is parsed again, and the sender has to be read from the undecoded `From` header instead.
 
 ### B3. Mail read on a phone first
 
@@ -131,6 +132,7 @@ Pending for every provider. One Test and one real message each:
 - [ ] Transparent forward (alias or server redirect): the message shows the original author. It is handled like direct mail, without configuration.
 - [ ] Wrapped forward (for example an Outlook or Exchange "Forward" rule, or Google Groups): the message shows the forwarding mailbox. Add that mailbox under Forwarding mailboxes. Expected: the log shows the original sender "forwarded by" the mailbox, a spam forward goes to Junk, the black list gets the original sender and never the forwarding mailbox.
 - [ ] Check each source of the original sender if you can produce it: the `X-Original-From` header, an attached message, a "From:" line in the text.
+- [ ] Select a message that was forwarded as an attachment. In the background page's console (Tools, Developer Tools, Debug Add-ons, Block Spam, Inspect) run `const [m] = (await browser.mailTabs.getSelectedMessages()).messages; await browser.messages.listInlineTextParts(m.id)` and note whether the text of the attached message is part of the result. This decides review finding S5 (an attached message decides the sender of an inline forward): reading the forwarder's "From:" line before the attached message is safe only if that text is not included.
 - [ ] A wrapped forward whose original sender cannot be found is scored by the AI and never trusted because of the forwarding mailbox.
 
 ### B8. Shortcuts
