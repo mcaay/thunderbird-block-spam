@@ -384,7 +384,7 @@
     "message": "Changing this affects future entries only. Entries added by hand choose their scope themselves."
   },
   "aiHint": {
-    "message": "The AI is asked only when the sender is on neither list. It receives the sender, the recipients, the subject, the date and the first 20,000 characters of the text, and can answer with nothing but a probability from 0.00 to 1.00. Mail from whitelisted senders is never sent anywhere."
+    "message": "The AI is asked only when the sender is on neither list. It receives the sender, the Reply-To address if there is one, the recipients, the subject, the date and the first 20,000 characters of the text, and can answer with nothing but a probability from 0.00 to 1.00. Mail from whitelisted senders is never sent anywhere."
   },
   "aiSecretsHint": {
     "message": "API keys and sign-in tokens are stored unencrypted in your Thunderbird profile. They are never written to the log and never exported."
@@ -537,7 +537,7 @@
     "message": "Block Spam will send mail from senders who are on neither list to $1, in the background, to get a spam probability."
   },
   "consentWhat": {
-    "message": "What is sent: the sender, the recipients, the subject, the date and the first 20,000 characters of the text. Attachments, remote content and other headers are never sent."
+    "message": "What is sent: the sender, the Reply-To address if there is one, the recipients, the subject, the date and the first 20,000 characters of the text. Attachments, remote content and other headers are never sent."
   },
   "consentNever": {
     "message": "Mail from senders on your white list is never sent anywhere."

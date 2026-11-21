@@ -150,6 +150,21 @@ describe("strings", () => {
     }
   });
 
+  it("names every header the AI receives in the texts that ask for consent", async () => {
+    const { buildPayload } = await import("../src/core/payload");
+    const headers = buildPayload({ from: "a@b.example", replyTo: "c@d.example", to: ["e@f.example"], subject: "S", date: 1, body: "" })
+      .split("\n\n")[0]
+      ?.split("\n")
+      .map((line) => line.slice(0, line.indexOf(":")));
+    expect(headers).toEqual(["From", "Reply-To", "To", "Subject", "Date"]);
+    const words: Record<string, string> = { From: "the sender", "Reply-To": "Reply-To", To: "the recipients", Subject: "the subject", Date: "the date" };
+    for (const key of ["consentWhat", "aiHint"]) {
+      for (const header of headers ?? []) {
+        expect(messages[key]?.message, `${key}: ${header}`).toContain(words[header]);
+      }
+    }
+  });
+
   it("contains no en dash and no em dash anywhere in the project", () => {
     const files = [
       ...filesUnder("src", [".ts", ".html", ".css", ".json", ".svg"]),
