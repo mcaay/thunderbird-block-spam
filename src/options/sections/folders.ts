@@ -7,6 +7,7 @@ import type { FolderRef, Settings } from "../../core/types";
 import { t } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
 import { button, byId, guard, h, option, replace, toast } from "../dom";
+import { endOfLocalDay } from "../fields";
 import { folderLabel, forgetAccounts, hasFolder, monitoredFolders, sentFolders, withoutFolder } from "../model";
 import type { AccountView, Model } from "../model";
 import type { Section } from "../section";
@@ -77,8 +78,8 @@ export function learningSection(onScanStarted: () => void): Section {
       void guard(async () => {
         const fromTime = dayStart(from.value);
         const toDay = dayStart(to.value);
-        // The end date is inclusive: scan up to the start of the following day.
-        const toTime = toDay === null ? null : new Date(toDay).setDate(new Date(toDay).getDate() + 1);
+        // messages.query includes toDate, so exclude midnight of the following day.
+        const toTime = toDay === null ? null : endOfLocalDay(toDay);
         if (fromTime !== null && toTime !== null && fromTime >= toTime) {
           toast(t("scanRangeInvalid"), "error");
           return;

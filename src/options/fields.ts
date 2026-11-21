@@ -1,6 +1,12 @@
 // Fields that show a stored setting. The page is redrawn after every storage change,
 // often while the background writes the log, and must never overwrite an edit.
 
+/** Inclusive end of a date input's local day, also across daylight-saving changes. */
+export function endOfLocalDay(start: number): number {
+  const next = new Date(start);
+  return next.setDate(next.getDate() + 1) - 1;
+}
+
 /**
  * Whether a field may be redrawn with the stored value: never while it has the focus,
  * and not while it holds an edit that was not saved. `shown` is what the page put

@@ -1,5 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { mayRedraw, sameLabels, sameNumber } from "../../src/options/fields";
+import { endOfLocalDay, mayRedraw, sameLabels, sameNumber } from "../../src/options/fields";
+
+describe("the scan's inclusive end date", () => {
+  it("includes the selected day's last millisecond and excludes the next midnight", () => {
+    const end = endOfLocalDay(new Date(2026, 10, 15).getTime());
+    expect(end).toBe(new Date(2026, 10, 15, 23, 59, 59, 999).getTime());
+    expect(new Date(2026, 10, 16).getTime()).toBeGreaterThan(end);
+  });
+
+  it("follows calendar days at month and daylight-saving boundaries", () => {
+    for (const start of [new Date(2026, 0, 31), new Date(2026, 2, 29), new Date(2026, 9, 25)]) {
+      expect(new Date(endOfLocalDay(start.getTime())).toString()).toBe(
+        new Date(start.getFullYear(), start.getMonth(), start.getDate(), 23, 59, 59, 999).toString(),
+      );
+    }
+  });
+});
 
 describe("fields that show a stored setting", () => {
   it("are filled the first time and follow the stored value while nobody edits them", () => {
