@@ -6,6 +6,10 @@ export const KEY_ENTRIES = "entries";
 export const KEY_ACCESS_POINTS = "accessPoints";
 export const KEY_META = "meta";
 export const KEY_LOG_META = "logMeta";
+/** The last block or trust command made by hand, with what is needed to take it back. */
+export const KEY_LAST_COMMAND = "lastCommand";
+/** The AI services the user was already told about that they need attention. */
+export const KEY_ATTENTION_NOTIFIED = "attentionNotified";
 export const PREFIX_PROCESSED_IN = "processed:in:";
 export const PREFIX_PROCESSED_SENT = "processed:sent:";
 export const PREFIX_LOG = "log:";

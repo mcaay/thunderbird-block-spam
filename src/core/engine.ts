@@ -1,15 +1,15 @@
 // Orchestration of learning, the incoming pipeline, sweeps, scans and commands.
 // Everything here works against ports, so it runs unchanged under test.
 
-import { normalizeAddress, smartTarget } from "./address";
+import { normalizeAddress } from "./address";
 import { AccessPointError } from "./chain";
-import { applyCommand } from "./commands";
+import { applyCommand, COMMANDS, commandTarget } from "./commands";
 import type { CommandMessage, CommandName, CommandPlan } from "./commands";
 import { decideMessage, errorText, MessageReader, REASONS, scorePayload } from "./decision";
 import type { DecisionDeps } from "./decision";
 import { resolveMonitoredFolders, resolveSentFolders } from "./folders";
 import { learnRecipients, syncIdentities } from "./learning";
-import { matchSender } from "./lists";
+import { entryKey, matchSender } from "./lists";
 import type { AddResult } from "./lists";
 import { applyLogAction, expectsMove } from "./logAction";
 import type { LogAction } from "./logAction";
@@ -62,11 +62,43 @@ export interface ScanProgress {
   scanned: number;
   added: number;
   errors: string[];
+  /**
+   * How many messages the scan will read, when that is known: the Sent folders say how
+   * many messages they hold, and the scan has no date limit. Null otherwise.
+   */
+  total: number | null;
+}
+
+/** One message a command moved: where it came from and where it went. */
+export interface CommandMove {
+  accountId: string;
+  /** Message-ID header. The message is found again by it, since its number changes when it is moved. */
+  messageId: string;
+  from: FolderRef;
+  to: FolderRef;
+}
+
+/** Everything needed to take a command back: the lists exactly as they were, and the messages to where they were. */
+export interface CommandUndo {
+  /** Keys of entries to remove. */
+  remove: string[];
+  /** Entries to put back exactly as they were. */
+  restore: Entry[];
+  moves: CommandMove[];
 }
 
 export interface CommandOutcome {
   plan: CommandPlan;
   moved: number;
+  failures: string[];
+  undo: CommandUndo;
+}
+
+export interface CommandUndoOutcome {
+  /** Messages moved back. */
+  moved: number;
+  /** Messages that were no longer where the command had put them. */
+  notFound: number;
   failures: string[];
 }
 
@@ -87,6 +119,16 @@ export interface SenderInfo {
   own: boolean;
   /** What the domain commands would add: the domain, or with Smart on the address of a sender at a public provider. */
   domainTarget: Target | null;
+  /** The list entry that decides this sender now. Null when the sender is on neither list. */
+  deciding: Entry | null;
+  /** The account and the Message-ID of the message, for finding its decision in the log. The Message-ID may be empty. */
+  accountId: string;
+  messageId: string;
+  /**
+   * Commands that would change nothing: the sender is already decided that way, and
+   * the message is where the command would put it.
+   */
+  unchanged: CommandName[];
 }
 
 /**
@@ -526,8 +568,17 @@ export class Engine {
       scanned: 0,
       added: 0,
       errors: [],
+      total: null,
     };
     onProgress({ ...progress });
+    if (options.from === null && options.to === null && folders.length > 0) {
+      // Without a date limit every message of the folders is read, so their sizes say how far the scan is.
+      const counts = await Promise.all(folders.map((folder) => mail.messageCount(folder).catch(() => null)));
+      if (counts.every((count): count is number => count !== null)) {
+        progress.total = counts.reduce((sum, count) => sum + count, 0);
+        onProgress({ ...progress });
+      }
+    }
 
     scanning: for (const [index, folder] of folders.entries()) {
       progress.folderIndex = index + 1;
@@ -595,7 +646,7 @@ export class Engine {
       await state.saveEntries();
     }
 
-    const outcome: CommandOutcome = { plan, moved: 0, failures: [] };
+    const outcome: CommandOutcome = { plan, moved: 0, failures: [], undo: { ...plan.undo, moves: [] } };
     const byAccount = new Map<string, MessageInfo[]>();
     for (const message of plan.moves) {
       if (message.folder === null) {
@@ -611,12 +662,22 @@ export class Engine {
         outcome.failures.push(plan.list === "black" ? REASONS.noJunkFolder : "no-inbox-folder");
         continue;
       }
-      const ids = group.filter((message) => !sameFolder(message.folder, target)).map((message) => message.id);
-      for (let start = 0; start < ids.length; start += MOVE_BATCH) {
-        const batch = ids.slice(start, start + MOVE_BATCH);
+      const moving = group.filter((message) => !sameFolder(message.folder, target));
+      for (let start = 0; start < moving.length; start += MOVE_BATCH) {
+        const batch = moving.slice(start, start + MOVE_BATCH);
+        // Noted before the move: where each message is now.
+        const origins = batch.map((message) => ({ messageId: message.headerMessageId, from: message.folder }));
         try {
-          await mail.move(batch, target);
+          await mail.move(
+            batch.map((message) => message.id),
+            target,
+          );
           outcome.moved += batch.length;
+          for (const origin of origins) {
+            if (origin.from !== null) {
+              outcome.undo.moves.push({ accountId, messageId: origin.messageId, from: { ...origin.from }, to: target });
+            }
+          }
         } catch (error) {
           outcome.failures.push(errorText(error));
         }
@@ -629,21 +690,83 @@ export class Engine {
     return outcome;
   }
 
-  /** The sender the commands would act on for one message. */
+  /**
+   * Takes a command back: the entries exactly as they were, and every message it moved
+   * to where it came from. A message the user has moved on since is left alone.
+   */
+  async undoCommand(undo: CommandUndo): Promise<CommandUndoOutcome> {
+    const { state } = this.deps;
+    const context = await this.context();
+    for (const key of undo.remove) {
+      state.removeEntry(key);
+    }
+    for (const entry of undo.restore) {
+      state.restoreEntry(entry);
+    }
+    if (undo.remove.length > 0 || undo.restore.length > 0) {
+      await state.saveEntries();
+    }
+    const outcome: CommandUndoOutcome = { moved: 0, notFound: 0, failures: [] };
+    for (const move of undo.moves) {
+      const result = await this.moveLogged(move.accountId, move.messageId, (folder) => sameFolder(folder, move.to), move.from);
+      if (result.move === "moved") {
+        outcome.moved += 1;
+      } else if (result.move === "failed") {
+        outcome.failures.push(result.failure);
+      } else {
+        outcome.notFound += 1;
+      }
+    }
+    if (state.whiteAdded) {
+      await this.sweepScreening(context);
+    }
+    return outcome;
+  }
+
+  /** The sender the commands would act on for one message, and what the lists say about it now. */
   async describeSender(message: MessageInfo): Promise<SenderInfo> {
     const { state, mail } = this.deps;
     const context = await this.context();
     const effective = await new MessageReader(mail, message).effectiveSender(state);
     const sender = effective.sender;
+    const where = { accountId: message.accountId, messageId: message.headerMessageId };
     if (sender === null) {
-      return { address: "", via: effective.forwarder ?? "", own: false, domainTarget: null };
+      return { address: "", via: effective.forwarder ?? "", own: false, domainTarget: null, deciding: null, ...where, unchanged: [] };
     }
+    const deciding = matchSender(state.entries, sender, message.accountId);
+    const inJunk = context.isJunk(message.folder);
+    const held = inJunk || (message.folder !== null && state.settings.screeningFolders.some((folder) => sameFolder(folder, message.folder)));
+    const scope = state.newEntryScope(message.accountId);
+    const unchanged = COMMANDS.filter((command) => {
+      const list: ListName = command.startsWith("block") ? "black" : "white";
+      // Block moves the message to Junk, trust moves it back from Junk or a screening folder.
+      const moves = list === "black" ? !inJunk : held;
+      if (moves || deciding?.list !== list) {
+        return false;
+      }
+      if (!command.endsWith("domain")) {
+        return true;
+      }
+      const target = commandTarget(state, command, sender);
+      return state.entries.get(entryKey(target.kind, target.value, scope))?.list === list;
+    });
     return {
       address: sender.address,
       via: effective.forwarder ?? "",
       own: context.own.has(sender.address),
-      domainTarget: state.settings.smart ? smartTarget(sender, state.publicDomains) : { kind: "domain", value: sender.domain },
+      domainTarget: commandTarget(state, "block-domain", sender),
+      deciding,
+      ...where,
+      unchanged,
     };
+  }
+
+  /** The first copy of a message in an account, by its Message-ID header. Null when there is none. */
+  async findMessage(accountId: string, messageId: string): Promise<MessageInfo | null> {
+    if (messageId === "") {
+      return null;
+    }
+    return (await this.deps.mail.findByMessageId(accountId, messageId))[0] ?? null;
   }
 
   /**

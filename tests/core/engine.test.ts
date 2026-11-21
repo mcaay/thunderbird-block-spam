@@ -463,6 +463,27 @@ describe("manual scan", () => {
     expect((await reload(h.store)).entries.size).toBe(3);
   });
 
+  it("says how many messages it will read when the folders tell, so that the progress can be drawn", async () => {
+    const h = await harness();
+    h.mail.put(SENT1, { recipients: ["a@one.example"] });
+    h.mail.put(SENT1, { recipients: ["b@two.example"] });
+    h.mail.put(SENT2, { recipients: ["d@gmail.com"] });
+    const { progress, onProgress } = collect();
+    const result = await h.engine.scan({ from: null, to: null }, onProgress, () => false);
+    expect(result.total).toBe(3);
+    // The first report comes before the folders were asked.
+    expect(progress[0]?.total).toBeNull();
+    expect(progress[1]).toMatchObject({ total: 3, scanned: 0 });
+  });
+
+  it("does not guess the total for a date range, or when a folder does not tell its size", async () => {
+    const h = await harness();
+    h.mail.put(SENT1, { recipients: ["a@one.example"], date: h.clock.now - DAY });
+    expect((await h.engine.scan({ from: h.clock.now - 2 * DAY, to: null }, () => undefined, () => false)).total).toBeNull();
+    h.mail.countsKnown = false;
+    expect((await h.engine.scan({ from: null, to: null }, () => undefined, () => false)).total).toBeNull();
+  });
+
   it("limits the scan to a date range", async () => {
     const h = await harness();
     const start = h.clock.now - 20 * DAY;

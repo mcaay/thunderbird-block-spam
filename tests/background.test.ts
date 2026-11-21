@@ -4,7 +4,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CHATGPT_MODELS_URL } from "../src/ai/chatgpt";
 import { CHATGPT_ORIGINS, DISCOVERY_URL, ISSUER, JWKS_URL, TOKEN_URL } from "../src/ai/chatgptAuth";
-import { KEY_ACCESS_POINTS, KEY_ENTRIES, KEY_SETTINGS } from "../src/core/keys";
+import { KEY_ACCESS_POINTS, KEY_ATTENTION_NOTIFIED, KEY_ENTRIES, KEY_LAST_COMMAND, KEY_SETTINGS } from "../src/core/keys";
 import { defaultSettings } from "../src/core/settings";
 import type { AccessPoint } from "../src/core/types";
 import { FakeBrowser, loadBackground } from "./helpers/browser";
@@ -225,16 +225,25 @@ describe("block and trust without shortcuts", () => {
       result: {
         count: 1,
         limit: 50,
-        sender: { address: "mike@mail.outreach.example", via: "", own: false, domainTarget: { kind: "domain", value: "outreach.example" } },
+        sender: {
+          address: "mike@mail.outreach.example",
+          via: "",
+          own: false,
+          domainTarget: { kind: "domain", value: "outreach.example" },
+          deciding: null,
+          accountId: "account1",
+          messageId: "msg-1@test",
+          unchanged: [],
+        },
       },
     });
   });
 
   it("runs the command of a popup button on the selection and answers with what was done, without a notification", async () => {
     const { fake, background } = await setup([FakeBrowser.header(1, "mike@outreach.example"), FakeBrowser.header(2, "anna@outreach.example")]);
-    expect(await background.send("runCommand", { command: "block-domain", tabId: 1 })).toEqual({
+    expect(await background.send("runCommand", { command: "block-domain", tabId: 1 })).toMatchObject({
       ok: true,
-      result: { lines: ["notifyBlocked(outreach.example)", "notifyMovedToJunk(2)"], failed: false },
+      result: { source: "popup", lines: ["notifyBlocked(outreach.example)", "notifyMovedToJunk(2)"], failed: false, undoable: true },
     });
     expect(fake.moves).toEqual([{ ids: [1, 2], folderId: "f-junk" }]);
     expect(fake.storage[KEY_ENTRIES]).toMatchObject([{ list: "black", kind: "domain", value: "outreach.example", source: "manual" }]);
@@ -243,9 +252,9 @@ describe("block and trust without shortcuts", () => {
 
   it("refuses anything but the four commands, and says so when nothing is selected", async () => {
     const { fake, background } = await setup([]);
-    expect(await background.send("runCommand", { command: "block-address", tabId: 1 })).toEqual({
+    expect(await background.send("runCommand", { command: "block-address", tabId: 1 })).toMatchObject({
       ok: true,
-      result: { lines: ["popupNothingSelected"], failed: true },
+      result: { lines: ["popupNothingSelected"], failed: true, undoable: false },
     });
     expect(await background.send("runCommand", { command: "delete-everything" as never, tabId: 1 })).toMatchObject({ ok: false });
     expect(fake.moves).toEqual([]);
@@ -273,12 +282,236 @@ describe("block and trust without shortcuts", () => {
       { list: "white", kind: "address", value: "friend@gmail.com", source: "manual" },
       { list: "white", kind: "domain", value: "customer.example", source: "manual" },
     ]);
-    expect(fake.notifications).toEqual(["notifyTrusted(friend@gmail.com, customer.example)\nnotifyMovedToInbox(2)"]);
+    // The notification also says where the command can be undone.
+    expect(fake.notifications).toEqual(["notifyTrusted(friend@gmail.com, customer.example)\nnotifyMovedToInbox(2)\nnotifyUndoHint"]);
 
     // Anything that is not one of the commands is ignored.
     background.fire(fake.api.menus.onClicked as unknown as FakeEvent, { menuItemId: "block-spam-menu", selectedMessages: { id: null, messages: clicked } });
     await settle();
     expect(fake.notifications).toHaveLength(1);
+  });
+});
+
+describe("undoing a command made by hand", () => {
+  async function setup(entries: unknown[] = []) {
+    const fake = new FakeBrowser({ [KEY_SETTINGS]: defaultSettings(Date.now()), [KEY_ENTRIES]: entries });
+    const message = FakeBrowser.header(1, "Mike <mike@outreach.example>");
+    fake.selected = [message];
+    fake.folderMessages.set("f-inbox", [message]);
+    const background = await loadBackground(fake, fakeFetch({}).fetch);
+    await settle();
+    return { fake, background };
+  }
+
+  it("offers Undo in the popup right after a button, and takes the command back exactly", async () => {
+    const learned = { list: "white", kind: "domain", value: "outreach.example", scope: "all", source: "sent", addedAt: 5 };
+    const { fake, background } = await setup([learned]);
+    const done = await background.send("runCommand", { command: "block-address", tabId: 1 });
+    if (!done.ok) {
+      throw new Error(done.error);
+    }
+    expect(done.result.undoable).toBe(true);
+    // An address entry beats the entry of its domain, which stays as it is.
+    expect(fake.storage[KEY_ENTRIES]).toMatchObject([learned, { list: "black", kind: "address", value: "mike@outreach.example" }]);
+    expect(fake.moves).toEqual([{ ids: [1], folderId: "f-junk" }]);
+
+    expect(await background.send("undoCommand", { id: done.result.id })).toEqual({
+      ok: true,
+      result: { lines: ["commandUndone", "commandUndoMoved(1)"], failed: false },
+    });
+    expect(fake.storage[KEY_ENTRIES]).toEqual([learned]);
+    expect(fake.moves[1]).toEqual({ ids: [1], folderId: "f-inbox" });
+    // Taken back once: there is nothing left to undo.
+    expect(await background.send("lastCommand", {})).toEqual({ ok: true, result: { command: null } });
+    expect(await background.send("undoCommand", { id: done.result.id })).toMatchObject({ ok: false, code: "undo-gone" });
+  });
+
+  it("keeps the command of a shortcut for the next time the popup opens, also after the background page was restarted", async () => {
+    const { fake, background } = await setup();
+    background.fire(fake.api.commands.onCommand as unknown as FakeEvent, "block-domain", { id: 1, type: "mail", active: true });
+    await settle();
+    expect(fake.notifications).toEqual(["notifyBlocked(outreach.example)\nnotifyMovedToJunk(1)\nnotifyUndoHint"]);
+
+    // A background page that was suspended keeps nothing in memory.
+    const restarted = await loadBackground(fake, fakeFetch({}).fetch);
+    const last = await restarted.send("lastCommand", {});
+    expect(last).toMatchObject({ ok: true, result: { command: { source: "shortcut", lines: ["notifyBlocked(outreach.example)", "notifyMovedToJunk(1)"], undoable: true } } });
+    if (!last.ok || last.result.command === null) {
+      throw new Error("no command");
+    }
+    expect(await restarted.send("undoCommand", { id: last.result.command.id })).toMatchObject({ ok: true, result: { failed: false } });
+    expect(fake.storage[KEY_ENTRIES]).toEqual([]);
+    expect(fake.moves.at(-1)).toEqual({ ids: [1], folderId: "f-inbox" });
+  });
+
+  it("lets a command that changed nothing leave the one before it in place, and forgets a dismissed one", async () => {
+    const { fake, background } = await setup();
+    const first = await background.send("runCommand", { command: "block-address", tabId: 1 });
+    if (!first.ok) {
+      throw new Error(first.error);
+    }
+    // The same command again: the address is blocked and the message is in Junk already.
+    fake.selected = [FakeBrowser.header(1, "Mike <mike@outreach.example>", "f-junk")];
+    expect(await background.send("runCommand", { command: "block-address", tabId: 1 })).toMatchObject({ ok: true, result: { undoable: false } });
+    expect(await background.send("lastCommand", {})).toMatchObject({ ok: true, result: { command: { id: first.result.id } } });
+
+    // Dismissing another command than the last one does nothing.
+    await background.send("dismissCommand", { id: "something-else" });
+    expect(fake.storage[KEY_LAST_COMMAND]).toBeDefined();
+    await background.send("dismissCommand", { id: first.result.id });
+    expect(fake.storage[KEY_LAST_COMMAND]).toBeUndefined();
+    expect(fake.storage[KEY_ENTRIES]).toMatchObject([{ list: "black", value: "mike@outreach.example" }]);
+  });
+
+  it("ignores a stored command that is not one", async () => {
+    const { fake, background } = await setup();
+    fake.storage[KEY_LAST_COMMAND] = { id: "x", lines: "not a list" };
+    expect(await background.send("lastCommand", {})).toEqual({ ok: true, result: { command: null } });
+    expect(await background.send("undoCommand", { id: "x" })).toMatchObject({ ok: false, code: "undo-gone" });
+  });
+});
+
+describe("problems on the toolbar button", () => {
+  const rejected = (partial: Partial<AccessPoint> = {}): AccessPoint =>
+    accessPoint({ id: "openai", name: "OpenAI", type: "openai-chat", endpoint: "https://api.example.com/v1", needsAttention: true, lastError: "HTTP 401", ...partial });
+
+  async function setup(settings: Record<string, unknown>, points: AccessPoint[], extra: Record<string, unknown> = {}) {
+    const learned = { list: "white", kind: "domain", value: "customer.example", scope: "all", source: "sent", addedAt: 5 };
+    const fake = new FakeBrowser({ [KEY_SETTINGS]: { ...defaultSettings(Date.now()), ...settings }, [KEY_ACCESS_POINTS]: points, [KEY_ENTRIES]: [learned], ...extra });
+    fake.granted.add("https://api.example.com/*");
+    const background = await loadBackground(fake, fakeFetch({}).fetch);
+    await settle();
+    return { fake, background };
+  }
+
+  it("shows a badge with the number of problems in the title while protection is on", async () => {
+    const { fake, background } = await setup({ protection: true, protectionOnAt: 1 }, [rejected()]);
+    expect(fake.badge).toMatchObject({ text: "!", title: "badgeProblems_one(1)" });
+    expect(fake.badge.color).not.toBeNull();
+
+    // Editing the service clears the problem, and the badge with it.
+    await background.send("saveAccessPoint", {
+      id: "openai",
+      definition: { type: "openai-chat", name: "OpenAI", enabled: true, endpoint: "https://api.example.com/v1", model: "model-1" },
+      apiKey: "sk-new",
+    });
+    await settle();
+    expect(fake.badge).toMatchObject({ text: "", title: null });
+  });
+
+  it("shows no badge while protection is off, and one for stored data that is not valid", async () => {
+    const off = await setup({ protection: false }, [rejected()]);
+    expect(off.fake.badge).toMatchObject({ text: "", title: null });
+    await off.background.send("setProtection", { on: true });
+    await settle();
+    expect(off.fake.badge.text).toBe("!");
+
+    const broken = await setup({ cutoff: 7 }, []);
+    expect(broken.fake.badge).toMatchObject({ text: "!", title: "badgeDataProblem" });
+  });
+
+  it("announces a service once when it first needs attention, and again only after it has worked", async () => {
+    const { fake, background } = await setup({ protection: true, protectionOnAt: 1 }, [rejected()]);
+    // What was wrong when the page was loaded is on the badge, not announced.
+    expect(fake.notifications).toEqual([]);
+    background.fire(fake.api.alarms.onAlarm as unknown as FakeEvent, { name: "tick" });
+    await settle();
+    expect(fake.notifications).toEqual(["warnNeedsAttention(OpenAI) remedy_key_rejected"]);
+    expect(fake.notificationIds).toEqual(["attention:openai"]);
+    expect(fake.storage[KEY_ATTENTION_NOTIFIED]).toEqual(["openai"]);
+
+    background.fire(fake.api.alarms.onAlarm as unknown as FakeEvent, { name: "tick" });
+    await settle();
+    expect(fake.notifications).toHaveLength(1);
+
+    // The user enters a new key: the service is no longer marked, and a later rejection is news again.
+    await background.send("saveAccessPoint", {
+      id: "openai",
+      definition: { type: "openai-chat", name: "OpenAI", enabled: true, endpoint: "https://api.example.com/v1", model: "model-1" },
+      apiKey: "sk-new",
+    });
+    await settle();
+    expect(fake.storage[KEY_ATTENTION_NOTIFIED]).toEqual([]);
+  });
+
+  it("does not announce what the user did on the page, nor anything while protection is off", async () => {
+    const quiet = await setup({ protection: false }, [rejected()]);
+    quiet.background.fire(quiet.fake.api.alarms.onAlarm as unknown as FakeEvent, { name: "tick" });
+    await settle();
+    expect(quiet.fake.notifications).toEqual([]);
+
+    const auth = { clientId: "c", subject: "s", email: "", idToken: "", accessToken: "a", refreshToken: "r", expiresAt: Date.now() + 3_600_000, earliestRefreshAt: 0, scopes: [] };
+    const plan = accessPoint({ id: "plan", name: "ChatGPT plan", type: "chatgpt", auth });
+    const signedOut = await setup({ protection: true, protectionOnAt: 1 }, [plan]);
+    await signedOut.background.send("signOut", { id: "plan" });
+    await settle();
+    signedOut.background.fire(signedOut.fake.api.alarms.onAlarm as unknown as FakeEvent, { name: "tick" });
+    await settle();
+    expect(signedOut.fake.badge.text).toBe("!");
+    expect(signedOut.fake.notifications).toEqual([]);
+  });
+
+  it("leads from the notification to the warnings: the open settings page comes to the front, or the page is opened", async () => {
+    const { fake, background } = await setup({ protection: true, protectionOnAt: 1 }, [rejected()]);
+    background.fire(fake.api.notifications.onClicked as unknown as FakeEvent, "attention:openai");
+    await settle();
+    expect(fake.optionsPageOpened).toBe(1);
+    expect(await background.send("takeSettingsTarget", {})).toEqual({ ok: true, result: { target: { pane: "overview", logKey: null } } });
+
+    fake.optionsTab = { id: 7, windowId: 1 };
+    background.fire(fake.api.notifications.onClicked as unknown as FakeEvent, "attention:openai");
+    await settle();
+    expect(fake.optionsPageOpened).toBe(1);
+    expect(fake.activatedTabs).toEqual([7]);
+    // Any other notification is left alone.
+    background.fire(fake.api.notifications.onClicked as unknown as FakeEvent, "notification");
+    await settle();
+    expect(fake.activatedTabs).toEqual([7]);
+  });
+});
+
+describe("showing the message of a log entry", () => {
+  it("opens the message in a tab by its Message-ID, and says when it is gone", async () => {
+    const fake = new FakeBrowser({ [KEY_SETTINGS]: defaultSettings(Date.now()) });
+    fake.folderMessages.set("f-junk", [FakeBrowser.header(7, "Growth <growth@leadgen.example>", "f-junk")]);
+    const background = await loadBackground(fake, fakeFetch({}).fetch);
+    expect(await background.send("showMessage", { accountId: "account1", messageId: "msg-7@test" })).toEqual({ ok: true, result: { found: true } });
+    expect(fake.openedMessages).toEqual([7]);
+    expect(await background.send("showMessage", { accountId: "account1", messageId: "gone@test" })).toEqual({ ok: true, result: { found: false } });
+    expect(await background.send("showMessage", { accountId: "account1", messageId: "" })).toEqual({ ok: true, result: { found: false } });
+    expect(fake.openedMessages).toEqual([7]);
+  });
+});
+
+describe("stored data that is not valid", () => {
+  it("names the one setting that is wrong and sets only that one back, when the user asks", async () => {
+    const entries = [{ list: "black", kind: "domain", value: "outreach.example", scope: "all", source: "manual", addedAt: 5 }];
+    const settings = { ...defaultSettings(Date.now()), cutoff: 7, forwardingMailboxes: ["office@partner.example"] };
+    const fake = new FakeBrowser({ [KEY_SETTINGS]: settings, [KEY_ENTRIES]: entries });
+    const background = await loadBackground(fake, fakeFetch({}).fetch);
+    expect(await background.send("getStatus", {})).toMatchObject({ ok: true, result: { repair: ["cutoff"] } });
+    // Nothing is repaired by itself.
+    expect((fake.storage[KEY_SETTINGS] as { cutoff: number }).cutoff).toBe(7);
+    // Only a setting that was named can be set back.
+    expect(await background.send("repairSetting", { name: "prompt" })).toMatchObject({ ok: false });
+    expect(await background.send("repairSetting", { name: "entries" })).toMatchObject({ ok: false });
+
+    expect(await background.send("repairSetting", { name: "cutoff" })).toEqual({ ok: true, result: null });
+    expect(fake.storage[KEY_SETTINGS]).toEqual({ ...settings, cutoff: 0.85 });
+    expect(fake.storage[KEY_ENTRIES]).toEqual(entries);
+    expect(await background.send("getStatus", {})).toMatchObject({ ok: true, result: { fatal: null, repair: null } });
+    expect(await background.send("repairSetting", { name: "cutoff" })).toMatchObject({ ok: false });
+  });
+
+  it("offers no single repair when something other than a setting is wrong", async () => {
+    const settings = { ...defaultSettings(Date.now()), cutoff: 7 };
+    const fake = new FakeBrowser({ [KEY_SETTINGS]: settings, [KEY_ENTRIES]: [{ list: "grey" }] });
+    const background = await loadBackground(fake, fakeFetch({}).fetch);
+    const status = await background.send("getStatus", {});
+    expect(status).toMatchObject({ ok: true, result: { repair: null } });
+    expect(status.ok && status.result.fatal).not.toBeNull();
+    expect(await background.send("repairSetting", { name: "cutoff" })).toMatchObject({ ok: false });
+    expect((fake.storage[KEY_SETTINGS] as { cutoff: number }).cutoff).toBe(7);
   });
 });
 

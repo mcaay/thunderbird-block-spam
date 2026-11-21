@@ -4,6 +4,7 @@
 // Follows https://developers.openai.com/siwc/token-sharing-open-source and its
 // sign-in, accounts-and-sessions and token-reference pages.
 
+import { DIAGNOSTICS, httpDiagnostic, renewDiagnostic } from "../core/diagnostics";
 import { AccessPointError } from "../core/chain";
 import type { ChatGptAuth } from "../core/types";
 import { errorCodeFromBody, errorMessageFromBody, postForm, request, safeMessage } from "./http";
@@ -420,7 +421,7 @@ export function needsRefresh(auth: ChatGptAuth, now: number): boolean {
  */
 export async function refreshTokens(fetchFn: FetchLike, auth: ChatGptAuth, now: number): Promise<ChatGptAuth> {
   if (auth.refreshToken === "") {
-    throw new AccessPointError("auth", "not signed in");
+    throw new AccessPointError("auth", DIAGNOSTICS.notSignedIn);
   }
   const response = await postForm(fetchFn, TOKEN_URL, {
     grant_type: "refresh_token",
@@ -430,7 +431,7 @@ export async function refreshTokens(fetchFn: FetchLike, auth: ChatGptAuth, now: 
   });
   if (!response.ok) {
     const code = errorCodeFromBody(response.body);
-    const message = `sign-in could not be renewed: ${safeMessage(errorMessageFromBody(response.body), [auth.refreshToken]) || `HTTP ${response.status}`}`;
+    const message = renewDiagnostic(safeMessage(errorMessageFromBody(response.body), [auth.refreshToken]) || httpDiagnostic(response.status, ""));
     if (UNUSABLE_REFRESH_CODES.has(code) || response.status === 401 || response.status === 403) {
       throw new AccessPointError("auth", message);
     }
@@ -438,7 +439,7 @@ export async function refreshTokens(fetchFn: FetchLike, auth: ChatGptAuth, now: 
   }
   const tokens = readTokenResponse(response.body);
   if (tokens === null) {
-    throw new AccessPointError("transient", "sign-in could not be renewed: unexpected answer");
+    throw new AccessPointError("transient", renewDiagnostic("unexpected answer"));
   }
   return {
     ...auth,

@@ -348,6 +348,10 @@ describe("the sender a command would act on", () => {
       via: "",
       own: false,
       domainTarget: { kind: "domain", value: "outreach.example" },
+      deciding: null,
+      accountId: "account1",
+      messageId: company.headerMessageId,
+      unchanged: [],
     });
     expect((await h.engine.describeSender(personal)).domainTarget).toEqual({ kind: "address", value: "friend@gmail.com" });
     expect((await h.engine.describeSender(own)).own).toBe(true);
@@ -362,6 +366,15 @@ describe("the sender a command would act on", () => {
     const known = h.mail.put(INBOX1, { author: "office@partner.example", headers: { "x-original-from": ["cold@outreach.example"] } });
     const unknown = h.mail.put(INBOX1, { author: "office@partner.example", body: "nothing useful" });
     expect(await h.engine.describeSender(known)).toMatchObject({ address: "cold@outreach.example", via: "office@partner.example" });
-    expect(await h.engine.describeSender(unknown)).toEqual({ address: "", via: "office@partner.example", own: false, domainTarget: null });
+    expect(await h.engine.describeSender(unknown)).toEqual({
+      address: "",
+      via: "office@partner.example",
+      own: false,
+      domainTarget: null,
+      deciding: null,
+      accountId: "account1",
+      messageId: unknown.headerMessageId,
+      unchanged: [],
+    });
   });
 });

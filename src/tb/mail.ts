@@ -133,6 +133,11 @@ export class ThunderbirdMail implements MailPort {
     yield* messagePages(await browser.messages.list(await this.folderId(folder)));
   }
 
+  async messageCount(folder: FolderRef): Promise<number | null> {
+    const count = (await browser.folders.getFolderInfo(await this.folderId(folder))).totalMessageCount;
+    return typeof count === "number" && Number.isFinite(count) && count >= 0 ? count : null;
+  }
+
   async parseAddresses(raw: string): Promise<string[]> {
     return emailsOf(await browser.messengerUtilities.parseMailboxString(raw));
   }

@@ -1,6 +1,7 @@
 // OpenAI-compatible chat completions: OpenAI, Gemini, OpenRouter, Ollama, LM Studio
 // and any custom URL, including local bridges.
 
+import { DIAGNOSTICS } from "../core/diagnostics";
 import { AccessPointError } from "../core/chain";
 import { llmInstructions, parseLlmScore } from "../core/score";
 import type { AccessPoint } from "../core/types";
@@ -41,7 +42,7 @@ export async function scoreOpenAiChat(
   deps: { fetch: FetchLike; now: () => number },
 ): Promise<number> {
   if (point.model === "") {
-    throw new AccessPointError("transient", "no model is set");
+    throw new AccessPointError("transient", DIAGNOSTICS.noModelSet);
   }
   const response = await postJson(deps.fetch, `${baseUrl(point)}/chat/completions`, authHeaders(point), {
     model: point.model,
@@ -57,14 +58,14 @@ export async function scoreOpenAiChat(
   const choice = Array.isArray(choices) ? (choices[0] as Record<string, unknown> | undefined) : undefined;
   const message = choice?.message as Record<string, unknown> | undefined;
   if (typeof message !== "object" || message === null) {
-    throw new AccessPointError("transient", "the answer is missing");
+    throw new AccessPointError("transient", DIAGNOSTICS.answerMissing);
   }
   if ((typeof message.refusal === "string" && message.refusal !== "") || choice?.finish_reason === "content_filter") {
-    throw new AccessPointError("transient", "the model refused to answer");
+    throw new AccessPointError("transient", DIAGNOSTICS.refused);
   }
   const score = parseLlmScore(replyText(message));
   if (score === null) {
-    throw new AccessPointError("transient", "the answer is not a number from 0.00 to 1.00");
+    throw new AccessPointError("transient", DIAGNOSTICS.notNumber);
   }
   return score;
 }

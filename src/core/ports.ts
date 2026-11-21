@@ -14,6 +14,8 @@ export interface MailPort {
   messagesSince(folder: FolderRef, since: number, until?: number): AsyncIterable<MessageInfo[]>;
   /** Pages of all messages in a folder. */
   allMessages(folder: FolderRef): AsyncIterable<MessageInfo[]>;
+  /** How many messages a folder holds, or null when that is not known. */
+  messageCount(folder: FolderRef): Promise<number | null>;
   /** Addresses contained in one or more mailbox header values. */
   parseAddresses(raw: string): Promise<string[]>;
   /** All headers of a message, keyed by lowercase name. */

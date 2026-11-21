@@ -51,6 +51,17 @@ export class FakeBrowser {
   readonly openedTabs: string[] = [];
   readonly closedTabs: number[] = [];
   readonly notifications: string[] = [];
+  /** The ids of the notifications that were created with one. */
+  readonly notificationIds: string[] = [];
+  /** The toolbar button as the background last set it. */
+  readonly badge: { text: string; title: string | null; color: string | null } = { text: "", title: null, color: null };
+  /** Messages opened in a tab, by their number. */
+  readonly openedMessages: number[] = [];
+  /** Tabs brought to the front. */
+  readonly activatedTabs: number[] = [];
+  /** The settings page as an open tab, when a test wants one. */
+  optionsTab: { id: number; windowId: number } | null = null;
+  optionsPageOpened = 0;
   /** The context menu items, as menus.create received them. */
   menuItems: { id?: string; parentId?: string; title?: string; type?: string; contexts?: string[] }[] = [];
   /** Messages the background sent to open pages. */
@@ -88,6 +99,7 @@ export class FakeBrowser {
               (query.accountId === undefined || folder.accountId === query.accountId) &&
               (query.specialUse === undefined || query.specialUse.every((use) => folder.specialUse.includes(use))),
           ),
+        getFolderInfo: async (folderId: string) => ({ totalMessageCount: (this.folderMessages.get(folderId) ?? []).length }),
       },
       messages: {
         // Only the lookup by Message-ID finds messages: the date queries of a tick find none.
@@ -132,6 +144,22 @@ export class FakeBrowser {
       },
       messageDisplay: {
         getDisplayedMessages: async () => empty,
+        open: async (properties: { messageId: number }) => {
+          this.openedMessages.push(properties.messageId);
+          return { id: this.nextTab++, active: true, type: "messageDisplay" };
+        },
+      },
+      action: {
+        setBadgeText: async (details: { text: string | null }) => {
+          this.badge.text = details.text ?? "";
+        },
+        setBadgeBackgroundColor: async (details: { color: string | null }) => {
+          this.badge.color = details.color;
+        },
+        setBadgeTextColor: async () => undefined,
+        setTitle: async (details: { title: string | null }) => {
+          this.badge.title = details.title;
+        },
       },
       compose: { onAfterSend: new FakeEvent() },
       commands: {
@@ -145,13 +173,20 @@ export class FakeBrowser {
           this.openedTabs.push(properties.url);
           return { id: this.nextTab++, active: true, type: "content" };
         },
-        query: async () => [{ id: 1, type: "mail", active: true, windowId: 1 }],
+        query: async () => [
+          { id: 1, type: "mail", active: true, windowId: 1 },
+          ...(this.optionsTab === null ? [] : [{ ...this.optionsTab, type: "content", active: false, url: "moz-extension://test/options/options.html#log" }]),
+        ],
         get: async (id: number) => ({ id, type: "mail", active: true, windowId: 1 }),
+        update: async (id: number) => {
+          this.activatedTabs.push(id);
+          return { id, active: true };
+        },
         remove: async (id: number | number[]) => {
           this.closedTabs.push(...(Array.isArray(id) ? id : [id]));
         },
       },
-      windows: { openDefaultBrowser: async () => undefined },
+      windows: { openDefaultBrowser: async () => undefined, update: async () => undefined },
       alarms: { create: () => undefined, get: async () => undefined, onAlarm: new FakeEvent() },
       menus: {
         create: (properties: { id?: string }) => {
@@ -164,10 +199,15 @@ export class FakeBrowser {
         onClicked: new FakeEvent(),
       },
       notifications: {
-        create: async (options: { message: string }) => {
-          this.notifications.push(options.message);
-          return "notification";
+        create: async (first: string | { message: string }, second?: { message: string }) => {
+          const options = typeof first === "string" ? second : first;
+          this.notifications.push(options?.message ?? "");
+          if (typeof first === "string") {
+            this.notificationIds.push(first);
+          }
+          return typeof first === "string" ? first : "notification";
         },
+        onClicked: new FakeEvent(),
       },
       permissions: {
         request: async (set: tb.PermissionSet) => {
@@ -210,7 +250,9 @@ export class FakeBrowser {
         getURL: (path: string) => `moz-extension://test/${path}`,
         getManifest: () => ({ version: "1.0.0", name: "Block Spam", optional_permissions: ["accountsFolders", "webRequest"] }),
         getPlatformInfo: async () => ({ os: "linux" }),
-        openOptionsPage: async () => undefined,
+        openOptionsPage: async () => {
+          this.optionsPageOpened += 1;
+        },
         sendMessage: async (message: unknown) => {
           this.pageEvents.push(message);
         },

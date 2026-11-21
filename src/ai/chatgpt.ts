@@ -2,6 +2,7 @@
 // "Sign in with ChatGPT". Requests set store: false and stream: true and are read
 // until response.completed.
 
+import { DIAGNOSTICS, serviceDiagnostic, usageLimitDiagnostic } from "../core/diagnostics";
 import { AccessPointError, REQUEST_TIMEOUT_MS } from "../core/chain";
 import { llmInstructions, parseLlmScore } from "../core/score";
 import type { AccessPoint, ChatGptAuth } from "../core/types";
@@ -37,7 +38,7 @@ const refreshes = new Map<string, Promise<void>>();
 /** The access token to use, renewed first when it is due, or always with renew. */
 async function freshAccessToken(point: AccessPoint, deps: ChatGptDeps, renew = false): Promise<string> {
   if (point.auth === null || point.auth.refreshToken === "") {
-    throw new AccessPointError("auth", "not signed in");
+    throw new AccessPointError("auth", DIAGNOSTICS.notSignedIn);
   }
   if (renew || needsRefresh(point.auth, deps.now())) {
     let running = refreshes.get(point.id);
@@ -45,7 +46,7 @@ async function freshAccessToken(point: AccessPoint, deps: ChatGptDeps, renew = f
       running = (async () => {
         const current = point.auth;
         if (current === null) {
-          throw new AccessPointError("auth", "not signed in");
+          throw new AccessPointError("auth", DIAGNOSTICS.notSignedIn);
         }
         let refreshed: ChatGptAuth;
         try {
@@ -62,7 +63,7 @@ async function freshAccessToken(point: AccessPoint, deps: ChatGptDeps, renew = f
           // Signed out, signed in again or removed while the refresh ran: the session it
           // renewed is over, so the new tokens are never used and their session is ended.
           await revokeSession(deps.fetch, refreshed);
-          throw new AccessPointError("auth", "not signed in");
+          throw new AccessPointError("auth", DIAGNOSTICS.notSignedIn);
         }
         point.auth = refreshed;
         // Refresh tokens rotate: the replacement is stored before it is used.
@@ -74,7 +75,7 @@ async function freshAccessToken(point: AccessPoint, deps: ChatGptDeps, renew = f
   }
   const token = point.auth?.accessToken ?? "";
   if (token === "") {
-    throw new AccessPointError("auth", "not signed in");
+    throw new AccessPointError("auth", DIAGNOSTICS.notSignedIn);
   }
   return token;
 }
@@ -83,10 +84,10 @@ async function freshAccessToken(point: AccessPoint, deps: ChatGptDeps, renew = f
 function planError(code: string, message: string, status: number, retryAfter: string | null, now: number): AccessPointError {
   const text = safeMessage(message === "" ? code : message);
   if (code === "subscription_sharing_usage_limit_exceeded") {
-    return new AccessPointError("quota", `usage limit reached: ${text}`, parseRetryAfter(retryAfter, now));
+    return new AccessPointError("quota", usageLimitDiagnostic(text), parseRetryAfter(retryAfter, now));
   }
   if (code === "subscription_sharing_usage_unavailable" || code === "subscription_sharing_user_unavailable") {
-    return new AccessPointError("transient", text);
+    return new AccessPointError("transient", serviceDiagnostic(text));
   }
   if (
     code === "subscription_sharing_user_not_eligible" ||
@@ -94,7 +95,7 @@ function planError(code: string, message: string, status: number, retryAfter: st
     code === "subscription_sharing_route_not_supported" ||
     code.startsWith("chatpass_v2_")
   ) {
-    return new AccessPointError("auth", text);
+    return new AccessPointError("auth", serviceDiagnostic(text));
   }
   return statusError(status, message === "" ? code : `${code}: ${message}`, retryAfter, now);
 }
@@ -141,7 +142,7 @@ export async function readEventStream(
       const { done, value } = await reader.read();
       size += value?.byteLength ?? 0;
       if (size > limit) {
-        throw new AccessPointError("transient", "the answer is too large");
+        throw new AccessPointError("transient", DIAGNOSTICS.tooLarge);
       }
       buffer += decoder.decode(value ?? new Uint8Array(), { stream: !done });
       for (;;) {
@@ -172,7 +173,7 @@ export async function readEventStream(
 
 export async function scoreChatGpt(point: AccessPoint, prompt: string, payload: string, deps: ChatGptDeps): Promise<number> {
   if (point.model === "") {
-    throw new AccessPointError("transient", "no model is selected");
+    throw new AccessPointError("transient", DIAGNOSTICS.noModelSelected);
   }
   let text = await requestAnswer(point, prompt, payload, await freshAccessToken(point, deps), deps, true);
   if (text === null) {
@@ -182,7 +183,7 @@ export async function scoreChatGpt(point: AccessPoint, prompt: string, payload: 
   }
   const score = text === null ? null : parseLlmScore(text);
   if (score === null) {
-    throw new AccessPointError("transient", "the answer is not a number from 0.00 to 1.00");
+    throw new AccessPointError("transient", DIAGNOSTICS.notNumber);
   }
   return score;
 }
@@ -231,7 +232,7 @@ async function requestAnswer(
       );
     }
     if (response.body === null) {
-      throw new AccessPointError("transient", "the answer is empty");
+      throw new AccessPointError("transient", DIAGNOSTICS.answerEmpty);
     }
     let output = "";
     let completed = false;
@@ -240,7 +241,7 @@ async function requestAnswer(
       if (event.type === "response.output_text.delta" && typeof event.delta === "string") {
         output += event.delta;
         if (output.length > ANSWER_LIMIT) {
-          failure = new AccessPointError("transient", "the answer is too long");
+          failure = new AccessPointError("transient", DIAGNOSTICS.tooLong);
           return true;
         }
         return false;
@@ -263,7 +264,7 @@ async function requestAnswer(
         return true;
       }
       if (event.type === "response.incomplete") {
-        failure = new AccessPointError("transient", "the answer is incomplete");
+        failure = new AccessPointError("transient", DIAGNOSTICS.incomplete);
         return true;
       }
       return false;
@@ -272,7 +273,7 @@ async function requestAnswer(
       throw failure as AccessPointError;
     }
     if (!completed) {
-      throw new AccessPointError("transient", "the answer ended early");
+      throw new AccessPointError("transient", DIAGNOSTICS.endedEarly);
     }
     return output;
   });

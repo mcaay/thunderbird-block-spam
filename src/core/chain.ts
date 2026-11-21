@@ -1,5 +1,6 @@
 // The AI chain: access points are tried in order and the first valid score is final.
 
+import { DIAGNOSTICS } from "./diagnostics";
 import type { AccessPoint } from "./types";
 
 export const DEFAULT_COOLDOWN_MS = 10 * 60 * 1000;
@@ -96,7 +97,7 @@ export async function runChain(
     try {
       const value = await score(point);
       if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 1) {
-        throw new AccessPointError("transient", "invalid score");
+        throw new AccessPointError("transient", DIAGNOSTICS.invalidScore);
       }
       if (point.lastError !== "" || point.cooldownUntil !== 0) {
         point.lastError = "";

@@ -7,6 +7,7 @@ import type { CommandName } from "../core/commands";
 import type { SettingsPatch } from "../core/edit";
 import type {
   AccessPointTestResult,
+  CommandUndo,
   LogActionOutcome,
   LogActionUndo,
   MoveResult,
@@ -17,6 +18,26 @@ import type {
 import type { ExportResult, ImportMode, ImportReport } from "../core/exportImport";
 import type { LogAction } from "../core/logAction";
 import type { Entry, EntryKind, ListName, LogEntry } from "../core/types";
+
+/** Where a block or trust command came from. */
+export type CommandSource = "popup" | "shortcut" | "menu" | "keys";
+
+/** What a block or trust command did. The popup shows it, with Undo while it can be taken back. */
+export interface CommandRecord {
+  id: string;
+  time: number;
+  source: CommandSource;
+  /** What was done, one fact per line, in the language of the interface. */
+  lines: string[];
+  failed: boolean;
+  /** True while the command changed something that can be taken back. */
+  undoable: boolean;
+}
+
+/** A command as the background keeps it until it is undone, dismissed or replaced by the next one. */
+export interface StoredCommand extends CommandRecord {
+  undo: CommandUndo;
+}
 
 export interface Requests {
   getStatus: { request: Record<string, never>; result: Status };
@@ -63,7 +84,17 @@ export interface Requests {
    */
   selection: { request: { tabId: number }; result: { count: number; limit: number; sender: SenderInfo | null } };
   /** Runs one of the four shortcut commands on the selection of a tab. The lines say what was done. */
-  runCommand: { request: { command: CommandName; tabId: number }; result: { lines: string[]; failed: boolean } };
+  runCommand: { request: { command: CommandName; tabId: number }; result: CommandRecord };
+  /** The last command made by hand that can still be taken back, from the popup, a shortcut or the context menu. */
+  lastCommand: { request: Record<string, never>; result: { command: CommandRecord | null } };
+  /** Takes that command back: the lists exactly as they were, and the messages to where they were. */
+  undoCommand: { request: { id: string }; result: { lines: string[]; failed: boolean } };
+  /** Forgets that command without taking it back. */
+  dismissCommand: { request: { id: string }; result: null };
+  /** Opens the message of a log entry in a tab. Not found when it was deleted, or moved out of the account. */
+  showMessage: { request: { accountId: string; messageId: string }; result: { found: boolean } };
+  /** While stored data is not valid: sets one stored setting back to its default. Only settings named in the status. */
+  repairSetting: { request: { name: string }; result: null };
   scoreSelected: { request: { tabId: number }; result: TestScoreSummary & { selected: number } };
   /** Asks the settings page, open or about to open, to show a pane, and in the log one entry. */
   showInSettings: { request: SettingsTarget; result: null };
@@ -133,6 +164,11 @@ export interface SignInStatus {
 export interface Status {
   /** Set when stored data failed validation. Protection is off and nothing is written. */
   fatal: string | null;
+  /**
+   * With invalid stored data: the settings whose stored value is not valid, when they
+   * are all that is wrong and each can be set back to its default. Null otherwise.
+   */
+  repair: string[] | null;
   scan: ScanProgress | null;
   signIn: SignInStatus;
   /** A test of selected messages is running. */

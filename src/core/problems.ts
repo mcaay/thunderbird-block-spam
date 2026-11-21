@@ -43,6 +43,55 @@ export function scanIsComplete(scan: { running: boolean; cancelled: boolean; err
   return scan !== null && !scan.running && !scan.cancelled && scan.errors.length === 0;
 }
 
+/**
+ * Where setup step 1, the scan of sent mail, stands.
+ * - todo: nothing was learned yet and no scan ran in this session.
+ * - running: a scan is in progress. The step is not done before it ends.
+ * - incomplete: the last scan was cancelled or could not read a folder: it should run again.
+ * - empty: the scan ran to its end and found no sent mail at all.
+ * - done: the scan ran to its end, or contacts were learned before this session.
+ */
+export type ScanStep = "todo" | "running" | "incomplete" | "empty" | "done";
+
+export function scanStep(
+  scan: { running: boolean; cancelled: boolean; errors: readonly string[]; scanned: number } | null,
+  learned: boolean,
+): ScanStep {
+  if (scan === null) {
+    return learned ? "done" : "todo";
+  }
+  if (scan.running) {
+    return "running";
+  }
+  if (!scanIsComplete(scan)) {
+    return "incomplete";
+  }
+  return scan.scanned === 0 && !learned ? "empty" : "done";
+}
+
+/** Why a service needs attention, as the code of the sentence that says what to do about it. */
+export type Remedy = "sign-in" | "permission" | "key-missing" | "key-rejected" | "plan-refused";
+
+/** Whether a ChatGPT plan service holds a sign-in. */
+export function signedIn(point: Pick<AccessPoint, "type" | "auth">): boolean {
+  return point.type === "chatgpt" && point.auth !== null && point.auth.refreshToken !== "";
+}
+
+/**
+ * What to do about a service that needs attention. `hostGranted` is false only when
+ * this computer is known not to allow the host of the service.
+ */
+export function remedyFor(point: Pick<AccessPoint, "type" | "auth" | "apiKey" | "lastError">, hostGranted: boolean): Remedy {
+  if (point.type === "chatgpt") {
+    return signedIn(point) ? (hostGranted ? "plan-refused" : "permission") : "sign-in";
+  }
+  if (!hostGranted) {
+    return "permission";
+  }
+  // An imported service arrives without its key and is marked until the key is entered.
+  return point.apiKey === "" && point.lastError === "" ? "key-missing" : "key-rejected";
+}
+
 /** The problems in the order the settings page lists them. */
 export function findProblems(input: ProblemInput): Problem[] {
   const { settings, accessPoints, accounts, now } = input;

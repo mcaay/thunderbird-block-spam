@@ -3,9 +3,9 @@
 import { smartTarget } from "./address";
 import type { CommandName } from "./commandNames";
 import type { EffectiveSender } from "./forward";
-import { keyOf, matchSender } from "./lists";
+import { entryKey, keyOf, matchSender } from "./lists";
 import type { AppState } from "./state";
-import type { ListName, MessageInfo, Target } from "./types";
+import type { Entry, ListName, MessageInfo, Sender, Target } from "./types";
 
 export { COMMANDS, isCommandName } from "./commandNames";
 export type { CommandName } from "./commandNames";
@@ -28,6 +28,20 @@ export interface CommandPlan {
   /** Messages whose effective sender could not be determined: moved, but no entry added. */
   unknownSenders: number;
   entriesChanged: boolean;
+  /** How to take the list changes back: keys to remove, and entries to put back exactly as they were. */
+  undo: { remove: string[]; restore: Entry[] };
+}
+
+/** The entry a command adds for a sender, and whether the command works on the domain. */
+export function commandTarget(
+  state: Pick<AppState, "settings" | "publicDomains">,
+  command: CommandName,
+  sender: Sender,
+): Target {
+  if (!command.endsWith("domain")) {
+    return { kind: "address", value: sender.address };
+  }
+  return state.settings.smart ? smartTarget(sender, state.publicDomains) : { kind: "domain", value: sender.domain };
 }
 
 /**
@@ -45,9 +59,23 @@ export function applyCommand(
   now: number,
 ): CommandPlan {
   const list: ListName = command.startsWith("block") ? "black" : "white";
-  const byDomain = command.endsWith("domain");
-  const plan: CommandPlan = { list, targets: [], moves: [], ignoredOwn: 0, unknownSenders: 0, entriesChanged: false };
+  const plan: CommandPlan = {
+    list,
+    targets: [],
+    moves: [],
+    ignoredOwn: 0,
+    unknownSenders: 0,
+    entriesChanged: false,
+    undo: { remove: [], restore: [] },
+  };
   const seen = new Set<string>();
+  /** Every key the command touches, with the entry that held it before. The first touch counts. */
+  const before = new Map<string, Entry | undefined>();
+  const touch = (key: string): void => {
+    if (!before.has(key)) {
+      before.set(key, state.entries.get(key));
+    }
+  };
 
   for (const item of selected) {
     const sender = item.effective.sender;
@@ -59,12 +87,9 @@ export function applyCommand(
       // The effective sender could not be determined: the message is only moved.
       plan.unknownSenders += 1;
     } else {
-      const target: Target = !byDomain
-        ? { kind: "address", value: sender.address }
-        : state.settings.smart
-          ? smartTarget(sender, state.publicDomains)
-          : { kind: "domain", value: sender.domain };
+      const target = commandTarget(state, command, sender);
       const scope = state.newEntryScope(item.message.accountId);
+      touch(entryKey(target.kind, target.value, scope));
       const result = state.addEntry({ list, kind: target.kind, value: target.value, scope, source: "manual" }, now);
       if (result !== "unchanged") {
         plan.entriesChanged = true;
@@ -76,6 +101,7 @@ export function applyCommand(
         if (deciding === null || deciding.list === list) {
           break;
         }
+        touch(keyOf(deciding));
         state.removeEntry(keyOf(deciding));
         plan.entriesChanged = true;
       }
@@ -92,6 +118,16 @@ export function applyCommand(
       }
     } else if (item.location === "junk" || item.location === "screening") {
       plan.moves.push(item.message);
+    }
+  }
+  for (const [key, original] of before) {
+    const current = state.entries.get(key);
+    if (original === undefined) {
+      if (current !== undefined) {
+        plan.undo.remove.push(key);
+      }
+    } else if (current !== original) {
+      plan.undo.restore.push(original);
     }
   }
   return plan;

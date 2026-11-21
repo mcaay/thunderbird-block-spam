@@ -4,7 +4,17 @@ import type { LogMeta } from "../../src/core/log";
 import { buildPayload, BODY_LIMIT, truncateBody } from "../../src/core/payload";
 import { dayKey, PROCESSED_PART_SIZE, processedId, ProcessedSet } from "../../src/core/processed";
 import { DEFAULT_CUTOFF, isSpam, llmInstructions, OUTPUT_LINE, parseLlmScore, parseProbability } from "../../src/core/score";
-import { DEFAULT_PROMPT, defaultSettings, validateAccessPoints, validateEntries, validateSettings, ValidationError } from "../../src/core/settings";
+import {
+  DEFAULT_PROMPT,
+  defaultSettings,
+  invalidSettings,
+  isSettingName,
+  validateAccessPoints,
+  validateEntries,
+  validateSettings,
+  ValidationError,
+  withDefaults,
+} from "../../src/core/settings";
 import { AppState, KEY_ENTRIES, KEY_SETTINGS } from "../../src/core/state";
 import type { LogEntry } from "../../src/core/types";
 import { BUNDLED_PUBLIC_DOMAINS } from "../../src/data/publicDomains";
@@ -292,6 +302,30 @@ describe("settings and state", () => {
     for (const value of broken) {
       expect(() => validateSettings(value)).toThrowError(ValidationError);
     }
+  });
+
+  it("names the settings whose stored value is not valid, each on its own", () => {
+    const base = defaultSettings(NOW);
+    expect(invalidSettings(base)).toEqual([]);
+    expect(invalidSettings({ ...base, cutoff: 7 })).toEqual(["cutoff"]);
+    expect(invalidSettings({ ...base, cutoff: 7, prompt: " ", smart: "yes" })).toEqual(["smart", "cutoff", "prompt"]);
+    expect(invalidSettings({ ...base, forwardLabels: undefined })).toEqual(["forwardLabels"]);
+  });
+
+  it("names no single setting for settings of another version, or for something that is not a settings record", () => {
+    const base = defaultSettings(NOW);
+    expect(invalidSettings({ ...base, schemaVersion: 2, cutoff: 7 })).toBeNull();
+    expect(invalidSettings(null)).toBeNull();
+    expect(invalidSettings([])).toBeNull();
+  });
+
+  it("sets only the named settings back to their defaults", () => {
+    const stored = { ...defaultSettings(NOW), cutoff: 7, protection: true, forwardingMailboxes: ["office@partner.example"] };
+    const repaired = withDefaults(stored, ["cutoff"], NOW + 5);
+    expect(repaired).toEqual({ ...stored, cutoff: 0.85 });
+    expect(validateSettings(repaired)).toMatchObject({ cutoff: 0.85, protection: true, forwardingMailboxes: ["office@partner.example"] });
+    expect(isSettingName("cutoff")).toBe(true);
+    expect(isSettingName("entries")).toBe(false);
   });
 
   it("validates list entries", () => {

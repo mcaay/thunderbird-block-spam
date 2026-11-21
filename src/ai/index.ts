@@ -1,5 +1,6 @@
 // The adapter registry: one scoring operation per access point type.
 
+import { DIAGNOSTICS, permissionDiagnostic } from "../core/diagnostics";
 import { AccessPointError } from "../core/chain";
 import type { AiPort } from "../core/ports";
 import type { AccessPoint } from "../core/types";
@@ -39,11 +40,11 @@ export function createAi(deps: AiDeps): Ai {
     // Endpoints on loopback addresses may use http, all others must use https.
     const origins = requiredOrigins(point);
     if (origins === null) {
-      throw new AccessPointError("transient", "the endpoint address is not valid");
+      throw new AccessPointError("transient", DIAGNOSTICS.endpointInvalid);
     }
     for (const origin of origins) {
       if (!(await deps.hasHostPermission(origin))) {
-        throw new AccessPointError("auth", `no permission for ${origin}: open the access point and save it`);
+        throw new AccessPointError("auth", permissionDiagnostic(origin));
       }
     }
   }

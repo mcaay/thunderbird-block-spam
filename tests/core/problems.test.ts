@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findProblems, scanIsComplete } from "../../src/core/problems";
+import { findProblems, remedyFor, scanIsComplete, scanStep } from "../../src/core/problems";
 import type { AccountFacts, ProblemInput } from "../../src/core/problems";
 import { defaultSettings } from "../../src/core/settings";
 import { accessPoint } from "../helpers/harness";
@@ -33,6 +33,54 @@ describe("a scan that ran to its end", () => {
     expect(scanIsComplete({ ...scan, running: true })).toBe(false);
     expect(scanIsComplete({ ...scan, cancelled: true })).toBe(false);
     expect(scanIsComplete({ ...scan, errors: ["Sent: could not be read"] })).toBe(false);
+  });
+});
+
+describe("setup step 1, the scan of sent mail", () => {
+  const scan = { running: false, cancelled: false, errors: [] as string[], scanned: 12 };
+
+  it("is to do until something was learned, and done when contacts were learned before this session", () => {
+    expect(scanStep(null, false)).toBe("todo");
+    expect(scanStep(null, true)).toBe("done");
+  });
+
+  it("is not done while a scan runs, also when the scan has learned entries already", () => {
+    expect(scanStep({ ...scan, running: true }, true)).toBe("running");
+    expect(scanStep({ ...scan, running: true }, false)).toBe("running");
+  });
+
+  it("is incomplete after Cancel and after a folder that could not be read", () => {
+    expect(scanStep({ ...scan, cancelled: true }, true)).toBe("incomplete");
+    expect(scanStep({ ...scan, errors: ["/Sent: could not be read"] }, true)).toBe("incomplete");
+  });
+
+  it("is done after a scan that ran to its end", () => {
+    expect(scanStep(scan, true)).toBe("done");
+  });
+
+  it("is empty, not done, after a scan that found no sent mail at all", () => {
+    expect(scanStep({ ...scan, scanned: 0 }, false)).toBe("empty");
+    // Contacts learned from live sending count, also when the Sent folders are empty.
+    expect(scanStep({ ...scan, scanned: 0 }, true)).toBe("done");
+  });
+});
+
+describe("what to do about a service that needs attention", () => {
+  it("asks for a key that is missing or was rejected", () => {
+    expect(remedyFor(accessPoint({ apiKey: "", lastError: "" }), true)).toBe("key-missing");
+    expect(remedyFor(accessPoint({ apiKey: "sk-wrong", lastError: "HTTP 401" }), true)).toBe("key-rejected");
+  });
+
+  it("asks for the permission first when this computer has not allowed the host", () => {
+    expect(remedyFor(accessPoint({ apiKey: "" }), false)).toBe("permission");
+  });
+
+  it("asks a ChatGPT plan service to sign in, or says that the plan was refused", () => {
+    const auth = { clientId: "c", subject: "s", email: "", idToken: "", accessToken: "a", refreshToken: "r", expiresAt: 0, earliestRefreshAt: 0, scopes: [] };
+    expect(remedyFor(accessPoint({ type: "chatgpt", auth: null }), true)).toBe("sign-in");
+    expect(remedyFor(accessPoint({ type: "chatgpt", auth: { ...auth, refreshToken: "" } }), true)).toBe("sign-in");
+    expect(remedyFor(accessPoint({ type: "chatgpt", auth }), true)).toBe("plan-refused");
+    expect(remedyFor(accessPoint({ type: "chatgpt", auth }), false)).toBe("permission");
   });
 });
 

@@ -2,7 +2,12 @@
 // its host, and what to do when it needs attention.
 
 import { requiredOrigins } from "../ai/presets";
+import { remedyFor, signedIn } from "../core/problems";
+import type { Remedy } from "../core/problems";
 import type { AccessPoint } from "../core/types";
+
+export { signedIn };
+export type { Remedy };
 
 /** Host permission patterns and whether they are granted, as far as the page has asked. */
 const grants = new Map<string, boolean>();
@@ -30,20 +35,7 @@ export async function refreshGrants(points: readonly AccessPoint[]): Promise<boo
   return changed;
 }
 
-export function signedIn(point: AccessPoint): boolean {
-  return point.type === "chatgpt" && point.auth !== null && point.auth.refreshToken !== "";
-}
-
-/** Why a service needs attention, as the code of the sentence that says what to do about it. */
-export type Remedy = "sign-in" | "permission" | "key-missing" | "key-rejected" | "plan-refused";
-
+/** Why a service needs attention, as far as the page knows what this computer allows. */
 export function remedyOf(point: AccessPoint): Remedy {
-  if (point.type === "chatgpt") {
-    return signedIn(point) ? (hostGranted(point) ? "plan-refused" : "permission") : "sign-in";
-  }
-  if (!hostGranted(point)) {
-    return "permission";
-  }
-  // An imported service arrives without its key and is marked until the key is entered.
-  return point.apiKey === "" && point.lastError === "" ? "key-missing" : "key-rejected";
+  return remedyFor(point, hostGranted(point));
 }

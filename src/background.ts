@@ -16,28 +16,41 @@ import {
 } from "./ai/chatgptAuth";
 import type { PendingSignIn } from "./ai/chatgptAuth";
 import { isLoopbackHost, validateEndpoint } from "./ai/http";
-import { checkDefinition, checkImportedDefinition, KEY_REQUIRED_TYPES, newAccessPoint, normalizeDefinition } from "./ai/presets";
+import { checkDefinition, checkImportedDefinition, KEY_REQUIRED_TYPES, newAccessPoint, normalizeDefinition, requiredOrigins } from "./ai/presets";
 import { COMMANDS, isCommandName } from "./core/commands";
 import type { CommandName } from "./core/commands";
 import { errorText } from "./core/decision";
 import { applySettingsPatch, manualEntry } from "./core/edit";
 import { Engine } from "./core/engine";
-import type { CommandOutcome, LogActionUndo, ScanProgress } from "./core/engine";
+import type { CommandOutcome, CommandUndo, LogActionUndo, ScanProgress } from "./core/engine";
 import { applyImport, buildExport } from "./core/exportImport";
-import { KEY_ACCESS_POINTS } from "./core/keys";
+import { KEY_ACCESS_POINTS, KEY_ATTENTION_NOTIFIED, KEY_LAST_COMMAND, KEY_SETTINGS } from "./core/keys";
+import { whiteListIsOnlyIdentities } from "./core/lists";
 import { validateLogEntry } from "./core/log";
 import { isLogAction } from "./core/logAction";
 import { folderKey } from "./core/ports";
+import { findProblems, remedyFor, scanIsComplete } from "./core/problems";
 import { SerialQueue } from "./core/queue";
-import { asArray, asRecord, asString, validateEntry, ValidationError } from "./core/settings";
+import { asArray, asBoolean, asNumber, asRecord, asString, invalidSettings, isSettingName, validateEntry, ValidationError, withDefaults } from "./core/settings";
 import { AppState } from "./core/state";
 import type { AccessPoint, ChatGptAuth, FolderRef, MessageInfo } from "./core/types";
 import { BUNDLED_PUBLIC_DOMAINS } from "./data/publicDomains";
-import { t, tCode } from "./tb/i18n";
+import { t, tCode, tn } from "./tb/i18n";
 import { hold, withKeepAlive } from "./tb/keepAlive";
 import { collect, messagePages, messagesOfTab, ThunderbirdMail } from "./tb/mail";
 import { COMPANION_ID, KEY_PENDING_SIGN_IN } from "./tb/protocol";
-import type { Envelope, PageEvent, Reply, RequestName, Requests, SettingsTarget, Status } from "./tb/protocol";
+import type {
+  CommandRecord,
+  CommandSource,
+  Envelope,
+  PageEvent,
+  Reply,
+  RequestName,
+  Requests,
+  SettingsTarget,
+  Status,
+  StoredCommand,
+} from "./tb/protocol";
 import { BrowserStore } from "./tb/store";
 
 const TICK_ALARM = "tick";
@@ -62,6 +75,8 @@ const httpFetch = (url: string, init?: RequestInit): Promise<Response> => fetch(
 let app: App | null = null;
 /** Set when stored data failed validation: protection stays off and nothing is written. */
 let fatal: string | null = null;
+/** With invalid stored data: the settings that are all that is wrong, see Status.repair. */
+let repair: string[] | null = null;
 let scan: { progress: ScanProgress; cancelled: boolean } | null = null;
 let scoring = false;
 let signIn: StoredSignIn | null = null;
@@ -71,9 +86,28 @@ let signInTimer: ReturnType<typeof setTimeout> | null = null;
 
 let ready = start();
 
-async function start(): Promise<void> {
+/**
+ * The settings whose stored value is not valid, when everything else in storage is
+ * valid: with those settings at their defaults the data loads. Nothing is written.
+ */
+async function repairableSettings(raw: Record<string, unknown>): Promise<string[] | null> {
+  const names = invalidSettings(raw[KEY_SETTINGS]);
+  if (names === null || names.length === 0) {
+    return null;
+  }
   try {
-    const raw = await store.all();
+    const nowhere = { set: async () => undefined, remove: async () => undefined };
+    await AppState.load({ ...raw, [KEY_SETTINGS]: withDefaults(raw[KEY_SETTINGS], names, Date.now()) }, nowhere, BUNDLED_PUBLIC_DOMAINS, Date.now());
+    return names;
+  } catch {
+    return null;
+  }
+}
+
+async function start(): Promise<void> {
+  let raw: Record<string, unknown> | null = null;
+  try {
+    raw = await store.all();
     const state = await AppState.load(raw, store, BUNDLED_PUBLIC_DOMAINS, Date.now());
     const ai = createAi({
       fetch: httpFetch,
@@ -90,6 +124,7 @@ async function start(): Promise<void> {
     });
     app = { state, engine, ai };
     fatal = null;
+    repair = null;
     const pending = raw[KEY_PENDING_SIGN_IN] as StoredSignIn | undefined;
     signIn =
       pending !== undefined && typeof pending.startedAt === "number" && Date.now() - pending.startedAt < SIGN_IN_TIMEOUT_MS
@@ -103,8 +138,10 @@ async function start(): Promise<void> {
   } catch (error) {
     app = null;
     fatal = errorText(error);
+    repair = raw === null ? null : await repairableSettings(raw);
     console.error("Block Spam: stored data is not valid. Protection is off.", error);
   }
+  requestAttention("badge");
 }
 
 function need(): App {
@@ -136,6 +173,7 @@ function requestTick(startup = false): void {
         const sweep = sweepOnTick;
         sweepOnTick = false;
         await app.engine.tick({ sweep });
+        requestAttention("loud");
       }),
     "tick",
   );
@@ -175,11 +213,162 @@ browser.messages.onNewMailReceived.addListener((folder, list) => {
       }
       mail.resetCache();
       await app.engine.handleNewMail({ accountId, path: folder.path }, messagePages(list));
+      requestAttention("loud");
     }),
   );
 });
 
 void ensureAlarm().catch((error) => console.error("Block Spam: the alarm could not be created", error));
+
+// ---------------------------------------------------------------------------
+// Problems that change what happens to mail are visible without opening anything: a
+// badge on the toolbar button while protection is on and something is wrong, and one
+// desktop notification when an AI service first needs the user.
+
+const BADGE_COLOR = "#f5c542";
+const BADGE_TEXT_COLOR = "#15141a";
+const ATTENTION_NOTIFICATION = "attention:";
+
+/**
+ * - badge: only the badge is brought in line, when the background page starts.
+ * - silent: after a request of a page. A service that needs attention now is one the
+ *   user is looking at already: it is remembered as announced without a notification.
+ * - loud: after background work (a tick, new mail). A service that needs attention for
+ *   the first time is announced.
+ */
+type AttentionMode = "badge" | "silent" | "loud";
+const ATTENTION_ORDER: readonly AttentionMode[] = ["badge", "silent", "loud"];
+
+let attentionWanted: AttentionMode | null = null;
+let attentionRunning = false;
+
+/** Brings the badge in line with the problems, after anything that can change them. */
+function requestAttention(mode: AttentionMode): void {
+  if (attentionWanted === null || ATTENTION_ORDER.indexOf(mode) > ATTENTION_ORDER.indexOf(attentionWanted)) {
+    attentionWanted = mode;
+  }
+  if (attentionRunning) {
+    return;
+  }
+  attentionRunning = true;
+  void (async () => {
+    try {
+      while (attentionWanted !== null) {
+        const wanted = attentionWanted;
+        attentionWanted = null;
+        await updateAttention(wanted);
+      }
+    } catch (error) {
+      console.warn("Block Spam: the toolbar button could not be updated", error);
+    } finally {
+      attentionRunning = false;
+    }
+  })();
+}
+
+async function showBadge(title: string | null): Promise<void> {
+  await browser.action.setBadgeText({ text: title === null ? "" : "!" });
+  if (title !== null) {
+    await browser.action.setBadgeBackgroundColor({ color: BADGE_COLOR });
+    await browser.action.setBadgeTextColor({ color: BADGE_TEXT_COLOR });
+  }
+  await browser.action.setTitle({ title });
+}
+
+async function hostGranted(point: AccessPoint): Promise<boolean> {
+  const origins = requiredOrigins(point) ?? [];
+  try {
+    return origins.length === 0 || (await browser.permissions.contains({ origins }));
+  } catch {
+    return true;
+  }
+}
+
+async function updateAttention(mode: AttentionMode): Promise<void> {
+  if (app === null) {
+    await showBadge(fatal === null ? null : t("badgeDataProblem"));
+    return;
+  }
+  const { state } = app;
+  const settings = state.settings;
+  let count = 0;
+  if (settings.protection) {
+    const [accounts, inboxes, junk] = await Promise.all([mail.accounts(), mail.specialFolders("inbox"), mail.specialFolders("junk")]);
+    count = findProblems({
+      settings,
+      accessPoints: state.accessPoints,
+      accounts: accounts.map((account) => ({
+        id: account.id,
+        inboxes: inboxes.filter((folder) => folder.accountId === account.id),
+        hasJunk: junk.some((folder) => folder.accountId === account.id),
+      })),
+      onlyOwnAddresses: whiteListIsOnlyIdentities(state.entries) && !scanIsComplete(scan?.progress ?? null),
+      now: Date.now(),
+    }).length;
+  }
+  await showBadge(count === 0 ? null : tn("badgeProblems", count));
+  if (mode === "badge") {
+    return;
+  }
+  const loud = mode === "loud";
+
+  // One notification per service, not repeated until the service has worked again.
+  const stored = (await browser.storage.local.get(KEY_ATTENTION_NOTIFIED))[KEY_ATTENTION_NOTIFIED];
+  const notified = new Set(Array.isArray(stored) ? stored.filter((id): id is string => typeof id === "string") : []);
+  const needing = state.accessPoints.filter((point) => point.enabled && point.needsAttention);
+  let changed = false;
+  for (const id of [...notified]) {
+    if (!needing.some((point) => point.id === id)) {
+      notified.delete(id);
+      changed = true;
+    }
+  }
+  for (const point of needing) {
+    if (notified.has(point.id) || (loud && !settings.protection)) {
+      continue;
+    }
+    notified.add(point.id);
+    changed = true;
+    if (loud) {
+      await browser.notifications
+        .create(`${ATTENTION_NOTIFICATION}${point.id}`, {
+          type: "basic",
+          title: t("extensionName"),
+          message: `${t("warnNeedsAttention", point.name)} ${tCode("remedy", remedyFor(point, await hostGranted(point)))}`,
+          iconUrl: browser.runtime.getURL("icons/icon.svg"),
+        })
+        .catch((error: unknown) => console.warn("Block Spam: the notification could not be shown", error));
+    }
+  }
+  if (changed) {
+    await store.set({ [KEY_ATTENTION_NOTIFIED]: [...notified] });
+  }
+}
+
+/** Brings the settings page to the front, or opens it, showing what the target names. */
+async function openSettingsAt(target: SettingsTarget): Promise<void> {
+  settingsTarget = { target, at: Date.now() };
+  const event: PageEvent = { blockSpamEvent: "show", target };
+  void browser.runtime.sendMessage(event).catch(() => undefined);
+  const address = browser.runtime.getURL("options/options.html");
+  const open = (await browser.tabs.query({})).find((tab) => tab.url?.startsWith(address) === true);
+  if (open?.id === undefined) {
+    await browser.runtime.openOptionsPage();
+    return;
+  }
+  // Opening the page again would load it anew, and text typed into it would be lost.
+  await browser.tabs.update(open.id, { active: true });
+  if (open.windowId !== undefined) {
+    await browser.windows.update(open.windowId, { focused: true });
+  }
+}
+
+// A click on the notification about a service leads to the warning with its fix.
+browser.notifications.onClicked.addListener((id) => {
+  if (id.startsWith(ATTENTION_NOTIFICATION)) {
+    void openSettingsAt({ pane: "overview", logKey: null }).catch((error: unknown) => console.warn("Block Spam: the settings could not be opened", error));
+  }
+});
 
 // ---------------------------------------------------------------------------
 // Live send: teaches the recipients immediately.
@@ -256,13 +445,58 @@ function commandLines(outcome: CommandOutcome): string[] {
   return lines;
 }
 
-async function notifyCommand(outcome: CommandOutcome): Promise<void> {
+async function notifyCommand(record: CommandRecord): Promise<void> {
+  // The notification cannot carry a button on every platform: it says where Undo is.
+  const lines = record.undoable ? [...record.lines, t("notifyUndoHint")] : record.lines;
   await browser.notifications.create({
     type: "basic",
     title: t("extensionName"),
-    message: commandLines(outcome).join("\n"),
+    message: lines.join("\n"),
     iconUrl: browser.runtime.getURL("icons/icon.svg"),
   });
+}
+
+function asCommandUndo(value: unknown): CommandUndo {
+  const record = asRecord(value, "undo");
+  return {
+    remove: asArray(record.remove, "undo.remove", asString),
+    restore: asArray(record.restore, "undo.restore", validateEntry),
+    moves: asArray(record.moves, "undo.moves", (item, path) => {
+      const move = asRecord(item, path);
+      return {
+        accountId: asString(move.accountId, `${path}.accountId`),
+        messageId: asString(move.messageId, `${path}.messageId`),
+        from: asFolderRef(move.from, `${path}.from`),
+        to: asFolderRef(move.to, `${path}.to`),
+      };
+    }),
+  };
+}
+
+/** The last command as stored. Null when there is none, or when what is stored is not one. */
+async function storedCommand(): Promise<StoredCommand | null> {
+  const raw = (await browser.storage.local.get(KEY_LAST_COMMAND))[KEY_LAST_COMMAND];
+  if (raw === undefined) {
+    return null;
+  }
+  try {
+    const record = asRecord(raw, "lastCommand");
+    return {
+      id: asString(record.id, "lastCommand.id"),
+      time: asNumber(record.time, "lastCommand.time"),
+      source: asString(record.source, "lastCommand.source") as CommandSource,
+      lines: asArray(record.lines, "lastCommand.lines", asString),
+      failed: asBoolean(record.failed, "lastCommand.failed"),
+      undoable: true,
+      undo: asCommandUndo(record.undo),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function publicRecord(command: StoredCommand): CommandRecord {
+  return { id: command.id, time: command.time, source: command.source, lines: command.lines, failed: command.failed, undoable: command.undoable };
 }
 
 /** Runs a command on the given messages. Null when there is nothing to act on. */
@@ -276,17 +510,44 @@ async function executeCommand(command: CommandName, messages: MessageInfo[]): Pr
   return withKeepAlive(() => engine.runCommand(command, messages));
 }
 
-/** A command from a shortcut, the context menu or the companion: a desktop notification confirms it. */
-async function runCommand(command: CommandName, messages: MessageInfo[]): Promise<void> {
+/**
+ * Runs a command and keeps what is needed to take it back: the popup offers Undo for
+ * the last command that changed something, until it is undone, dismissed or replaced.
+ * A command that changed nothing leaves the one before it in place.
+ */
+async function recordCommand(command: CommandName, messages: MessageInfo[], source: CommandSource): Promise<CommandRecord | null> {
   const outcome = await executeCommand(command, messages);
-  if (outcome !== null) {
-    await notifyCommand(outcome);
+  if (outcome === null) {
+    return null;
+  }
+  const { undo } = outcome;
+  const record: CommandRecord = {
+    id: crypto.randomUUID(),
+    time: Date.now(),
+    source,
+    lines: commandLines(outcome),
+    failed: outcome.failures.length > 0,
+    undoable: undo.remove.length > 0 || undo.restore.length > 0 || undo.moves.length > 0,
+  };
+  if (record.undoable) {
+    const stored: StoredCommand = { ...record, undo };
+    await store.set({ [KEY_LAST_COMMAND]: stored });
+  }
+  requestAttention("silent");
+  return record;
+}
+
+/** A command from a shortcut, the context menu or the companion: a desktop notification confirms it. */
+async function runCommand(command: CommandName, messages: MessageInfo[], source: CommandSource): Promise<void> {
+  const record = await recordCommand(command, messages, source);
+  if (record !== null) {
+    await notifyCommand(record);
   }
 }
 
 browser.commands.onCommand.addListener((command, tab) => {
   if (isCommandName(command)) {
-    void (async () => runCommand(command, await messagesOfTab(tab)))().catch((error) =>
+    void (async () => runCommand(command, await messagesOfTab(tab), "shortcut"))().catch((error) =>
       console.error("Block Spam: the shortcut failed", error),
     );
   }
@@ -331,7 +592,7 @@ browser.menus.onClicked.addListener((info) => {
   if (!isCommandName(command) || selected === undefined) {
     return;
   }
-  void (async () => runCommand(command, await collect(selected)))().catch((error) =>
+  void (async () => runCommand(command, await collect(selected), "menu"))().catch((error) =>
     console.error("Block Spam: the menu command failed", error),
   );
 });
@@ -344,7 +605,7 @@ browser.runtime.onMessageExternal.addListener((message, sender) => {
   }
   return (async () => {
     const [tab] = await browser.tabs.query({ active: true, lastFocusedWindow: true });
-    await runCommand(command, await messagesOfTab(tab));
+    await runCommand(command, await messagesOfTab(tab), "keys");
     return { ok: true };
   })();
 });
@@ -558,6 +819,7 @@ const handlers: Handlers = {
   async getStatus(): Promise<Status> {
     return {
       fatal,
+      repair,
       scan: scan?.progress ?? null,
       signIn: {
         url: signIn?.url ?? null,
@@ -652,7 +914,7 @@ const handlers: Handlers = {
     }
     const current = {
       cancelled: false,
-      progress: { running: true, cancelled: false, folderIndex: 0, folderCount: 0, folder: null, scanned: 0, added: 0, errors: [] } as ScanProgress,
+      progress: { running: true, cancelled: false, folderIndex: 0, folderCount: 0, folder: null, scanned: 0, added: 0, errors: [], total: null } as ScanProgress,
     };
     scan = current;
     mail.resetCache();
@@ -668,6 +930,8 @@ const handlers: Handlers = {
       } catch (error) {
         current.progress = { ...current.progress, running: false, errors: [...current.progress.errors, errorText(error)] };
       }
+      // A scan that ran to its end ends the warning about AI before the first scan.
+      requestAttention("silent");
     });
     return null;
   },
@@ -952,11 +1216,67 @@ const handlers: Handlers = {
     if (!isCommandName(command)) {
       throw new ValidationError("command: expected one of the four commands");
     }
-    const outcome = await executeCommand(command, await messagesOfTab(await browser.tabs.get(tabId)));
-    if (outcome === null) {
-      return { lines: [t("popupNothingSelected")], failed: true };
+    const record = await recordCommand(command, await messagesOfTab(await browser.tabs.get(tabId)), "popup");
+    return record ?? { id: "", time: Date.now(), source: "popup", lines: [t("popupNothingSelected")], failed: true, undoable: false };
+  },
+
+  async lastCommand() {
+    const stored = await storedCommand();
+    return { command: stored === null ? null : publicRecord(stored) };
+  },
+
+  async undoCommand({ id }) {
+    const { engine } = need();
+    const stored = await storedCommand();
+    if (stored === null || stored.id !== id) {
+      // Another command was made since, or this one was taken back already.
+      throw new ValidationError("undo: this command is not the last one any more", "undo-gone");
     }
-    return { lines: commandLines(outcome), failed: outcome.failures.length > 0 };
+    await store.remove([KEY_LAST_COMMAND]);
+    mail.resetCache();
+    const outcome = await withKeepAlive(() => engine.undoCommand(stored.undo));
+    const lines = [t("commandUndone")];
+    if (outcome.moved > 0) {
+      lines.push(t("commandUndoMoved", outcome.moved));
+    }
+    if (outcome.notFound > 0) {
+      lines.push(t("commandUndoNotFound", outcome.notFound));
+    }
+    const failure = outcome.failures[0];
+    if (failure !== undefined) {
+      lines.push(t("notifyMoveFailed", failure));
+    }
+    return { lines, failed: failure !== undefined };
+  },
+
+  async dismissCommand({ id }) {
+    const stored = await storedCommand();
+    if (stored !== null && stored.id === id) {
+      await store.remove([KEY_LAST_COMMAND]);
+    }
+    return null;
+  },
+
+  async showMessage({ accountId, messageId }) {
+    const { engine } = need();
+    const found = await engine.findMessage(asString(accountId, "accountId"), asString(messageId, "messageId"));
+    if (found === null) {
+      return { found: false };
+    }
+    await browser.messageDisplay.open({ messageId: found.id, location: "tab", active: true });
+    return { found: true };
+  },
+
+  async repairSetting({ name }) {
+    if (fatal === null || repair === null || !isSettingName(name) || !repair.includes(name)) {
+      throw new ValidationError("name: not a setting that can be set back on its own");
+    }
+    const raw = await store.all();
+    await store.set({ [KEY_SETTINGS]: withDefaults(raw[KEY_SETTINGS], [name], Date.now()) });
+    ready = start();
+    await ready;
+    requestTick();
+    return null;
   },
 
   async scoreSelected({ tabId }) {
@@ -1006,7 +1326,10 @@ const handlers: Handlers = {
 };
 
 /** Requests that still work when stored data is invalid. */
-const ALWAYS_ALLOWED: readonly RequestName[] = ["getStatus", "resetData"];
+const ALWAYS_ALLOWED: readonly RequestName[] = ["getStatus", "resetData", "repairSetting"];
+
+/** Requests that only read: nothing they do can change what the toolbar button has to show. */
+const READ_ONLY: readonly RequestName[] = ["getStatus", "selection", "lastCommand", "takeSettingsTarget", "showInSettings", "showMessage", "listModels", "listModelsFor"];
 
 function isEnvelope(message: unknown): message is Envelope {
   return (
@@ -1032,7 +1355,11 @@ browser.runtime.onMessage.addListener((message, sender) => {
         throw new Error(fatal);
       }
       const handler = handlers[message.blockSpam] as (args: unknown, sender: tb.MessageSender) => Promise<unknown>;
-      return { ok: true, result: await handler(message.args ?? {}, sender) };
+      const result = await handler(message.args ?? {}, sender);
+      if (!READ_ONLY.includes(message.blockSpam)) {
+        requestAttention("silent");
+      }
+      return { ok: true, result };
     } catch (error) {
       const code = error instanceof ValidationError ? error.code : "";
       return code === "" ? { ok: false, error: errorText(error) } : { ok: false, error: errorText(error), code };

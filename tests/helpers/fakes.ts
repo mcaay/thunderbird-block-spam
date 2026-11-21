@@ -157,6 +157,13 @@ export class FakeMail implements MailPort {
     return this.pages([...this.folder(folder).messages]);
   }
 
+  /** Set to false for a server that does not say how many messages a folder holds. */
+  countsKnown = true;
+
+  async messageCount(folder: FolderRef): Promise<number | null> {
+    return this.countsKnown ? this.folder(folder).messages.length : null;
+  }
+
   async parseAddresses(raw: string): Promise<string[]> {
     this.parseCalls += 1;
     return fakeParseAddresses(raw);

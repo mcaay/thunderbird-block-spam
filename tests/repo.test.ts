@@ -68,7 +68,7 @@ describe("strings", () => {
     source: ["identity", "sent", "scan", "ai", "manual"],
     problem: ["name-missing", "endpoint-invalid", "endpoint-insecure", "endpoint-placeholder", "model-missing", "key-missing"],
     // Mistakes a user can make: the codes of ValidationError that the pages translate.
-    invalid: ["entry-invalid", "address-invalid", "account-unknown", "cutoff-range", "prompt-empty", "own-address", "no-sender", "import-invalid"],
+    invalid: ["entry-invalid", "address-invalid", "account-unknown", "cutoff-range", "prompt-empty", "own-address", "no-sender", "import-invalid", "undo-gone"],
     remedy: ["sign-in", "permission", "key-missing", "key-rejected", "plan-refused"],
     endpointHint: ["systemone", "openai-chat"],
     modelHint: ACCESS_POINT_TYPES,

@@ -137,6 +137,9 @@
   "invalid_import_invalid": {
     "message": "This file is not a valid Block Spam export."
   },
+  "invalid_undo_gone": {
+    "message": "This command can no longer be undone here: another one was made since."
+  },
   "catOverview": {
     "message": "Overview"
   },
@@ -1636,5 +1639,29 @@
   },
   "notifyNoInbox": {
     "message": "The account has no Inbox folder"
+  },
+  "notifyUndoHint": {
+    "message": "To undo, click the Block Spam button in the toolbar."
+  },
+  "commandUndone": {
+    "message": "Undone. The lists are as they were before."
+  },
+  "commandUndoMoved": {
+    "message": "Moved back: $1"
+  },
+  "commandUndoNotFound": {
+    "message": "No longer found, so not moved back: $1"
+  },
+  "badgeProblems_one": {
+    "message": "Block Spam: $1 problem"
+  },
+  "badgeProblems_few": {
+    "message": "Block Spam: $1 problems"
+  },
+  "badgeProblems_many": {
+    "message": "Block Spam: $1 problems"
+  },
+  "badgeDataProblem": {
+    "message": "Block Spam: stored data is not valid"
   }
 }

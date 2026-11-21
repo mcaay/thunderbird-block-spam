@@ -135,6 +135,7 @@ declare namespace tb {
     };
     folders: {
       query(queryInfo?: { accountId?: string; specialUse?: string[] }): Promise<MailFolder[]>;
+      getFolderInfo(folderId: string): Promise<{ totalMessageCount?: number; unreadMessageCount?: number }>;
       /** Needs the optional accountsFolders permission. */
       create?(folderId: string, childName: string): Promise<MailFolder>;
     };
@@ -165,6 +166,15 @@ declare namespace tb {
     };
     messageDisplay: {
       getDisplayedMessages(tabId?: number): Promise<MessageList>;
+      /** Opens a message in a new tab or window. */
+      open(properties: { messageId: number; location?: "tab" | "window"; active?: boolean }): Promise<Tab>;
+    };
+    /** The toolbar button. */
+    action: {
+      setBadgeText(details: { text: string | null }): Promise<void>;
+      setBadgeBackgroundColor(details: { color: string | null }): Promise<void>;
+      setBadgeTextColor(details: { color: string | null }): Promise<void>;
+      setTitle(details: { title: string | null }): Promise<void>;
     };
     compose: {
       onAfterSend: WebExtEvent<(tab: Tab, sendInfo: SendInfo) => void>;
@@ -178,7 +188,7 @@ declare namespace tb {
     };
     tabs: {
       create(properties: { url: string; windowId?: number; active?: boolean; linkHandler?: string }): Promise<Tab>;
-      query(queryInfo: { active?: boolean; currentWindow?: boolean; lastFocusedWindow?: boolean }): Promise<Tab[]>;
+      query(queryInfo: { active?: boolean; currentWindow?: boolean; lastFocusedWindow?: boolean; url?: string }): Promise<Tab[]>;
       get(tabId: number): Promise<Tab>;
       update(tabId: number, properties: { active?: boolean }): Promise<Tab>;
       remove(tabIds: number | number[]): Promise<void>;
@@ -208,6 +218,8 @@ declare namespace tb {
     };
     notifications: {
       create(options: { type: "basic"; title: string; message: string; iconUrl?: string }): Promise<string>;
+      create(id: string, options: { type: "basic"; title: string; message: string; iconUrl?: string }): Promise<string>;
+      onClicked: WebExtEvent<(notificationId: string) => void>;
     };
     permissions: {
       request(permissions: PermissionSet): Promise<boolean>;

@@ -133,44 +133,93 @@ export function validatePrompt(value: unknown, path = "prompt"): string {
   return prompt.trim() !== "" ? prompt : fail(path, "a prompt that is not empty", "prompt-empty");
 }
 
+function validateSchemaVersion(value: unknown, path: string): number {
+  const schemaVersion = asNumber(value, path);
+  if (schemaVersion !== SCHEMA_VERSION) {
+    throw new ValidationError(`${path}: found ${schemaVersion}, this version of the add-on understands ${SCHEMA_VERSION}`);
+  }
+  return schemaVersion;
+}
+
+function validateScreeningFolders(value: unknown, path: string): FolderRef[] {
+  const screeningFolders = asArray(value, path, asFolderRef);
+  if (new Set(screeningFolders.map((folder) => folder.accountId)).size !== screeningFolders.length) {
+    fail(path, "at most one folder per account");
+  }
+  return screeningFolders;
+}
+
+/** One check per setting, so that a stored value that is not valid can be named, and repaired, on its own. */
+const SETTINGS_FIELDS: { [Name in keyof Settings]: (value: unknown, path: string) => Settings[Name] } = {
+  schemaVersion: validateSchemaVersion,
+  installedAt: asNumber,
+  protection: asBoolean,
+  protectionOnAt: (value, path) => (value === null ? null : asNumber(value, path)),
+  observation: asBoolean,
+  newEntryScope: (value, path) => asOneOf<NewEntryScope>(value, ["shared", "account"], path),
+  noVerdictAction: (value, path) => asOneOf<NoVerdictAction>(value, ["leave", "junk", "screening"], path),
+  smart: asBoolean,
+  cutoff: validateCutoff,
+  prompt: validatePrompt,
+  publicDomainsAdded: (value, path) => asArray(value, path, asString),
+  publicDomainsRemoved: (value, path) => asArray(value, path, asString),
+  forwardingMailboxes: (value, path) => asArray(value, path, asString),
+  forwardLabels: (value, path) => asArray(value, path, asString),
+  sentFoldersAdded: (value, path) => asArray(value, path, asFolderRef),
+  sentFoldersRemoved: (value, path) => asArray(value, path, asFolderRef),
+  monitoredFoldersAdded: (value, path) => asArray(value, path, asFolderRef),
+  screeningFolders: validateScreeningFolders,
+  chatgptWelcomeShown: asBoolean,
+};
+
+export type SettingName = keyof Settings;
+
+export const SETTING_NAMES = Object.keys(SETTINGS_FIELDS) as SettingName[];
+
+export function isSettingName(value: unknown): value is SettingName {
+  return typeof value === "string" && (SETTING_NAMES as string[]).includes(value);
+}
+
 export function validateSettings(value: unknown): Settings {
   const record = asRecord(value, "settings");
-  const schemaVersion = asNumber(record.schemaVersion, "settings.schemaVersion");
-  if (schemaVersion !== SCHEMA_VERSION) {
-    throw new ValidationError(
-      `settings.schemaVersion: found ${schemaVersion}, this version of the add-on understands ${SCHEMA_VERSION}`,
-    );
+  const settings: Partial<Record<SettingName, unknown>> = {};
+  for (const name of SETTING_NAMES) {
+    settings[name] = SETTINGS_FIELDS[name](record[name], `settings.${name}`);
   }
-  const screeningFolders = asArray(record.screeningFolders, "settings.screeningFolders", asFolderRef);
-  if (new Set(screeningFolders.map((folder) => folder.accountId)).size !== screeningFolders.length) {
-    fail("settings.screeningFolders", "at most one folder per account");
+  return settings as unknown as Settings;
+}
+
+/**
+ * The settings whose stored value is not valid, when each of them can be set back to
+ * its default on its own. Null when the stored settings are not a record at all or
+ * come from another version of the add-on: then no single setting can be named.
+ */
+export function invalidSettings(value: unknown): SettingName[] | null {
+  if (!isRecord(value)) {
+    return null;
   }
-  return {
-    schemaVersion,
-    installedAt: asNumber(record.installedAt, "settings.installedAt"),
-    protection: asBoolean(record.protection, "settings.protection"),
-    protectionOnAt:
-      record.protectionOnAt === null ? null : asNumber(record.protectionOnAt, "settings.protectionOnAt"),
-    observation: asBoolean(record.observation, "settings.observation"),
-    newEntryScope: asOneOf<NewEntryScope>(record.newEntryScope, ["shared", "account"], "settings.newEntryScope"),
-    noVerdictAction: asOneOf<NoVerdictAction>(
-      record.noVerdictAction,
-      ["leave", "junk", "screening"],
-      "settings.noVerdictAction",
-    ),
-    smart: asBoolean(record.smart, "settings.smart"),
-    cutoff: validateCutoff(record.cutoff, "settings.cutoff"),
-    prompt: validatePrompt(record.prompt, "settings.prompt"),
-    publicDomainsAdded: asArray(record.publicDomainsAdded, "settings.publicDomainsAdded", asString),
-    publicDomainsRemoved: asArray(record.publicDomainsRemoved, "settings.publicDomainsRemoved", asString),
-    forwardingMailboxes: asArray(record.forwardingMailboxes, "settings.forwardingMailboxes", asString),
-    forwardLabels: asArray(record.forwardLabels, "settings.forwardLabels", asString),
-    sentFoldersAdded: asArray(record.sentFoldersAdded, "settings.sentFoldersAdded", asFolderRef),
-    sentFoldersRemoved: asArray(record.sentFoldersRemoved, "settings.sentFoldersRemoved", asFolderRef),
-    monitoredFoldersAdded: asArray(record.monitoredFoldersAdded, "settings.monitoredFoldersAdded", asFolderRef),
-    screeningFolders,
-    chatgptWelcomeShown: asBoolean(record.chatgptWelcomeShown, "settings.chatgptWelcomeShown"),
-  };
+  const invalid: SettingName[] = [];
+  for (const name of SETTING_NAMES) {
+    try {
+      SETTINGS_FIELDS[name](value[name], `settings.${name}`);
+    } catch {
+      if (name === "schemaVersion") {
+        return null;
+      }
+      invalid.push(name);
+    }
+  }
+  return invalid;
+}
+
+/** The stored settings with the named ones set back to their defaults. The others are left as they are. */
+export function withDefaults(value: unknown, names: readonly SettingName[], now: number): Record<string, unknown> {
+  const defaults = defaultSettings(now) as unknown as Record<string, unknown>;
+  const repaired: Record<string, unknown> = { ...asRecord(value, "settings") };
+  for (const name of names) {
+    repaired[name] = defaults[name];
+  }
+  return repaired;
 }
 
 export function validateEntry(value: unknown, path: string): Entry {

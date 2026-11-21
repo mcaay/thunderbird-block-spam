@@ -137,6 +137,9 @@
   "invalid_import_invalid": {
     "message": "Ten plik nie jest prawidłowym eksportem Block Spam."
   },
+  "invalid_undo_gone": {
+    "message": "Tego polecenia nie można już tutaj cofnąć: od tego czasu wykonano inne."
+  },
   "catOverview": {
     "message": "Przegląd"
   },
@@ -1636,5 +1639,29 @@
   },
   "notifyNoInbox": {
     "message": "Konto nie ma folderu Odebrane"
+  },
+  "notifyUndoHint": {
+    "message": "Aby cofnąć, kliknij przycisk Block Spam na pasku narzędzi."
+  },
+  "commandUndone": {
+    "message": "Cofnięto. Listy są takie jak przedtem."
+  },
+  "commandUndoMoved": {
+    "message": "Przeniesiono z powrotem: $1"
+  },
+  "commandUndoNotFound": {
+    "message": "Nie znaleziono, więc nie przeniesiono z powrotem: $1"
+  },
+  "badgeProblems_one": {
+    "message": "Block Spam: $1 problem"
+  },
+  "badgeProblems_few": {
+    "message": "Block Spam: $1 problemy"
+  },
+  "badgeProblems_many": {
+    "message": "Block Spam: $1 problemów"
+  },
+  "badgeDataProblem": {
+    "message": "Block Spam: zapisane dane są nieprawidłowe"
   }
 }

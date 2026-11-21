@@ -3,6 +3,7 @@
 // Raw HTTP on purpose: the add-on has one runtime dependency (tldts) and bundles no
 // SDK. The request is the documented Messages API shape.
 
+import { DIAGNOSTICS } from "../core/diagnostics";
 import { AccessPointError } from "../core/chain";
 import { llmInstructions, parseLlmScore } from "../core/score";
 import type { AccessPoint } from "../core/types";
@@ -46,10 +47,10 @@ export async function scoreAnthropic(
   const body = response.body as { stop_reason?: unknown; content?: unknown } | null;
   // Always check the stop reason before reading the content.
   if (body?.stop_reason === "refusal") {
-    throw new AccessPointError("transient", "the model refused to answer");
+    throw new AccessPointError("transient", DIAGNOSTICS.refused);
   }
   if (body?.stop_reason === "max_tokens") {
-    throw new AccessPointError("transient", "the answer was cut off");
+    throw new AccessPointError("transient", DIAGNOSTICS.cutOff);
   }
   const blocks = Array.isArray(body?.content) ? body.content : [];
   const text = blocks
@@ -61,7 +62,7 @@ export async function scoreAnthropic(
     .join("");
   const score = parseLlmScore(text);
   if (score === null) {
-    throw new AccessPointError("transient", "the answer is not a number from 0.00 to 1.00");
+    throw new AccessPointError("transient", DIAGNOSTICS.notNumber);
   }
   return score;
 }

@@ -1,5 +1,6 @@
 // OpenAI Decisions API (gpt-6-luna): one predicate question named "spam".
 
+import { DIAGNOSTICS } from "../core/diagnostics";
 import { AccessPointError } from "../core/chain";
 import { parseProbability } from "../core/score";
 import type { AccessPoint } from "../core/types";
@@ -31,14 +32,14 @@ export async function scoreOpenAiDecisions(
   const answers = (response.body as { answers?: unknown } | null)?.answers;
   const answer = Array.isArray(answers) ? (answers[0] as Record<string, unknown> | undefined) : undefined;
   if (typeof answer !== "object" || answer === null) {
-    throw new AccessPointError("transient", "the answer is missing");
+    throw new AccessPointError("transient", DIAGNOSTICS.answerMissing);
   }
   if (answer.type === "refusal") {
-    throw new AccessPointError("transient", "the model refused to answer");
+    throw new AccessPointError("transient", DIAGNOSTICS.refused);
   }
   const score = parseProbability(answer.probability);
   if (score === null) {
-    throw new AccessPointError("transient", "the answer is not a probability");
+    throw new AccessPointError("transient", DIAGNOSTICS.notProbability);
   }
   return score;
 }

@@ -1,6 +1,7 @@
 // HTTP helpers shared by the access point adapters: timeout, error classification
 // and messages that never contain secrets.
 
+import { DIAGNOSTICS, httpDiagnostic, networkDiagnostic, timeoutDiagnostic } from "../core/diagnostics";
 import { AccessPointError, MAX_COOLDOWN_MS, REQUEST_TIMEOUT_MS } from "../core/chain";
 
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
@@ -106,7 +107,7 @@ export function statusError(
   secrets: readonly string[] = [],
 ): AccessPointError {
   const text = safeMessage(errorMessageFromBody(body), secrets);
-  const message = text === "" ? `HTTP ${status}` : `HTTP ${status}: ${text}`;
+  const message = httpDiagnostic(status, text);
   if (status === 401 || status === 403) {
     return new AccessPointError("auth", message);
   }
@@ -144,7 +145,7 @@ export async function readText(response: Response, limit: number = RESPONSE_LIMI
       }
       size += value.byteLength;
       if (size > limit) {
-        throw new AccessPointError("transient", "the answer is too large");
+        throw new AccessPointError("transient", DIAGNOSTICS.tooLarge);
       }
       text += decoder.decode(value, { stream: true });
     }
@@ -194,9 +195,9 @@ export async function withTimeout<T>(timeoutMs: number, run: (signal: AbortSigna
       throw error;
     }
     if (controller.signal.aborted) {
-      throw new AccessPointError("transient", `no answer within ${Math.round(timeoutMs / 1000)} seconds`);
+      throw new AccessPointError("transient", timeoutDiagnostic(Math.round(timeoutMs / 1000)));
     }
-    throw new AccessPointError("transient", `network error: ${error instanceof Error ? error.message : String(error)}`);
+    throw new AccessPointError("transient", networkDiagnostic(error instanceof Error ? error.message : String(error)));
   } finally {
     clearTimeout(timer);
   }
