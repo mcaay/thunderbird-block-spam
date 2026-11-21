@@ -126,6 +126,8 @@ export interface SignInStatus {
   error: string;
   /** The redirect could be captured automatically (the webRequest permission is present). */
   capture: boolean;
+  /** The service the attempt signs in again, or null when it adds a new one. */
+  accessPointId: string | null;
 }
 
 export interface Status {

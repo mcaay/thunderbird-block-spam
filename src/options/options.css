@@ -6,6 +6,12 @@
 body {
   display: flex;
   align-items: flex-start;
+  /* The column of the category list is painted on the page itself, so that it has no end however long a pane is. */
+  background-image: linear-gradient(to right, var(--soft) 218px, transparent 218px);
+}
+
+body:dir(rtl) {
+  background-image: linear-gradient(to left, var(--soft) 218px, transparent 218px);
 }
 
 /* The category list. */
@@ -383,6 +389,11 @@ h2 > .state {
 
 .screening-row {
   display: contents;
+}
+
+/* Every account starts a line of its own, also while the status at the end of the line before is hidden. */
+.screening-row > label {
+  grid-column: 1;
 }
 
 /* Forms. */
@@ -793,19 +804,27 @@ table.log tr:focus-visible {
   background-color: var(--soft);
 }
 
-.sign-in:empty {
-  display: none;
+/* A sign-in in progress is part of the row it belongs to, like the editor. */
+.sign-in {
+  margin: 0 0 2px 46px;
+  padding-top: 6px;
 }
 
-.sign-in {
-  margin: 10px 0;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 3px;
+.service.signing-in .sign-in {
+  margin-inline-start: 0;
+  padding-top: 0;
 }
 
 .sign-in h3 {
   margin-top: 0;
+}
+
+.sign-in .row:last-child {
+  margin-bottom: 0;
+}
+
+.sign-in-failed:empty {
+  display: none;
 }
 
 .ways {
@@ -884,8 +903,10 @@ dialog.modal p {
 /* Narrow windows: the categories become one row that stays at the top. */
 
 @media (max-width: 759px) {
-  body {
+  body,
+  body:dir(rtl) {
     display: block;
+    background-image: none;
   }
 
   #categories {

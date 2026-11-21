@@ -98,7 +98,9 @@ export function aiSection(shell: Shell): Section {
   );
   const presetHint = h("div", { class: "description", id: "preset-hint" });
   presetSelect.setAttribute("aria-describedby", "preset-hint");
+  /** The sign-in in progress. It is shown as part of the services list: in the row it signs in again, or as a new row. */
   const signInPanel = h("div", { class: "sign-in" });
+  const signInFailed = h("div", { class: "sign-in-failed" });
 
   const cutoff = h("input", {
     type: "number",
@@ -164,7 +166,7 @@ export function aiSection(shell: Shell): Section {
       }),
     ),
     presetHint,
-    signInPanel,
+    signInFailed,
     h("h2", { text: t("cutoffTitle") }),
     h("div", { class: "row" }, h("label", { for: "cutoff", text: t("cutoffLabel") }), cutoff, cutoffStatus.element),
     cutoffError.element,
@@ -281,13 +283,12 @@ export function aiSection(shell: Shell): Section {
       return;
     }
     signInDrawn = signature;
-    if (signIn === undefined || (signIn.url === null && signIn.error === "")) {
+    replace(
+      signInFailed,
+      signIn === undefined || signIn.error === "" ? null : h("p", { class: "field-error", text: t("signInFailed", signIn.error), attrs: { role: "alert" } }),
+    );
+    if (signIn === undefined || signIn.url === null) {
       replace(signInPanel);
-      return;
-    }
-    const failed = signIn.error === "" ? null : h("p", { class: "field-error", text: t("signInFailed", signIn.error), attrs: { role: "alert" } });
-    if (signIn.url === null) {
-      replace(signInPanel, failed);
       return;
     }
     const url = signIn.url;
@@ -321,7 +322,6 @@ export function aiSection(shell: Shell): Section {
         button(t("signInFinish"), () => void guard(() => send("finishSignIn", { url: pasted.value }))),
         button(t("cancel"), () => void guard(() => send("cancelSignIn", {}))),
       ),
-      failed,
     );
   }
 
@@ -654,7 +654,9 @@ export function aiSection(shell: Shell): Section {
       lines.push(h("div", { class: "service-state paused", text: t("apCoolingDown", formatLogTime(point.cooldownUntil, now)) }));
     }
     if (point.lastError !== "") {
-      lines.push(h("div", { class: "service-state detail", text: t("apLastError", point.lastError) }));
+      // A failure that neither paused the service nor needs the user: say that it simply is tried again.
+      const retried = point.enabled && !point.needsAttention && point.cooldownUntil <= now;
+      lines.push(h("div", { class: "service-state detail", text: t(retried ? "apLastErrorRetry" : "apLastError", point.lastError) }));
     }
     const test = tests.get(point.id);
     if (test !== undefined) {
@@ -663,7 +665,7 @@ export function aiSection(shell: Shell): Section {
     return lines;
   }
 
-  function serviceRow(point: AccessPoint, index: number, count: number, editing: Editor | null): HTMLElement {
+  function serviceRow(point: AccessPoint, index: number, count: number, editing: Editor | null, signingIn: boolean): HTMLElement {
     const now = Date.now();
     const enabledId = `enabled-${point.id}`;
     const enabled = h("input", {
@@ -756,6 +758,7 @@ export function aiSection(shell: Shell): Section {
       ),
       ...chatgpt,
       editing?.element ?? null,
+      signingIn ? signInPanel : null,
     );
   }
 
@@ -769,23 +772,30 @@ export function aiSection(shell: Shell): Section {
       editor = null;
     }
     const current = editor;
+    // A sign-in in progress belongs to the service it signs in again, or is a new row of its own.
+    const signIn = model.status.signIn;
+    const signInRow = signIn.url === null ? null : points.some((point) => point.id === signIn.accessPointId) ? signIn.accessPointId : "";
     const items: Keyed[] = points.map((point, index) => {
       const editing = current !== null && current.id === point.id ? current : null;
+      const signingIn = signInRow === point.id;
       return {
         key: point.id,
         signature:
           editing !== null
-            ? `editing:${editing.serial}:${index}:${points.length}`
-            : JSON.stringify([point, index, points.length, tests.get(point.id) ?? null, point.cooldownUntil > now, hostGranted(point)]),
-        build: () => serviceRow(point, index, points.length, editing),
+            ? `editing:${editing.serial}:${index}:${points.length}:${signingIn}`
+            : JSON.stringify([point, index, points.length, tests.get(point.id) ?? null, point.cooldownUntil > now, hostGranted(point), signingIn]),
+        build: () => serviceRow(point, index, points.length, editing, signingIn),
       };
     });
     if (current !== null && current.id === null) {
       items.push({ key: "new-service", signature: `new:${current.serial}`, build: () => h("li", { class: "service editing" }, current.element) });
     }
+    if (signInRow === "") {
+      items.push({ key: "sign-in", signature: "sign-in", build: () => h("li", { class: "service signing-in" }, signInPanel) });
+    }
     reconcile(list, items);
     list.hidden = items.length === 0;
-    empty.hidden = points.length > 0;
+    empty.hidden = items.length > 0;
   }
 
   function maybeWelcome(): void {
@@ -819,8 +829,8 @@ export function aiSection(shell: Shell): Section {
       if (settings === null) {
         return;
       }
-      drawList();
       drawSignIn();
+      drawList();
       void refreshGrants(next.accessPoints).then((changed) => {
         if (changed && model === next) {
           drawList();

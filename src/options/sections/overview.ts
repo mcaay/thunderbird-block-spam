@@ -74,6 +74,8 @@ export function overviewSection(shell: Shell): Section {
   function requestProtection(on: boolean): void {
     void guard(async () => {
       if (on && model !== null && aiBeforeScan(model)) {
+        // Nothing is switched on before the answer, and the box says so while the question is open.
+        protection.input.checked = false;
         const choice = await dialog({
           title: t("scanFirstTitle"),
           body: [t("warnAiBeforeScan"), t("scanFirstText")],
@@ -85,7 +87,6 @@ export function overviewSection(shell: Shell): Section {
           await startFullScan();
         }
         if (choice !== "extra") {
-          protection.input.checked = false;
           return;
         }
       }

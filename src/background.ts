@@ -559,7 +559,12 @@ const handlers: Handlers = {
     return {
       fatal,
       scan: scan?.progress ?? null,
-      signIn: { url: signIn?.url ?? null, error: signInError, capture: browser.webRequest !== undefined },
+      signIn: {
+        url: signIn?.url ?? null,
+        error: signInError,
+        capture: browser.webRequest !== undefined,
+        accessPointId: signIn?.accessPointId ?? null,
+      },
       scoring,
     };
   },

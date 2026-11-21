@@ -541,6 +541,27 @@ describe("ChatGPT sign-in", () => {
     expect(status.ok && status.result.signIn.url).not.toBeNull();
   });
 
+  it("says in the status which service a sign-in in progress is for", async () => {
+    const plan = accessPoint({ id: "plan", type: "chatgpt", endpoint: "https://api.openai.com/v1/responses", model: "gpt-6-luna", apiKey: "" });
+    const fake = new FakeBrowser({ [KEY_SETTINGS]: defaultSettings(Date.now()), [KEY_ACCESS_POINTS]: [plan] });
+    const openai = await fakeOpenAi();
+    const background = await loadBackground(fake, openai.http.fetch);
+    const signIn = async (): Promise<unknown> => {
+      const status = await background.send("getStatus", {});
+      return status.ok ? status.result.signIn : null;
+    };
+    expect(await signIn()).toMatchObject({ url: null, accessPointId: null });
+    // A new service: the settings page shows the sign-in as a new row.
+    expect(await background.send("startSignIn", { accessPointId: null, openTab: false })).toMatchObject({ ok: true });
+    expect(await signIn()).toMatchObject({ accessPointId: null });
+    expect(((await signIn()) as { url: string | null }).url).not.toBeNull();
+    // Signing in again: the page shows it in the row of that service.
+    expect(await background.send("startSignIn", { accessPointId: "plan", openTab: false })).toMatchObject({ ok: true });
+    expect(await signIn()).toMatchObject({ accessPointId: "plan" });
+    expect(await background.send("cancelSignIn", {})).toEqual({ ok: true, result: null });
+    expect(await signIn()).toMatchObject({ url: null, accessPointId: null });
+  });
+
   it("ends both sessions when Sign out comes while a token refresh is running", async () => {
     const signedIn = accessPoint({
       id: "plan",

@@ -980,6 +980,9 @@
   "apLastError": {
     "message": "Last problem: $1"
   },
+  "apLastErrorRetry": {
+    "message": "The last request failed: $1. It is tried again when needed."
+  },
   "apNoModel": {
     "message": "no model"
   },
