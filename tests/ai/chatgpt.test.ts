@@ -130,9 +130,43 @@ describe("ChatGPT plan adapter", () => {
       [429, { detail: "slow down" }, "quota"],
     ];
     for (const [status, body, kind] of cases) {
-      const { deps } = setup({ [CHATGPT_RESPONSES_URL]: () => jsonResponse(body, status) });
+      // A 401 is asked again once with a renewed token, which is refused the same way.
+      const { deps } = setup({
+        [CHATGPT_RESPONSES_URL]: () => jsonResponse(body, status),
+        [TOKEN_URL]: () => jsonResponse({ access_token: "access-2", refresh_token: "refresh-2", expires_in: 3600 }),
+      });
       expect((await failure(scoreChatGpt(point(), PROMPT, PAYLOAD, deps))).kind, JSON.stringify(body)).toBe(kind);
     }
+  });
+
+  it("renews the access token once after a 401 and asks again", async () => {
+    let calls = 0;
+    const { http, deps, target } = setup({
+      [CHATGPT_RESPONSES_URL]: (request) => {
+        calls += 1;
+        return request.headers.authorization === "Bearer access-1" ? jsonResponse({ detail: "token expired" }, 401) : completed("0.4")(request);
+      },
+      [TOKEN_URL]: () => jsonResponse({ access_token: "access-2", refresh_token: "refresh-2", expires_in: 3600 }),
+    });
+    // The stored expiry says the token is still good, the server says it is not.
+    const early = point();
+    target.current = early;
+    expect(await scoreChatGpt(early, PROMPT, PAYLOAD, deps)).toBe(0.4);
+    expect(calls).toBe(2);
+    expect(http.requests.map((request) => request.url)).toEqual([CHATGPT_RESPONSES_URL, TOKEN_URL, CHATGPT_RESPONSES_URL]);
+    expect(early.auth?.refreshToken).toBe("refresh-2");
+  });
+
+  it("needs attention when the renewed token is refused as well", async () => {
+    const { http, deps, target } = setup({
+      [CHATGPT_RESPONSES_URL]: () => jsonResponse({ detail: "identity not accepted" }, 401),
+      [TOKEN_URL]: () => jsonResponse({ access_token: "access-2", refresh_token: "refresh-2", expires_in: 3600 }),
+    });
+    const refused = point();
+    target.current = refused;
+    expect(await failure(scoreChatGpt(refused, PROMPT, PAYLOAD, deps))).toMatchObject({ kind: "auth" });
+    expect(http.requests.filter((request) => request.url === TOKEN_URL)).toHaveLength(1);
+    expect(http.requests.filter((request) => request.url === CHATGPT_RESPONSES_URL)).toHaveLength(2);
   });
 
   it("fails on incomplete responses and on output that is not just a number", async () => {

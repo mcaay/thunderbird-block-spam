@@ -34,11 +34,12 @@ export interface ChatGptDeps {
 /** One refresh at a time per access point, so a rotating refresh token is never used twice. */
 const refreshes = new Map<string, Promise<void>>();
 
-async function freshAccessToken(point: AccessPoint, deps: ChatGptDeps): Promise<string> {
+/** The access token to use, renewed first when it is due, or always with renew. */
+async function freshAccessToken(point: AccessPoint, deps: ChatGptDeps, renew = false): Promise<string> {
   if (point.auth === null || point.auth.refreshToken === "") {
     throw new AccessPointError("auth", "not signed in");
   }
-  if (needsRefresh(point.auth, deps.now())) {
+  if (renew || needsRefresh(point.auth, deps.now())) {
     let running = refreshes.get(point.id);
     if (running === undefined) {
       running = (async () => {
@@ -173,8 +174,29 @@ export async function scoreChatGpt(point: AccessPoint, prompt: string, payload: 
   if (point.model === "") {
     throw new AccessPointError("transient", "no model is selected");
   }
-  const token = await freshAccessToken(point, deps);
-  const text = await withTimeout(REQUEST_TIMEOUT_MS, async (signal) => {
+  let text = await requestAnswer(point, prompt, payload, await freshAccessToken(point, deps), deps, true);
+  if (text === null) {
+    // An access token can end before its stored expiry (revoked early, or a local clock
+    // that runs behind). It is renewed once before the access point needs attention.
+    text = await requestAnswer(point, prompt, payload, await freshAccessToken(point, deps, true), deps, false);
+  }
+  const score = text === null ? null : parseLlmScore(text);
+  if (score === null) {
+    throw new AccessPointError("transient", "the answer is not a number from 0.00 to 1.00");
+  }
+  return score;
+}
+
+/** The answer text, or null after HTTP 401 when the caller may renew the token and ask again. */
+async function requestAnswer(
+  point: AccessPoint,
+  prompt: string,
+  payload: string,
+  token: string,
+  deps: ChatGptDeps,
+  renewable: boolean,
+): Promise<string | null> {
+  return withTimeout(REQUEST_TIMEOUT_MS, async (signal) => {
     const response = await deps.fetch(CHATGPT_RESPONSES_URL, {
       method: "POST",
       headers: { authorization: `Bearer ${token}`, "content-type": "application/json", accept: "text/event-stream" },
@@ -188,6 +210,10 @@ export async function scoreChatGpt(point: AccessPoint, prompt: string, payload: 
       redirect: NO_REDIRECT,
       signal,
     });
+    if (response.status === 401 && renewable) {
+      await response.body?.cancel().catch(() => undefined);
+      return null;
+    }
     if (!response.ok) {
       const raw = await readText(response);
       let body: unknown = raw;
@@ -250,11 +276,6 @@ export async function scoreChatGpt(point: AccessPoint, prompt: string, payload: 
     }
     return output;
   });
-  const score = parseLlmScore(text);
-  if (score === null) {
-    throw new AccessPointError("transient", "the answer is not a number from 0.00 to 1.00");
-  }
-  return score;
 }
 
 /** The model catalog of the signed-in account: models meant for display, in the server's order. */
