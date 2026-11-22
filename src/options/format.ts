@@ -121,6 +121,15 @@ export function formatShortcut(shortcut: string, mac: boolean): string {
   return `${modifiers.join("")}${key}`;
 }
 
+/**
+ * The first few of a list of names, for a line that names them, and how many more there are. A name that is listed
+ * twice (the same entry for two accounts) is said once.
+ */
+export function firstFew(values: readonly string[], limit = 10): { shown: string[]; more: number } {
+  const distinct = [...new Set(values)];
+  return { shown: distinct.slice(0, limit), more: Math.max(0, distinct.length - limit) };
+}
+
 /** The detail of a list decision in the log, "value [scope]", taken apart. Null for any other detail. */
 export function parseEntryDetail(detail: string): { value: string; scope: string } | null {
   const match = /^(\S+) \[([^[\]]+)\]$/.exec(detail);

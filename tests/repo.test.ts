@@ -11,7 +11,7 @@ import { REASONS } from "../src/core/decision";
 import { DIAGNOSTIC_CODES } from "../src/core/diagnostics";
 import { PROBLEM_KINDS, PROTECTION_STATES } from "../src/core/problems";
 import { ACCESS_POINT_TYPES, DEFAULT_PROMPT } from "../src/core/settings";
-import { LOG_LABELS, LOG_RESULTS, LOG_TITLES } from "../src/options/logLabels";
+import { LOG_BACK, LOG_LABELS, LOG_RESULTS, LOG_TITLES, LOG_UNDONE } from "../src/options/logLabels";
 // @ts-expect-error The build scripts are plain JavaScript modules.
 import { crc32, createZip } from "../scripts/zip.mjs";
 
@@ -84,8 +84,18 @@ describe("strings", () => {
     logLabel: LOG_LABELS,
     logTitle: LOG_TITLES,
     logResult: LOG_RESULTS,
+    // What is true again after Undo in a log row: the list the entry is on again, and where the message is.
+    logUndone: LOG_UNDONE,
+    logBack: LOG_BACK,
     // The short names of the problems.
     cause: PROBLEM_KINDS,
+    // What happens to mail from unknown senders while no AI service gives a verdict, by the choice of Incoming mail:
+    // under its menu (while protection is off only the two choices that move say "once protection is on"), in the
+    // status line of the Overview and in its warning.
+    noVerdictNow: ["leave", "junk", "screening"],
+    noVerdictNowOff: ["junk", "screening"],
+    statusAiOffThen: ["leave", "junk", "screening"],
+    warnAiDown: ["leave", "junk", "screening"],
     // The times the log is looked through by.
     period: ["all", "today", "yesterday", "week", "month", "older"],
     // What went wrong with a request to an AI service, see core/diagnostics.
@@ -190,7 +200,8 @@ describe("strings", () => {
       ?.split("\n")
       .map((line) => line.slice(0, line.indexOf(":")));
     expect(headers).toEqual(["From", "Reply-To", "To", "Subject", "Date"]);
-    const words: Record<string, string> = { From: "the sender", "Reply-To": "Reply-To", To: "the recipients", Subject: "the subject", Date: "the date" };
+    // In a sentence the name of the header is written with a non-breaking hyphen, so that a line never ends inside it.
+    const words: Record<string, string> = { From: "the sender", "Reply-To": "Reply\u2011To", To: "the recipients", Subject: "the subject", Date: "the date" };
     for (const key of ["consentWhat", "aiHint"]) {
       for (const header of headers ?? []) {
         expect(messages[key]?.message, `${key}: ${header}`).toContain(words[header]);

@@ -34,9 +34,9 @@ import { folderKey } from "./core/ports";
 import { findProblems, protectionState, remedyFor, scanIsComplete } from "./core/problems";
 import type { Remedy } from "./core/problems";
 import { isNoWish, NO_WISH, outcomeOfScan, outcomeWithoutService, readWish, withoutService } from "./core/protectionWish";
-import type { ProtectionWish } from "./core/protectionWish";
+import type { MovingAction, ProtectionWish } from "./core/protectionWish";
 import { SerialQueue } from "./core/queue";
-import { asArray, asBoolean, asNumber, asRecord, asString, invalidSettings, isSettingName, validateEntry, ValidationError, withDefaults } from "./core/settings";
+import { asArray, asBoolean, asNumber, asOneOf, asRecord, asString, invalidSettings, isSettingName, validateEntry, ValidationError, withDefaults } from "./core/settings";
 import { AppState } from "./core/state";
 import type { AccessPoint, ChatGptAuth, FolderRef, MessageInfo } from "./core/types";
 import { BUNDLED_PUBLIC_DOMAINS } from "./data/publicDomains";
@@ -44,7 +44,7 @@ import { t, tCode, tn } from "./tb/i18n";
 import { hold, withKeepAlive } from "./tb/keepAlive";
 import { collect, messagePages, messagesOfTab, ThunderbirdMail } from "./tb/mail";
 import { commandLines } from "./tb/commandText";
-import { problemNames, servicesOutcomeText, wishOutcomeText } from "./tb/stateText";
+import { noVerdictOutcomeText, problemNames, servicesOutcomeText, wishOutcomeText } from "./tb/stateText";
 import { COMPANION_ID, KEY_PENDING_SIGN_IN } from "./tb/protocol";
 import type {
   CommandRecord,
@@ -91,7 +91,7 @@ interface RunningScan {
   range: { from: number | null; to: number | null };
 }
 let scan: RunningScan | null = null;
-/** What waits for the scan, as stored: "switch protection on", and AI services to be switched on. See core/protectionWish. */
+/** What waits for the scan, as stored: "switch protection on", AI services to be switched on, and the choice to move mail without a verdict. See core/protectionWish. */
 let wish: ProtectionWish = NO_WISH;
 let scoring = false;
 let signIn: StoredSignIn | null = null;
@@ -152,7 +152,11 @@ async function start(): Promise<void> {
         await saveWish({ ...wish, services: ids.length === 0 ? null : { ...wish.services, ids } });
       }
     }
-    const waitingFor = wish.waiting ?? wish.services;
+    if (wish.noVerdict !== null && state.settings.noVerdictAction === wish.noVerdict.action) {
+      // The choice was made some other way since: there is nothing left to wait for.
+      await saveWish({ ...wish, noVerdict: null });
+    }
+    const waitingFor = wish.waiting ?? wish.services ?? wish.noVerdict;
     if (waitingFor !== null && scan?.progress.running !== true) {
       // Thunderbird was closed while the scan ran. The wish is kept, so the scan starts again and what waits follows it.
       beginScan(engine, waitingFor.from, waitingFor.to);
@@ -466,7 +470,7 @@ async function settingsInFront(): Promise<boolean> {
   return tabs.some((tab) => tab.active === true && tab.url?.startsWith(address) === true);
 }
 
-/** True while mail from people the user writes to could reach an AI service: nobody was learned and no scan ran to its end, or a scan is still running. */
+/** True while people the user writes to still count as unknown senders: nobody was learned and no scan ran to its end, or a scan is still running. */
 function scanStillNeeded(state: AppState): boolean {
   return scan?.progress.running === true || (whiteListIsOnlyIdentities(state.entries) && !scanIsComplete(scan?.progress ?? null));
 }
@@ -503,19 +507,25 @@ async function serviceAfterScan(state: AppState, engine: Engine, point: AccessPo
 }
 
 /**
- * A scan has ended while something waited for it: protection, AI services, or both. A scan that ran to its end
- * switches on what waited, also when it read no message. A cancelled scan and one that could not read a folder
+ * A scan has ended while something waited for it: protection, AI services, the choice to move mail without a
+ * verdict, or several of them. A scan that ran to its end lets what waited take effect, also when it read no message. A cancelled scan and one that could not read a folder
  * drop the wish. Either way the outcome is kept for the page to say, and one notification covers everything.
  */
 async function settleWish(ended: RunningScan): Promise<void> {
-  if ((wish.waiting === null && wish.services === null) || app === null) {
+  if ((wish.waiting === null && wish.services === null && wish.noVerdict === null) || app === null) {
     return;
   }
   const { state } = app;
   const outcome = outcomeOfScan(ended.progress, Date.now());
   const protectionWaited = wish.waiting !== null;
   const waited = (wish.services?.ids ?? []).map((id) => state.accessPoints.find((point) => point.id === id)).filter((point): point is AccessPoint => point !== undefined && !point.enabled);
+  const choice = wish.noVerdict?.action ?? null;
   if (outcome.kind === "on") {
+    if (choice !== null) {
+      // Before protection: it goes on with the choice in place.
+      state.settings.noVerdictAction = choice;
+      await state.saveSettings();
+    }
     if (waited.length > 0) {
       for (const point of waited) {
         point.enabled = true;
@@ -531,9 +541,11 @@ async function settleWish(ended: RunningScan): Promise<void> {
     outcome: protectionWaited ? outcome : wish.outcome,
     services: null,
     servicesOutcome: waited.length > 0 ? { ...outcome, ids: waited.map((point) => point.id) } : wish.servicesOutcome,
+    noVerdict: null,
+    noVerdictOutcome: choice !== null ? { ...outcome, action: choice } : wish.noVerdictOutcome,
   });
   // Cancel was pressed on the page, which says what follows. The other two ends can come while nobody looks.
-  if (outcome.kind !== "cancelled" && (protectionWaited || waited.length > 0) && !(await settingsInFront())) {
+  if (outcome.kind !== "cancelled" && (protectionWaited || waited.length > 0 || choice !== null) && !(await settingsInFront())) {
     const lines = [
       ...(protectionWaited ? [wishOutcomeText(outcome)] : []),
       ...(waited.length > 0
@@ -546,6 +558,8 @@ async function settleWish(ended: RunningScan): Promise<void> {
             ),
           ]
         : []),
+      // After another sentence the scan is not announced again either.
+      ...(choice !== null ? [noVerdictOutcomeText(outcome, choice, protectionWaited || waited.length > 0)] : []),
     ];
     await browser.notifications
       .create(WISH_NOTIFICATION, { type: "basic", title: t("extensionName"), message: lines.join(" "), iconUrl: browser.runtime.getURL("icons/icon.svg") })
@@ -1025,7 +1039,14 @@ const handlers: Handlers = {
         accessPointId: signIn?.accessPointId ?? null,
       },
       scoring,
-      wish: { waiting: wish.waiting !== null, outcome: wish.outcome, services: wish.services?.ids ?? [], servicesOutcome: wish.servicesOutcome },
+      wish: {
+        waiting: wish.waiting !== null,
+        outcome: wish.outcome,
+        services: wish.services?.ids ?? [],
+        servicesOutcome: wish.servicesOutcome,
+        noVerdict: wish.noVerdict?.action ?? null,
+        noVerdictOutcome: wish.noVerdictOutcome,
+      },
     };
   },
 
@@ -1073,6 +1094,30 @@ const handlers: Handlers = {
     return null;
   },
 
+  async noVerdictAfterScan({ action }) {
+    const { state, engine } = need();
+    const choice = asOneOf<MovingAction>(action, ["junk", "screening"], "action");
+    if (!scanStillNeeded(state)) {
+      // Nothing is left to wait for: the choice takes effect at once.
+      state.settings.noVerdictAction = choice;
+      await state.saveSettings();
+      await saveWish({ ...wish, noVerdict: null, noVerdictOutcome: null });
+      return null;
+    }
+    const running = runningRange();
+    // Stored before the scan starts: a scan of an empty mailbox can end at once.
+    await saveWish({ ...wish, noVerdict: { since: Date.now(), from: running?.from ?? null, to: running?.to ?? null, action: choice }, noVerdictOutcome: null });
+    if (running === null) {
+      beginScan(engine, null, null);
+    }
+    return null;
+  },
+
+  async clearNoVerdictWish() {
+    await saveWish({ ...wish, noVerdict: null, noVerdictOutcome: null });
+    return null;
+  },
+
   async updateSettings({ patch }) {
     const { state } = need();
     const { settings, invalid } = applySettingsPatch(state.settings, patch);
@@ -1092,6 +1137,10 @@ const handlers: Handlers = {
     }
     state.settings = settings;
     await state.saveSettings();
+    if ("noVerdictAction" in asRecord(patch, "patch") && (wish.noVerdict !== null || wish.noVerdictOutcome !== null)) {
+      // Chosen by hand: a choice that waited for the scan is settled by this, and what the last one came to is history.
+      await saveWish({ ...wish, noVerdict: null, noVerdictOutcome: null });
+    }
     return { invalid };
   },
 
@@ -1155,9 +1204,9 @@ const handlers: Handlers = {
     if (scan?.progress.running === true) {
       throw new Error(t("errorScanRunning"));
     }
-    if (wish.outcome !== null || wish.servicesOutcome !== null) {
+    if (wish.outcome !== null || wish.servicesOutcome !== null || wish.noVerdictOutcome !== null) {
       // What the last wish came to is history once the next scan starts.
-      await saveWish({ ...wish, outcome: null, servicesOutcome: null });
+      await saveWish({ ...wish, outcome: null, servicesOutcome: null, noVerdictOutcome: null });
     }
     beginScan(engine, from, to);
     return null;
@@ -1392,6 +1441,7 @@ const handlers: Handlers = {
       }
     }
     const previous = [...state.accessPoints];
+    const movedBefore = state.settings.noVerdictAction !== "leave";
     let report;
     try {
       report = applyImport(state, file, mode === "replace" ? "replace" : "merge", {
@@ -1413,10 +1463,11 @@ const handlers: Handlers = {
       throw error instanceof ValidationError && error.code === "" ? new ValidationError(error.message, "import-invalid") : error;
     }
     let servicesOff = 0;
+    let noVerdictKept = false;
     if (report.mode === "replace") {
-      // The services that waited for the scan are gone with the replaced ones.
-      if (wish.services !== null || wish.servicesOutcome !== null) {
-        await saveWish({ ...wish, services: null, servicesOutcome: null });
+      // The services that waited for the scan are gone with the replaced ones, and a choice that waited is settled by the settings of the file.
+      if (wish.services !== null || wish.servicesOutcome !== null || wish.noVerdict !== null || wish.noVerdictOutcome !== null) {
+        await saveWish({ ...wish, services: null, servicesOutcome: null, noVerdict: null, noVerdictOutcome: null });
       }
       if (state.settings.protection && scanStillNeeded(state)) {
         // Protection is on and nobody was learned: an imported service that is switched on would get mail from
@@ -1424,6 +1475,12 @@ const handlers: Handlers = {
         for (const point of state.accessPoints.filter((item) => item.enabled)) {
           point.enabled = false;
           servicesOff += 1;
+        }
+        if (!movedBefore && state.settings.noVerdictAction !== "leave") {
+          // The same for a choice of the file that would start moving mail without a verdict: mail from people the
+          // user writes to would be moved without the question having been asked. It stays where it is, and the report says so.
+          state.settings.noVerdictAction = "leave";
+          noVerdictKept = true;
         }
       }
     }
@@ -1450,7 +1507,7 @@ const handlers: Handlers = {
     }
     mail.resetCache();
     await withKeepAlive(() => engine.sweepIfNeeded());
-    return { ...summary, undoId, servicesOff };
+    return { ...summary, undoId, servicesOff, noVerdictKept };
   },
 
   async undoImport({ id }) {

@@ -196,7 +196,6 @@ Lists:
 - [ ] Add an address and a domain without choosing a kind. A wrong value ("not an address") is refused with the reason under the field, and the field keeps the focus.
 - [ ] Search and filter the entries, with scope "All accounts" and with one account.
 - [ ] Remove an entry: a confirmation with "Undo (Ctrl+Z)" (Cmd+Z on macOS) appears above the table and stays until the next action. Undo puts the entry back with its source and date, and the shortcut does the same. With the keyboard, the focus moves to the remove button of the next row.
-- [ ] "Sharing between accounts" (shared or per account) is in this pane, above the table. Its hint says that an entry added with the form uses its own "Applies to". With a single mail account a line says that it makes a difference only with two or more.
 - [ ] A click on a column header sorts the table by that column (all entries, not only the rows shown), a second click reverses the order, and the header shows an arrow. "Source:" narrows the table to what the AI, the scan, sent mail or you added.
 - [ ] "Add" is unavailable while the field is empty.
 - [ ] The line under the filter reads "Showing 200 of 4,001." without a filter, and "Matching: 12 of 4,001." with a filter or a search.
@@ -228,6 +227,7 @@ Learning and Incoming mail:
 
 Advanced:
 
+- [ ] With two or more mail accounts "Sharing between accounts" (shared or per account) is the first group, and the lead sentence of the pane names it. Its hint says that an entry added with the form under Lists uses its own "Applies to", and "Lists" in it opens the Lists pane. "Learn more" of the Lists pane says where sharing is set, with a link to Advanced.
 - [ ] Public mail providers: check a domain, treat a company domain as public and back.
 - [ ] Forwarding mailboxes and labels: add and remove a mailbox (removing offers Undo), change the labels and save. Save is filled only while the labels are changed.
 
@@ -321,11 +321,34 @@ Block and trust:
 - [ ] Close and reopen the settings page, and restart Thunderbird, while a service waits: it still waits, and the scan starts again after a restart.
 - [ ] Log: a row "Blocked" for an address inside a trusted domain offers "Unblock address" and only removes the black entry. A row for a blocked address elsewhere offers "Trust address" and does not trust the domain. Undo restores the lists exactly.
 - [ ] Popup: "Block" for the whole domain of a sender whose address is on the white list says "Removed from the white list: ..." in its result, and the tooltip of the button says so beforehand.
-- [ ] AI: change a field in the editor of a service and press Escape, Cancel or "Edit" of another row. Expected: a line "The changes to ... are not saved." with "Continue editing", which opens the editor with everything that was typed. Closing the tab asks first.
+- [ ] AI: change a field in the editor of a service and press Escape, Cancel or "Edit" of another row. Expected (changed in round 6): the editor closes, and where it stood a bar says "Discarded the changes to ..." with "Undo", which opens the editor with everything that was typed. Closing the tab then does not ask.
 - [ ] Export and import: "Merge lists" of a file whose entries are on the other list here reports them as moved and offers Undo. Undo restores the lists exactly. "Replace everything" asks first and says that it cannot be undone.
-- [ ] One mail account: the Lists pane shows no "Sharing between accounts", no "Applies to" menu and no "Applies to" column. With an entry of a removed account the column stays.
+- [ ] One mail account: the Advanced pane shows no "Sharing between accounts" and its lead sentence does not name it, "Learn more" of Lists has no sentence about it, and the Lists pane shows no "Applies to" menu and no "Applies to" column. With an entry of a removed account the column stays.
 - [ ] Overview: the status line stands directly under "Protection". "Check again" on the warning about a missing Spam folder answers "Checked at ...: the Spam folder is still missing." when nothing changed.
 - [ ] The warning about a missing Spam folder names Account Settings, "Spam Settings" and "Move new spam messages to:". Following it makes the warning go away after "Check again".
 - [ ] Incoming mail, "Mail without an AI verdict" (the first group of the pane, above "Monitored folders"): first the sentence about which mail this is, then "What to do with it:", and the screening folders only with the third option.
 - [ ] The cutoff is a plain field: the arrow keys step it by 0.01, a value outside 0 to 1 is refused.
 
+## After review round 6: logic
+
+- [ ] No AI service, nothing scanned, "Mail without an AI verdict" set to "Move it to the Spam folder" while protection is off (nothing is asked there). Tick "Protect incoming mail". Expected: "Scan your sent mail first?" with "Cancel", "Switch on anyway" and "Scan first", and a text that says such mail "would be moved to the Spam folder". The same with the screening folder ("to a screening folder"), and with a service on as well (sent, and moved without an AI verdict).
+- [ ] "Switch on anyway": the state is "On, 1 problem", the toolbar button has its badge, and the warning "Your sent mail is not scanned yet, so mail from people you already write to is moved to the Spam folder." stands on the Overview and under the menu of Incoming mail, each with "Scan sent mail". The scan ends the warning.
+- [ ] Protection on, nothing scanned, the menu on "Leave the message where it is": choose "Move it to the Spam folder". Expected: the same question with "Choose anyway". "Cancel": the menu is back on "Leave". "Scan first": the menu still shows "Leave", a note under it says that the option takes effect when the scan has finished, with "Don’t change", and when the scan has ended the menu shows the Spam folder and a bar says so. While protection is off the menu saves at once.
+- [ ] While the choice waits: close the settings page, or restart Thunderbird. It still waits, and the scan starts again after a restart. Cancel the scan: the menu stays, and a bar says that nothing was changed and why. "Don’t change" calls the choice off.
+- [ ] Incoming mail with no AI service available: one line under the menu says where every message from an unknown sender goes now (Spam folder, screening folder of its account, stays where it is), with "once protection is on" while protection is off. With a service available the line is gone.
+- [ ] Overview with all services switched off and protection on: the status line says where mail from unknown senders goes. The warning that no AI service is available says the same.
+- [ ] AI: press "Add…" or "Edit" of another row while an editor holds changes. Expected: the same bar with "Undo" where the editor stood. "Edit" on that row opens a fresh editor and the bar is gone. An unchanged editor closes without a bar. The close button of the bar puts the focus on "Edit" of the row.
+- [ ] AI: "Test" with a cutoff of 0.85. A score above it: "Works: ... above the cutoff of 0.85." in green. A score that is not: "The service answers, but ... not above the cutoff of 0.85 ..." in the warning color. Change the cutoff: the line follows.
+- [ ] Log: trust or block from a row, then "Undo". Expected: "Taken back: ... is on the black list again." (or the white list, or neither list), and "The message is back in ..." only when the message was moved back.
+- [ ] Every bar with Undo (Lists, Learning, Incoming mail, Advanced, AI), the import report and what its Undo says end with a close button. Closing moves the focus to a control, never to nothing.
+- [ ] Lists and Log with more than one page: Tab reaches one control of the table and the next Tab reaches "Show N more". Up, Down, Home and End move between rows, Left and Right between the action and "Show message" of a log row. After a removal or an action Tab still enters at that row.
+- [ ] Export and import: "Merge lists" of a file whose entries are on the other list here names them: "Moved to the white list: ..." and "Moved to the black list: ...", the first ten and then "and N more".
+- [ ] A screen reader on the cutoff field says the value and the range 0 to 1, also after an arrow key and after typing.
+
+## After review round 6: wording
+
+- [ ] Overview, protection on, no new mail today: the status line reads "Last check: ... No new mail today yet."
+- [ ] Import a file with an AI service on a computer that has not allowed it yet: the warning, the row and the test say "Thunderbird may not connect to ... yet. Edit ... and press “Save” to allow it.", in Polish "Thunderbird nie ma jeszcze zgody na połączenia z ...".
+- [ ] Popup, "Test AI on selected messages": when every message got a score the line is "Scored: N. The scores are in the log.". "Without a score: N." appears only when a service failed for some.
+- [ ] Narrow the window while a sentence with "sign-in", "add-on" or the Polish "e-mail" stands at the end of a line (for example the dialog "Replace lists, settings and AI services?"): the word moves to the next line whole.
+- [ ] The editor of a service: no hint says "provider", "server" or "endpoint".

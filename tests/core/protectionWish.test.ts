@@ -49,6 +49,34 @@ describe("AI services that wait for the scan, as stored", () => {
   });
 });
 
+describe("the choice to move mail without a verdict that waits for the scan, as stored", () => {
+  it("reads the choice that waits and what became of the last one", () => {
+    const noVerdict = { since: 5, from: null, to: 9, action: "junk" };
+    const noVerdictOutcome = { kind: "errors", at: 7, scanned: 3, action: "screening" };
+    expect(readWish({ noVerdict, noVerdictOutcome })).toEqual({ ...NO_WISH, noVerdict, noVerdictOutcome });
+    // A wish written before the choice could wait reads as it did.
+    expect(readWish({ waiting: { since: 1, from: null, to: null }, outcome: null })).toMatchObject({ noVerdict: null, noVerdictOutcome: null });
+  });
+
+  it("takes a choice that moves nothing, has no dates or no known outcome for none, so nothing changes because of data that cannot be read", () => {
+    for (const raw of [
+      { noVerdict: { since: 5, from: null, to: null, action: "leave" } },
+      { noVerdict: { since: 5, from: null, to: null } },
+      { noVerdict: { action: "junk" } },
+      { noVerdict: "junk" },
+      { noVerdictOutcome: { kind: "on", at: 1, scanned: 1 } },
+      { noVerdictOutcome: { kind: "later", at: 1, scanned: 1, action: "junk" } },
+    ]) {
+      expect(readWish(raw), JSON.stringify(raw)).toEqual(NO_WISH);
+    }
+  });
+
+  it("has to be stored while it waits and until what became of it was seen", () => {
+    expect(isNoWish({ ...NO_WISH, noVerdict: { since: 5, from: null, to: null, action: "junk" } })).toBe(false);
+    expect(isNoWish({ ...NO_WISH, noVerdictOutcome: { kind: "on", at: 1, scanned: 2, action: "junk" } })).toBe(false);
+  });
+});
+
 describe("what a scan that has ended makes of the wish", () => {
   it("switches protection on after a scan that ran to its end, also when it read no message", () => {
     expect(outcomeOfScan({ cancelled: false, errors: [], scanned: 40 }, 9)).toEqual({ kind: "on", at: 9, scanned: 40 });

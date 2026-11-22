@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findProblems, protectionState, remedyFor, scanIsComplete, scanStep } from "../../src/core/problems";
+import { actsOnUnknownSenders, findProblems, protectionState, remedyFor, scanIsComplete, scanStep, unknownSenderEffects } from "../../src/core/problems";
 import type { AccountFacts, ProblemInput } from "../../src/core/problems";
 import { defaultSettings } from "../../src/core/settings";
 import { accessPoint } from "../helpers/harness";
@@ -91,10 +91,37 @@ describe("problems that keep protection from working as set up", () => {
   });
 
   it("warns when an AI service is on before anyone but the user is on the white list", () => {
-    expect(findProblems(input({ accessPoints: [accessPoint()], onlyOwnAddresses: true }))).toEqual([{ kind: "ai-before-scan" }]);
-    // Without a service that is switched on, nothing would be sent.
+    expect(findProblems(input({ accessPoints: [accessPoint()], onlyOwnAddresses: true }))).toEqual([{ kind: "before-scan", sent: true, moved: null }]);
+    // Without a service that is switched on, nothing would be sent, and mail without a verdict stays where it is.
     expect(findProblems(input({ onlyOwnAddresses: true }))).toEqual([]);
     expect(findProblems(input({ accessPoints: [accessPoint({ enabled: false })], onlyOwnAddresses: true }))).toEqual([]);
+  });
+
+  it("warns as well when mail without a verdict is moved before anyone was learned, with no AI service at all", () => {
+    const junk = { ...defaultSettings(NOW), noVerdictAction: "junk" as const };
+    const screening = { ...defaultSettings(NOW), noVerdictAction: "screening" as const, screeningFolders: [{ accountId: "work", path: "/Screening" }] };
+    // The README's own use without AI: every message from people the user writes to would be moved.
+    expect(findProblems(input({ settings: junk, onlyOwnAddresses: true }))).toEqual([{ kind: "before-scan", sent: false, moved: "junk" }]);
+    expect(findProblems(input({ settings: screening, onlyOwnAddresses: true }))).toEqual([{ kind: "before-scan", sent: false, moved: "screening" }]);
+    expect(findProblems(input({ settings: junk, accessPoints: [accessPoint({ enabled: false })], onlyOwnAddresses: true }))).toEqual([{ kind: "before-scan", sent: false, moved: "junk" }]);
+    // One cause is one problem, also when a service is on and all of them can fail: it names both things that happen.
+    expect(findProblems(input({ settings: junk, accessPoints: [accessPoint()], onlyOwnAddresses: true }))).toEqual([{ kind: "before-scan", sent: true, moved: "junk" }]);
+    // Once the sent mail is scanned, the choice is no problem.
+    expect(findProblems(input({ settings: junk }))).toEqual([]);
+    expect(findProblems(input({ settings: screening }))).toEqual([]);
+  });
+
+  it("knows what acts on unknown senders: a service that is switched on, and a choice that moves mail without a verdict", () => {
+    const settings = defaultSettings(NOW);
+    expect(unknownSenderEffects(settings, [])).toEqual({ sent: false, moved: null });
+    expect(unknownSenderEffects(settings, [accessPoint({ enabled: false })])).toEqual({ sent: false, moved: null });
+    expect(unknownSenderEffects(settings, [accessPoint({ enabled: false }), accessPoint({ id: "b" })])).toEqual({ sent: true, moved: null });
+    expect(unknownSenderEffects({ noVerdictAction: "junk" }, [])).toEqual({ sent: false, moved: "junk" });
+    expect(unknownSenderEffects({ noVerdictAction: "screening" }, [accessPoint()])).toEqual({ sent: true, moved: "screening" });
+    expect(actsOnUnknownSenders({ sent: false, moved: null })).toBe(false);
+    expect(actsOnUnknownSenders({ sent: true, moved: null })).toBe(true);
+    expect(actsOnUnknownSenders({ sent: false, moved: "junk" })).toBe(true);
+    expect(actsOnUnknownSenders({ sent: false, moved: "screening" })).toBe(true);
   });
 
   it("names every monitored account without a Junk folder, as one problem", () => {
@@ -166,7 +193,7 @@ describe("problems that keep protection from working as set up", () => {
         onlyOwnAddresses: true,
       }),
     );
-    expect(problems.map((problem) => problem.kind)).toEqual(["ai-before-scan", "no-junk", "attention", "ai-down", "no-screening"]);
+    expect(problems.map((problem) => problem.kind)).toEqual(["before-scan", "no-junk", "attention", "ai-down", "no-screening"]);
   });
 });
 

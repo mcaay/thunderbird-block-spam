@@ -5,16 +5,30 @@ import type { ImportMode } from "../../core/exportImport";
 import { t } from "../../tb/i18n";
 import { RequestError, send } from "../../tb/protocol";
 import type { ImportReply } from "../../tb/protocol";
-import { addressed, bar, button, byId, description, dialog, download, errorText, guard, h, inlineStatus, learnMore, named, option, replace, whileBusy } from "../dom";
+import { addressed, bar, button, byId, closeButton, description, dialog, download, errorText, guard, h, inlineStatus, learnMore, named, option, replace, whileBusy } from "../dom";
+import { firstFew } from "../format";
 import type { Section } from "../section";
 
 function reportLines(report: ImportReply): string[] {
   const lines = [t("importEntries", report.entriesAdded, report.entriesReplaced, report.entriesUnchanged)];
+  // The entries that changed sides are named: whether to keep the import depends on which senders they are.
+  // The first ten of each side, then how many more.
+  const white = firstFew(report.movedToWhite);
+  if (white.shown.length > 0) {
+    lines.push(white.more === 0 ? t("importMovedWhite", white.shown.join(", ")) : t("importMovedWhiteMore", white.shown.join(", "), white.more));
+  }
+  const black = firstFew(report.movedToBlack);
+  if (black.shown.length > 0) {
+    lines.push(black.more === 0 ? t("importMovedBlack", black.shown.join(", ")) : t("importMovedBlackMore", black.shown.join(", "), black.more));
+  }
   if (report.mode === "replace") {
     lines.push(t("importReplaced", report.accessPoints));
   }
   if (report.servicesOff > 0) {
     lines.push(t("importServicesOff", report.servicesOff));
+  }
+  if (report.noVerdictKept) {
+    lines.push(t("importNoVerdictKept"));
   }
   for (const item of report.skipped) {
     lines.push(item.account === "" ? t("importSkippedFolder", item.item) : t("importSkippedAccount", item.item, item.account));
@@ -38,6 +52,19 @@ export function backupSection(): Section {
   /** Set while the last merge can still be taken back. */
   let undoable = false;
   const exportStatus = inlineStatus();
+  /** The close button of the report and of what its Undo says: both stay until the next import or until the pane is left. */
+  const closeReport = (): HTMLButtonElement =>
+    closeButton(() => {
+      // The bar goes away with its button: the keyboard goes back to where the next file is chosen.
+      choose.focus();
+      report.removeAttribute("aria-label");
+      replace(report);
+      if (undoable) {
+        // Closed for good: the merge cannot be taken back any more, like after the pane was left.
+        undoable = false;
+        void send("forgetImport", {}).catch(() => undefined);
+      }
+    });
 
   // Nothing to import before a file is chosen: the button is unavailable until then.
   const importButton = button(t("importButton"), () => void whileBusy(importButton, runImport).then(drawImport));
@@ -96,7 +123,7 @@ export function backupSection(): Section {
                     const undone = await send("undoImport", { id: undoId });
                     undoable = false;
                     const text = t("importUndone", undone.removed, undone.restored);
-                    const box = bar("information", [text]);
+                    const box = bar("information", [text], [closeReport()]);
                     box.setAttribute("role", "status");
                     report.setAttribute("aria-label", text);
                     replace(report, box);
@@ -114,7 +141,7 @@ export function backupSection(): Section {
       report.removeAttribute("aria-label");
       replace(
         report,
-        bar("success", [h("strong", { text: t("importDone") }), h("ul", {}, ...reportLines(result).map((line) => h("li", {}, ...addressed(line))))], [undo]),
+        bar("success", [h("strong", { text: t("importDone") }), h("ul", {}, ...reportLines(result).map((line) => h("li", {}, ...addressed(line))))], [undo, closeReport()]),
       );
       report.firstElementChild?.setAttribute("role", "status");
       file.value = "";

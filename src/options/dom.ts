@@ -6,6 +6,7 @@ import { RequestError } from "../tb/protocol";
 import { addressPieces, breakableParts } from "./format";
 import { icon } from "./icons";
 import type { IconName } from "./icons";
+import { isRovingKey, rovingMove } from "./roving";
 
 export type Child = Node | string | null | undefined | false;
 
@@ -312,6 +313,33 @@ export type BarKind = "information" | "success" | "warning" | "critical";
 
 const BAR_ICONS: Record<BarKind, IconName> = { information: "info", success: "success", warning: "warning", critical: "critical" };
 
+/**
+ * The close button of a bar that stays until the next action (a confirmation with Undo, a report, a result): the
+ * same one everywhere, at the end of the bar after its other buttons. A bar that describes a state that still
+ * holds (a warning, a note that something waits) has none: it goes when the state does.
+ */
+export function closeButton(onclick: () => void): HTMLButtonElement {
+  const element = iconButton("close", t("dismiss"), onclick);
+  element.dataset.focus = "close";
+  return element;
+}
+
+/**
+ * Where the keyboard goes on when a bar is closed and no control is named for it: the first control that follows
+ * the bar in its pane and can be reached with Tab, or else the title of the pane. It is never left on nothing.
+ */
+export function focusAfter(element: Element): void {
+  const pane = element.closest("section.pane");
+  const next = [...(pane ?? document.body).querySelectorAll<HTMLElement>(FOCUSABLE)].find(
+    (candidate) =>
+      !element.contains(candidate) &&
+      (element.compareDocumentPosition(candidate) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0 &&
+      candidate.tabIndex >= 0 &&
+      candidate.getClientRects().length > 0,
+  );
+  (next ?? paneTitle(element))?.focus();
+}
+
 /** A message bar: an icon, text, and optionally buttons or links that lead to the fix. */
 export function bar(kind: BarKind, content: Child[], actions: Child[] = []): HTMLElement {
   return h(
@@ -505,6 +533,95 @@ export function paneTitle(element: Element): HTMLElement | null {
 }
 
 // ---------------------------------------------------------------------------
+// A table that pages (Lists, Log) is one tab stop, as Thunderbird's own lists are.
+
+/** The controls of a table row that the keyboard reaches. */
+const ROW_CONTROLS = "button, a[href]";
+
+export interface TabStop {
+  /** Call after the rows were drawn: rows that are new join, and exactly one control stays reachable with Tab. */
+  sync(): void;
+  /** The control Tab enters the table at, or null while no row has one. */
+  stop(): HTMLElement | null;
+}
+
+/**
+ * Makes the body of a table one tab stop. Exactly one control of it can be reached with Tab: the one in the row that
+ * was focused last, or else the first. Up and Down move to the same control of the next row (or to its first one),
+ * Left and Right between the controls of a row, Home and End to the first and the last row, and the next Tab leaves
+ * the table for what follows it. Whatever receives the focus inside (after a removal, Undo, an action of a row, a
+ * redraw, a click) becomes the tab stop. The table keeps its native semantics: only tabindex values change.
+ */
+export function oneTabStop(body: HTMLElement): TabStop {
+  /** The row and the kind of control that were focused last. Rows are told apart by their key, so a row that is drawn anew stays the same row. */
+  let lastRow: string | null = null;
+  let lastKind: string | null = null;
+  let stop: HTMLElement | null = null;
+  const rowsOf = (): HTMLElement[] => [...body.children].filter((row): row is HTMLElement => row instanceof HTMLElement);
+  const controlsOf = (row: Element): HTMLElement[] => [...row.querySelectorAll<HTMLElement>(ROW_CONTROLS)];
+  /** The control of a row of the given kind, or else its first one. */
+  const pick = (row: Element, kind: string | null): HTMLElement | null => {
+    const controls = controlsOf(row);
+    return (kind === null ? undefined : controls.find((control) => control.dataset.focus === kind)) ?? controls[0] ?? null;
+  };
+
+  function sync(): void {
+    const rows = rowsOf();
+    const active = document.activeElement;
+    if (active instanceof HTMLElement && body.contains(active)) {
+      // What has the focus decides: a control is the tab stop itself, a row that was focused as a whole gives its first control.
+      const row = active.closest<HTMLElement>("tr");
+      lastRow = row?.dataset.key ?? null;
+      lastKind = active.matches(ROW_CONTROLS) ? (active.dataset.focus ?? null) : null;
+      stop = active.matches(ROW_CONTROLS) ? active : row === null ? null : pick(row, null);
+    } else {
+      const row = lastRow === null ? undefined : rows.find((candidate) => candidate.dataset.key === lastRow);
+      stop = row === undefined ? null : pick(row, lastKind);
+    }
+    // The row that was focused last is gone, or none was focused yet: the first control of the table.
+    stop ??= rows.map((row) => pick(row, null)).find((control) => control !== null) ?? null;
+    for (const control of body.querySelectorAll<HTMLElement>(ROW_CONTROLS)) {
+      const wanted = control === stop ? 0 : -1;
+      if (control.tabIndex !== wanted) {
+        control.tabIndex = wanted;
+      }
+    }
+  }
+
+  body.addEventListener("focusin", sync);
+  body.addEventListener("keydown", (event) => {
+    const target = event.target;
+    if (!isRovingKey(event.key) || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || !(target instanceof HTMLElement)) {
+      return;
+    }
+    const row = target.closest("tr");
+    const rows = rowsOf();
+    const from = row === null ? -1 : rows.indexOf(row as HTMLElement);
+    if (from === -1 || !(target === row || target.matches(ROW_CONTROLS))) {
+      return;
+    }
+    // Inside the table these keys move the focus and nothing else: the page does not scroll under them.
+    event.preventDefault();
+    const controls = controlsOf(rows[from] as HTMLElement);
+    if (target === row && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
+      // The row as a whole has the focus (it was scrolled to): its first control takes it.
+      controls[0]?.focus();
+      return;
+    }
+    const place = rovingMove(event.key, { row: from, control: Math.max(0, controls.indexOf(target)) }, rows.map((candidate) => controlsOf(candidate).length));
+    if (place === null) {
+      return;
+    }
+    const next = rows[place.row] as HTMLElement;
+    // In the same row the neighbouring control, in another row the control of the same kind or else its first one.
+    const control = place.row === from ? (controls[place.control] ?? null) : pick(next, target === row ? null : (target.dataset.focus ?? null));
+    control?.focus();
+  });
+  sync();
+  return { sync, stop: () => stop };
+}
+
+// ---------------------------------------------------------------------------
 // Confirmations in place. An action that changes something says so where it happened:
 // as an information bar in the group it belongs to, with Undo where the action can be
 // taken back. Nothing floats over the page and nothing leaves by itself.
@@ -519,9 +636,9 @@ export function undoLabel(): string {
 export interface Notice {
   element: HTMLElement;
   /**
-   * Shows a confirmation. It stays until the next action here. With `undo` it carries
-   * an Undo button, and Ctrl+Z or Command+Z does the same; `undone` is what it says
-   * once the action was taken back.
+   * Shows a confirmation. It stays until the next action here, or until its close button
+   * is pressed. With `undo` it carries an Undo button, and Ctrl+Z or Command+Z does the
+   * same; `undone` is what it says once the action was taken back.
    */
   show(message: string, undo?: () => Promise<unknown> | void, undone?: string): void;
   clear(): void;
@@ -541,8 +658,12 @@ function onUndoKey(event: KeyboardEvent): void {
   }
 }
 
-/** The place of a group where its confirmations appear. Put its element where the result of the action is seen. */
-export function notice(): Notice {
+/**
+ * The place of a group where its confirmations appear. Put its element where the result of the action is seen.
+ * `afterClose` names the control the confirmation belongs to: it takes the focus when the bar is closed. Without
+ * it, or when it names none, the control that follows the bar does.
+ */
+export function notice(afterClose?: () => HTMLElement | null): Notice {
   // It can take the focus, for when the button that was pressed is gone: then it reads its text.
   const element = h("div", { class: "notice", tabIndex: -1, attrs: { role: "group" } });
   const self: Notice = {
@@ -575,7 +696,17 @@ export function notice(): Notice {
           document.addEventListener("keydown", onUndoKey);
         }
       }
-      const box = bar("information", [message], [undoButton]);
+      const close = closeButton(() => {
+        // The bar goes away, and the button that was pressed with it: the focus moves first, so that it is never on nothing.
+        const target = afterClose?.() ?? null;
+        if (target !== null && target.isConnected) {
+          target.focus();
+        } else {
+          focusAfter(element);
+        }
+        self.clear();
+      });
+      const box = bar("information", [message], [undoButton, close]);
       box.setAttribute("role", "status");
       element.setAttribute("aria-label", message);
       replace(element, box);
@@ -641,7 +772,13 @@ export function reportError(message: string): void {
     }
   }
   const holder = host;
-  const box = bar("critical", [message], [iconButton("close", t("dismiss"), () => holder.remove())]);
+  const box = bar("critical", [message], [
+    closeButton(() => {
+      // The bar goes away with its button: the keyboard goes on with what follows it in the pane.
+      focusAfter(holder);
+      holder.remove();
+    }),
+  ]);
   box.setAttribute("role", "alert");
   replace(holder, box);
 }

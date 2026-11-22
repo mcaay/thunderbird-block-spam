@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { endOfLocalDay, mayRedraw, sameLabels, sameNumber } from "../../src/options/fields";
+import { cutoffNumber, endOfLocalDay, mayRedraw, sameLabels, sameNumber } from "../../src/options/fields";
 
 describe("the scan's inclusive end date", () => {
   it("includes the selected day's last millisecond and excludes the next midnight", () => {
@@ -48,5 +48,20 @@ describe("fields that show a stored setting", () => {
     expect(mayRedraw({ value: "0,9", focused: false }, "0,85", "0,90", sameNumber)).toBe(true);
     expect(sameLabels(" From: ,, Od:", "From:, Od:")).toBe(true);
     expect(sameLabels("From:", "From:, Od:")).toBe(false);
+  });
+});
+
+describe("the value a screen reader is told for the cutoff field", () => {
+  it("is the number the field holds, with a point or a comma as the decimal sign", () => {
+    expect(cutoffNumber("0.85")).toBe(0.85);
+    expect(cutoffNumber("0,85")).toBe(0.85);
+    expect(cutoffNumber(" 1 ")).toBe(1);
+    expect(cutoffNumber("0")).toBe(0);
+  });
+
+  it("is not claimed while the text is empty, no number or outside 0 to 1", () => {
+    for (const text of ["", "  ", "abc", "0.8.5", "1.2", "-0.1"]) {
+      expect(cutoffNumber(text), text).toBeNull();
+    }
   });
 });

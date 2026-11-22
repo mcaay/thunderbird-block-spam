@@ -17,7 +17,7 @@ import type {
 } from "../core/engine";
 import type { ExportResult, ImportMode, ImportReport } from "../core/exportImport";
 import type { LogAction } from "../core/logAction";
-import type { ServicesOutcome, WishOutcome } from "../core/protectionWish";
+import type { MovingAction, NoVerdictOutcome, ServicesOutcome, WishOutcome } from "../core/protectionWish";
 import type { Entry, EntryKind, ListName, LogEntry } from "../core/types";
 
 /** Where a block or trust command came from. */
@@ -58,6 +58,14 @@ export interface Requests {
   enableAfterScan: { request: { id: string }; result: null };
   /** With a service: calls its wish off, or forgets what it came to. With null: forgets what the last wish of the services came to. */
   clearServiceWish: { request: { id: string | null }; result: null };
+  /**
+   * Moves mail without an AI verdict to the Spam folder or to a screening folder when the scan of the sent mail has
+   * finished without an error: the scan that is running, or else a scan of everything that is started here. Until
+   * then the stored setting stays what it is. Kept like protection that waits for the scan.
+   */
+  noVerdictAfterScan: { request: { action: MovingAction }; result: null };
+  /** Calls that choice off, and forgets what the last one came to. */
+  clearNoVerdictWish: { request: Record<string, never>; result: null };
   updateSettings: { request: { patch: SettingsPatch }; result: { invalid: string[] } };
   /** Without a kind, a value with a name before an "@" is an address and anything else a domain. */
   addEntry: {
@@ -129,6 +137,8 @@ export type ImportReply = Omit<ImportReport, "undo"> & {
   undoId: string | null;
   /** AI services that were imported switched off, because protection is on and the sent mail was not scanned yet. */
   servicesOff: number;
+  /** The file would have started moving mail without an AI verdict, and that was not taken over, for the same reason. */
+  noVerdictKept: boolean;
 };
 
 export type RequestName = keyof Requests;
@@ -209,6 +219,10 @@ export interface Status {
     services: string[];
     /** What became of the services that waited, until the user has seen it. */
     servicesOutcome: ServicesOutcome | null;
+    /** The choice for mail without an AI verdict that takes effect when the scan has finished. */
+    noVerdict: MovingAction | null;
+    /** What became of the choice that waited, until the user has seen it. */
+    noVerdictOutcome: NoVerdictOutcome | null;
   };
 }
 

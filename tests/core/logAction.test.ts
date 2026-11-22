@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { entryKey } from "../../src/core/lists";
 import { expectsMove, fittingAction, isLogAction, logOffer } from "../../src/core/logAction";
-import { logLabel, logResult } from "../../src/options/logLabels";
+import { backPlace, logLabel, logResult, logUndone } from "../../src/options/logLabels";
 import { ValidationError } from "../../src/core/settings";
 import { KEY_ENTRIES } from "../../src/core/state";
 import type { Entry, FolderRef, LogEntry } from "../../src/core/types";
@@ -504,5 +504,20 @@ describe("the label of a log action names exactly what it changes", () => {
     // Undo restores the lists exactly.
     await h.engine.undoLogAction(outcome.undo);
     expect(new Map(h.state.entries)).toEqual(before);
+    // The line under the decision then says what is true again: the list the entry is back on, or that it is on neither.
+    const was = before.get(entryKey(offer.target.kind, offer.target.value, offer.scope));
+    const back = logUndone(outcome);
+    expect(back?.code ?? null).toBe(change === "none" ? null : was === undefined ? "neither-again" : `${was.list}-again`);
+    if (back !== null) {
+      expect(back.args).toEqual([offer.target.value]);
+    }
+  });
+
+  it("says where the message is after Undo moved it back, by the kind of folder", () => {
+    expect(backPlace(["junk"])).toBe("junk");
+    expect(backPlace(["inbox"])).toBe("inbox");
+    // A screening folder, or another monitored folder, is named.
+    expect(backPlace([])).toBe("folder");
+    expect(backPlace(["archives"])).toBe("folder");
   });
 });

@@ -14,12 +14,12 @@ import { BUNDLED_PUBLIC_DOMAINS } from "../../data/publicDomains";
 import { stringsLocale, t, tCode } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
 import { attemptsLines } from "../diagnostic";
-import { address, addressed, button, byId, dialog, errorText, guard, h, named, option, reconcile, replace, setUnavailable, tNodes } from "../dom";
+import { address, addressed, button, byId, dialog, errorText, guard, h, named, oneTabStop, option, reconcile, replace, setUnavailable, tNodes } from "../dom";
 import type { Child } from "../dom";
 import { formatFullTime, formatScore, logTimeParts, matchesSearch, parseEntryDetail } from "../format";
 import { logReader } from "../logData";
-import { logLabel, logResult } from "../logLabels";
-import { accountName, ownAddresses } from "../model";
+import { backPlace, logLabel, logResult, logUndone } from "../logLabels";
+import { accountName, folderView, ownAddresses } from "../model";
 import type { Model } from "../model";
 import type { Intent, Section } from "../section";
 import { loadShortcutKeys } from "../shortcutKeys";
@@ -57,6 +57,8 @@ interface RowResult {
   kind: "ok" | "error";
   /** Set while the action can still be taken back. */
   undo: LogActionUndo | null;
+  /** What Undo makes true again on the lists, said when it was pressed. Null when the action changed nothing there. */
+  back: { code: string; args: string[] } | null;
 }
 
 /** The lists as the page sees them, for telling what an action would add. */
@@ -123,6 +125,8 @@ export function logSection(): Section {
     },
   });
   const rows = h("tbody", { attrs: { role: "rowgroup" } });
+  /** The table body is one tab stop: the arrow keys move between its rows and between the controls of a row, and Tab leaves it for what follows. */
+  const tabStop = oneTabStop(rows);
   const more = h("div", { class: "row" });
   /** How many entries are shown, or how many match the filter and the search, out of how many. */
   const summary = h("p", { class: "description count-line", attrs: { role: "status" } });
@@ -234,13 +238,32 @@ export function logSection(): Section {
       try {
         const outcome = await send("logAction", { entry, action });
         const undoable = outcome.undo.remove.length > 0 || outcome.undo.restore.length > 0 || outcome.undo.move !== null;
-        results.set(key, { text: outcomeText(outcome), kind: outcome.move === "failed" ? "error" : "ok", undo: undoable ? outcome.undo : null });
+        results.set(key, { text: outcomeText(outcome), kind: outcome.move === "failed" ? "error" : "ok", undo: undoable ? outcome.undo : null, back: logUndone(outcome) });
       } catch (error) {
-        results.set(key, { text: errorText(error), kind: "error", undo: null });
+        results.set(key, { text: errorText(error), kind: "error", undo: null, back: null });
       }
       busy.delete(key);
       draw();
     })();
+  }
+
+  /**
+   * What is true again after Undo: which list the entry is on again (or that it is on neither), and where the message
+   * is when it was moved back. The line stays in the row under the decision, so it never says a bare "Undone".
+   */
+  function undoneText(back: RowResult["back"], data: LogActionUndo, outcome: { move: string; failure: string }): string {
+    const parts = back === null ? [] : [tCode("logUndone", back.code, ...back.args)];
+    if (outcome.move === "moved" && data.move !== null) {
+      // The message went back to where the action took it from.
+      const folder = model === null ? null : folderView(model, data.move.from);
+      const place = folder === null ? "folder" : backPlace(folder.specialUse);
+      parts.push(place === "folder" ? tCode("logBack", place, folder?.name ?? data.move.from.path.replace(/^\//, "")) : tCode("logBack", place));
+    } else if (outcome.move === "not-found") {
+      parts.push(t("logMoveNotFound"));
+    } else if (outcome.move === "failed") {
+      parts.push(t("logMoveFailed", outcome.failure));
+    }
+    return parts.join(" ");
   }
 
   function undo(key: string, data: LogActionUndo): void {
@@ -248,19 +271,11 @@ export function logSection(): Section {
     draw();
     void (async () => {
       try {
+        const back = results.get(key)?.back ?? null;
         const outcome = await send("undoLogAction", { undo: data });
-        results.set(key, {
-          text:
-            outcome.move === "failed"
-              ? `${t("logUndone")} ${t("logMoveFailed", outcome.failure)}`
-              : outcome.move === "not-found"
-                ? `${t("logUndone")} ${t("logMoveNotFound")}`
-                : t("logUndone"),
-          kind: outcome.move === "failed" ? "error" : "ok",
-          undo: null,
-        });
+        results.set(key, { text: undoneText(back, data, outcome), kind: outcome.move === "failed" ? "error" : "ok", undo: null, back: null });
       } catch (error) {
-        results.set(key, { text: errorText(error), kind: "error", undo: null });
+        results.set(key, { text: errorText(error), kind: "error", undo: null, back: null });
       }
       busy.delete(key);
       draw();
@@ -499,6 +514,8 @@ export function logSection(): Section {
             };
           }),
     );
+    // Rows that were drawn anew or added join the one tab stop.
+    tabStop.sync();
     replace(
       more,
       matching.length > limit

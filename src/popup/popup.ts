@@ -125,7 +125,13 @@ function drawCommand(tabId: number | null): void {
   const shown = lastCommand;
   if (shown === null) {
     commandBox.hidden = undone === null;
-    replace(commandBox, undone === null ? null : resultBox(undone.lines, undone.failed, "", []));
+    // What Undo did stays until the next command: like the result of the command itself, it can be closed.
+    const close = iconButton("close", t("dismiss"), () => {
+      undone = null;
+      drawCommand(tabId);
+      restoreFocus(null);
+    });
+    replace(commandBox, undone === null ? null : resultBox(undone.lines, undone.failed, "", [close]));
     return;
   }
   const { record } = shown;
@@ -416,7 +422,9 @@ function confirmScoring(tabId: number, count: number): void {
     void (async () => {
       try {
         const summary = await send("scoreSelected", { tabId });
-        showScoreMessage(summary.selected === 0 ? t("popupNothingSelected") : t("popupScoreDone", summary.scored, summary.failed), summary.selected === 0);
+        // How many got no score is said only when some did not: "Without a score: 0." would be noise.
+        const done = summary.failed > 0 ? t("popupScoreDoneFailed", summary.scored, summary.failed) : t("popupScoreDone", summary.scored);
+        showScoreMessage(summary.selected === 0 ? t("popupNothingSelected") : done, summary.selected === 0);
         log = (await logReader.load()).entries;
         drawRecent();
         await drawSelection(tabId);
@@ -498,8 +506,9 @@ async function redraw(kind: string | null): Promise<void> {
 
 /**
  * The protection switch. While protection waits for the scan, the popup says so and offers to call it off.
- * Switching on while a scan runs and an AI service is on waits for that scan, as the settings page does by
- * default: mail from people the scan has not learned yet is not sent to the AI.
+ * Switching on while a scan runs and something acts on unknown senders (an AI service is on, or mail without a
+ * verdict is moved) waits for that scan, as the settings page does by default: mail from people the scan has not
+ * learned yet is neither sent to the AI nor moved.
  */
 function switchBox(settings: Settings, status: Status, hasAi: boolean): HTMLElement {
   if (status.wish.waiting) {
@@ -515,7 +524,8 @@ function switchBox(settings: Settings, status: Status, hasAi: boolean): HTMLElem
     cancel.setAttribute("aria-describedby", "wish-waiting");
     return h("div", { class: "switch waiting" }, h("p", { class: "description", id: "wish-waiting", text: t("wishWaiting"), attrs: { role: "status" } }), cancel);
   }
-  const afterScan = !settings.protection && status.scan?.running === true && hasAi;
+  // The same holds while mail without a verdict is moved: until the scan has ended, people it has not learned yet count as unknown senders.
+  const afterScan = !settings.protection && status.scan?.running === true && (hasAi || settings.noVerdictAction !== "leave");
   const toggle = button(t(settings.protection ? "protectionSwitchOff" : "protectionSwitchOn"), () => {
     setUnavailable(toggle, true);
     void (afterScan ? send("protectAfterScan", {}) : send("setProtection", { on: !settings.protection }))

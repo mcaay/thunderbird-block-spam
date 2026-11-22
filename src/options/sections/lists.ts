@@ -1,17 +1,15 @@
-// Lists: the white list and the black list with add and remove, the scope of entries
-// the add-on creates by itself, and the table of all entries: filters by list and by
-// source, a search, and a sort by every column.
+// Lists: the white list and the black list with add and remove, and the table of all
+// entries: filters by list and by source, a search, and a sort by every column.
 
 import { keyOf } from "../../core/lists";
 import { SCOPE_ALL } from "../../core/types";
-import type { Entry, EntrySource, Settings } from "../../core/types";
+import type { Entry, EntrySource } from "../../core/types";
 import { stringsLocale, t, tCode, tn } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
 import {
   address,
   button,
   byId,
-  description,
   errorText,
   fieldError,
   focusNeighbor,
@@ -20,10 +18,13 @@ import {
   inlineStatus,
   learnMore,
   notice,
+  oneTabStop,
   option,
+  paneLink,
   reconcile,
   removeButton,
   replace,
+  tNodes,
   withMore,
 } from "../dom";
 import { formatDate, formatFullTime } from "../format";
@@ -44,7 +45,8 @@ export function listsSection(): Section {
   /** The column the table is sorted by, and its direction. Newest first until a header is pressed. */
   let sort: { key: SortKey; descending: boolean } = { key: "date", descending: true };
   /** What the last removal did, with Undo. It stands between the filter and the table. */
-  const removed = notice();
+  // Closed, the keyboard goes on with the table it stands above: the row that was focused last.
+  const removed = notice(() => tabStop.stop());
 
   const counts = h("p", { class: "counts" });
   const filter = h(
@@ -69,6 +71,8 @@ export function listsSection(): Section {
     attrs: { "aria-label": t("listsSearchLabel") },
   });
   const rows = h("tbody");
+  /** The table body is one tab stop: the arrow keys move between its rows, and Tab leaves it for what follows. */
+  const tabStop = oneTabStop(rows);
   const more = h("div", { class: "row" });
   /** How many entries are shown, or how many match the filter and the search, out of how many. */
   const summary = h("p", { class: "description count-line", attrs: { role: "status" } });
@@ -169,37 +173,23 @@ export function listsSection(): Section {
 
   const scopeColumn = h("col", { class: "col-scope" });
 
-  const newScope = h(
-    "select",
-    {
-      id: "new-scope",
-      onchange: () => void guard(() => send("updateSettings", { patch: { newEntryScope: newScope.value as Settings["newEntryScope"] } })),
-    },
-    option("shared", t("scopeShared")),
-    option("account", t("scopePerAccount")),
-  );
-
-  /** "Sharing between accounts": whether entries the add-on makes by itself are shared by all accounts. */
-  const sharing = h(
-    "div",
-    { class: "group", hidden: true },
-    h("h2", { text: t("newEntriesTitle") }),
-    h("div", { class: "row" }, h("label", { for: "new-scope", text: t("newEntriesLabel") }), newScope),
-    description(t("newEntriesHint")),
-  );
+  /**
+   * Whether the entries the add-on makes by itself are shared by all accounts is set once, in Advanced. With two or
+   * more mail accounts "Learn more" says so and leads there. With one it could change nothing, and is not said.
+   */
+  const sharingNote = h("p", { hidden: true }, ...tNodes("listsMoreSharing", paneLink("advanced", t("catAdvanced"), () => {
+      location.hash = "advanced";
+    })));
 
   replace(
     root,
     h("h1", { text: t("catLists"), tabIndex: -1 }),
-    h("p", { class: "lead" }, ...withMore(t("listsHint"), learnMore(t("catLists"), t("listsMore")))),
+    h("p", { class: "lead" }, ...withMore(t("listsHint"), learnMore(t("catLists"), t("listsMore"), sharingNote))),
     counts,
     h("h2", { text: t("listsAddTitle") }),
     addForm,
     valueError.element,
     addStatus.element,
-    // What applies to every future entry stands before the table, which can be hundreds of rows long. It means something
-    // only with several mail accounts, and is not shown with one.
-    sharing,
     h("h2", { text: t("listsEntriesTitle") }),
     h(
       "div",
@@ -364,6 +354,8 @@ export function listsSection(): Section {
             build: () => row(entry),
           })),
     );
+    // Rows that were drawn anew or added join the one tab stop.
+    tabStop.sync();
     replace(
       more,
       matching.length > limit
@@ -387,12 +379,11 @@ export function listsSection(): Section {
       const white = next.entries.filter((entry) => entry.list === "white").length;
       const black = next.entries.length - white;
       counts.textContent = `${tn("listsWhiteCount", white)} ${tn("listsBlackCount", black)}`;
-      newScope.value = next.settings.newEntryScope;
-      // With fewer than two mail accounts nothing here could make a difference: the group, the menu of the form and
-      // the column are not shown. Entries then apply as they would have: to all accounts, or to the one account.
+      // With fewer than two mail accounts nothing here could make a difference: the menu of the form, the column and
+      // the sentence about sharing are not shown. Entries then apply as they would have: to all accounts, or to the one account.
       const several = next.accounts.length > 1;
       const only = next.accounts[0]?.id;
-      sharing.hidden = !several;
+      sharingNote.hidden = !several;
       scopeField.hidden = !several;
       showScope = several || next.entries.some((entry) => entry.scope !== SCOPE_ALL && entry.scope !== only);
       scopeColumn.hidden = !showScope;
