@@ -443,6 +443,34 @@ The code review and the practical test in Thunderbird 153.7 changed the behavior
 | 4.5 | After learning, black list entries with source `ai` that would still decide the recipient are removed, also when their key differs. |
 | 8.8 | "Score selected messages" shows how many messages will be sent and refuses more than 50. |
 
+## 18. The interface after the UX and UI review
+
+Added on 2026-11-22. Not yet confirmed by the owner. After the code review the interface was rebuilt and polished in rounds of independent reviews. The filtering rules of sections 4 to 8 did not change, except where the table says so. Sections 9 and 11 still carry their original wording; where they differ from this section, this section describes what is built. The binding decisions with their reasons are in `reviews/2026-11-21-ux-ui/design.md`, the changes round by round in `docs/implementation-notes.md` under "Interface".
+
+| Section | What is built now |
+|---|---|
+| 9.1 | The settings page follows Thunderbird's own Settings: a category list and one pane at a time. Panes: Overview, Lists, Log, Learning, Incoming mail, AI, Block and trust, and at the bottom Advanced (sharing between accounts, public mail providers, forwarding mailboxes) and Export and import. The state of protection stands under the add-on's name on every pane. |
+| 9.2 | The popup shows the state, the selected message with what the lists and the log say about it, buttons that block and trust its address or its whole domain, the six newest decisions (each opens its log entry), the AI test of the selected messages, and the switch of protection. |
+| 9 | New ways to block and trust without the keyboard: the popup's buttons, commands in the context menu of the message list, and one action in every log row. A log action changes the entry that decided (trust the address or the domain, or only unblock an address inside a trusted domain). |
+| 9 | Every block or trust made by hand, every removal and addition in a list and a merge import can be taken back with Undo where its result is shown. Cancel in a service editor discards with Undo. |
+| 9 | Problems that change what happens to mail are visible without opening anything: a badge and a tooltip on the toolbar button, and one notification when an AI service first needs attention. One cause is one warning that names the accounts or services it concerns. |
+| 5, 9.1 | "Scan first" guard. Until the sent mail is scanned, the people the user writes to count as unknown senders. So the add-on asks before any of these takes effect while nothing is learned: protection, an AI service that is switched on, or moving mail without a verdict to the Spam folder or a screening folder. With "Scan first" the thing waits and takes effect by itself when the scan has finished, also after a restart. A replacing import does not switch services on or start moving mail in that state. |
+| 5.2, 5.3 | The setting for mail without an AI verdict stands first on Incoming mail and says which mail it means. The screening folder of each account is shown only while the screening option is chosen. |
+| 4.4 | "Sharing between accounts" (the scope of new entries) is shown only with two or more mail accounts, and with one account the scope of an entry is not shown either. |
+| 8 | The test of an AI service compares the score of its sample spam email with the cutoff and warns when the service answers but would have let the sample pass. A ChatGPT plan service is named "ChatGPT plan"; signing in again and signing out are in its editor. |
+| 9.1 | Lists sort by every column and filter by list and by source. The log filters by outcome, time and account, and shows the score at the end of the decision line instead of in a column of its own. |
+| 9 | English calls the folder for unwanted mail "Spam", as Thunderbird 153 does, where this document says "Junk". Polish says "Niechciane". The lists keep their names: white list and black list. |
+| 7.2 | The companion add-on for bare keys is packaged inside the main add-on and saved to a file with a button on the Block and trust pane. |
+| 11 | One more required permission: `menus`, for the commands in the context menu of the message list. Optional host permissions cover `https://*/*` and the two loopback addresses, each host still being granted when its service is saved. |
+
+Open points from the last review, not fixed (details in `reviews/2026-11-21-ux-ui/coordinator/round-8/`):
+
+- The settings page does not notice an account or a folder that was added in Thunderbird until its next refresh, up to five minutes later.
+- That the sent mail was scanned is remembered only while the background page lives, and a scan limited by dates that finds nothing counts as a complete scan. The first brings a warning back after a restart for a mailbox without sent mail; the second can lift the "scan first" guard.
+- A "scan first" that finds no sent mail ends as a success, although nobody was learned.
+- A date from another year breaks inside its year in the log, and the popup can cut its last decision row when a result is shown above the list.
+- The log cannot be sorted by score. The category list announces links although it behaves like a list. Dialog titles are left-aligned where Thunderbird centers them. Two Polish hints of the service editor and the technical line of the invalid-data state need rewording.
+
 ## Appendix A: minimum public domain list
 
 gmail.com, googlemail.com, outlook.com, hotmail.com, live.com, msn.com, yahoo.com, ymail.com, icloud.com, me.com, mac.com, aol.com, proton.me, protonmail.com, pm.me, gmx.com, gmx.net, gmx.de, web.de, mail.com, zoho.com, yandex.com, yandex.ru, mail.ru, fastmail.com, tuta.com, tutanota.com, hey.com, wp.pl, o2.pl, onet.pl, onet.eu, op.pl, poczta.onet.pl, vp.pl, interia.pl, interia.eu, poczta.fm, gazeta.pl, tlen.pl, go2.pl, int.pl
