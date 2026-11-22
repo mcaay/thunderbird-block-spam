@@ -105,6 +105,11 @@ body:dir(rtl) {
   outline-offset: -2px;
 }
 
+/* The ring is drawn inside the row, on its fill. On the fill under the pointer the accent color would have 1.2 to 1 in the dark theme: there the ring is white, like the label. */
+.category:hover:focus-visible {
+  outline-color: light-dark(#0060df, #ffffff);
+}
+
 /* On the selection fill the ring takes the color Thunderbird gives the border of a focused selected item. */
 .category[aria-current="page"]:focus-visible {
   outline-color: var(--focus-selected);

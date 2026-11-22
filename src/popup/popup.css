@@ -352,6 +352,11 @@ button.decision:hover:not(:disabled, [aria-disabled="true"]) {
   outline-offset: -2px;
 }
 
+/* The ring is drawn inside the row. On the fill under the pointer it takes Thunderbird's color for a focused item on a fill, which keeps 3 to 1 there in both themes. */
+.decision:hover:focus-visible {
+  outline-color: var(--focus-selected);
+}
+
 .decision .who {
   overflow: hidden;
   text-overflow: ellipsis;
