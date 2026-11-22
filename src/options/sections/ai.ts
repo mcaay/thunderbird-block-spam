@@ -132,7 +132,7 @@ export function aiSection(shell: Shell): Section {
     }
     // Closed: the bar empties itself right after this. Then the row is drawn without it, so that nothing empty is left behind.
     queueMicrotask(() => {
-      if (discarded !== null && discardedKey() === null) {
+      if (discarded !== null && discardNote.element.childElementCount === 0) {
         forgetDiscarded();
         drawList();
       }
@@ -597,7 +597,7 @@ export function aiSection(shell: Shell): Section {
 
   /** The service whose row shows the confirmation of a discarded editor now, NEW_SERVICE for the place under the list, or null. */
   function discardedKey(): string | null {
-    return discarded !== null && discardNote.element.childElementCount > 0 ? discarded.key : null;
+    return discarded?.key ?? null;
   }
 
   /** The next action in the list: the confirmation of a discarded editor goes, like every confirmation in place. */
@@ -628,13 +628,17 @@ export function aiSection(shell: Shell): Section {
     }
     const key = left.id ?? NEW_SERVICE;
     editor = null;
-    if (left.dirty()) {
+    const changed = left.dirty();
+    if (changed) {
       const active = document.activeElement;
-      const draft: Draft = { editor: left, focus: active instanceof HTMLElement && left.element.contains(active) ? active : null };
-      discarded = { key, draft };
-      discardNote.show(left.id === null ? t("discardedNew") : t("discardedChanges", left.name), () => reopen(key, draft));
+      discarded = { key, draft: { editor: left, focus: active instanceof HTMLElement && left.element.contains(active) ? active : null } };
     }
     drawList();
+    if (changed && discarded !== null) {
+      // Said once its place stands where the editor stood, so that it is read out like every status that changes on the page.
+      const draft = discarded.draft;
+      discardNote.show(left.id === null ? t("discardedNew") : t("discardedChanges", left.name), () => reopen(key, draft));
+    }
     if (focus) {
       // The keyboard goes back to where the editor was opened from: Edit of the row, or the menu for adding. The
       // confirmation is read out as a status, its Undo is the next thing in the row, and the Undo shortcut does the same.
