@@ -609,7 +609,7 @@
     "message": "Download the raw data…"
   },
   "fatalDownloadHint": {
-    "message": "The raw data contains your API keys and sign\u2011in tokens. Keep the file private."
+    "message": "The raw data contains your API keys and sign\u2011ins. Keep the file private."
   },
   "fatalReset": {
     "message": "Reset everything…"
@@ -930,7 +930,7 @@
     "message": "No decisions yet. Protection switches on when the scan has finished."
   },
   "logNoMatch": {
-    "message": "No entry matches."
+    "message": "No decision matches."
   },
   "logUnknownSender": {
     "message": "(sender not known)"
@@ -1290,7 +1290,7 @@
     "message": "An AI service receives the sender, the Reply\u2011To address if there is one, the recipients, the subject, the date and the first 20,000 characters of the text, and can answer with nothing but a probability from 0.00 to 1.00."
   },
   "aiSecretsHint": {
-    "message": "API keys and sign\u2011in tokens are stored unencrypted in your Thunderbird profile. They are never written to the log and never exported."
+    "message": "API keys and sign\u2011ins are stored unencrypted in your Thunderbird profile. They are never written to the log and never exported."
   },
   "privacyText": {
     "message": "Nothing else leaves this computer, apart from messages you score yourself as a test. There is no telemetry and no other network request."
@@ -1425,7 +1425,7 @@
     "message": "Needs attention."
   },
   "apCoolingDown": {
-    "message": "Paused until $1 after a rate limit."
+    "message": "Paused until $1: the service’s limit of requests was reached."
   },
   "apCoolingOthers": {
     "message": "The other services answer meanwhile."
@@ -1623,7 +1623,7 @@
     "message": "The address must start with https. Only localhost and 127.0.0.1 may use http."
   },
   "problem_endpoint_placeholder": {
-    "message": "Replace the placeholder in the address with your own value."
+    "message": "Replace the part of the address in angle brackets with your own value."
   },
   "problem_model_missing": {
     "message": "Enter a model."
@@ -1809,19 +1809,19 @@
     "message": "OpenAI reported an error: $1"
   },
   "signInError_no_code": {
-    "message": "The address contains no authorization code."
+    "message": "The address holds no sign\u2011in code. Copy the whole address from the address bar."
   },
   "signInError_registration_incomplete": {
-    "message": "The registration did not return a client id. Start the sign\u2011in again."
+    "message": "OpenAI did not register Block Spam for the sign\u2011in. Start the sign\u2011in again."
   },
   "signInError_client_mismatch": {
-    "message": "The sign\u2011in returned a different client id. Start the sign\u2011in again."
+    "message": "The sign\u2011in answered for a different app than the one that started it. Start the sign\u2011in again."
   },
   "signInError_exchange_failed": {
-    "message": "The authorization code could not be exchanged: $1"
+    "message": "OpenAI did not complete the sign\u2011in: $1"
   },
   "signInError_invalid_token": {
-    "message": "The ID token is not valid: $1"
+    "message": "The answer of OpenAI to the sign\u2011in is not valid: $1"
   },
   "signInError_account_mismatch": {
     "message": "A different ChatGPT account signed in. Sign in with the account of this service, or add a new service."

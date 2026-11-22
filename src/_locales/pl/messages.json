@@ -54,7 +54,7 @@
     "message": "Na razie brak."
   },
   "showMore": {
-    "message": "Pokaż kolejne $1 (pozostało $2)"
+    "message": "Pokaż kolejne: $1 (pozostało: $2)"
   },
   "invalidItems": {
     "message": "Pominięto nieprawidłowe pozycje: $1"
@@ -609,7 +609,7 @@
     "message": "Pobierz surowe dane…"
   },
   "fatalDownloadHint": {
-    "message": "Surowe dane zawierają klucze API i tokeny logowania. Nie udostępniaj nikomu tego pliku."
+    "message": "Surowe dane zawierają klucze API i dane logowania. Nie udostępniaj nikomu tego pliku."
   },
   "fatalReset": {
     "message": "Zresetuj wszystko…"
@@ -819,7 +819,7 @@
     "message": "Sortuj tabelę według tej kolumny"
   },
   "source_identity": {
-    "message": "Własny adres"
+    "message": "Twój adres"
   },
   "source_sent": {
     "message": "Wysłana poczta"
@@ -861,7 +861,7 @@
     "message": "Pokaż:"
   },
   "logFilterName": {
-    "message": "Pokaż decyzje rodzaju"
+    "message": "Pokaż decyzje według rodzaju"
   },
   "logAll": {
     "message": "Wszystkie decyzje"
@@ -930,7 +930,7 @@
     "message": "Nie ma jeszcze żadnych decyzji. Ochrona włączy się po zakończeniu skanowania."
   },
   "logNoMatch": {
-    "message": "Żaden wpis nie pasuje."
+    "message": "Żadna decyzja nie pasuje."
   },
   "logUnknownSender": {
     "message": "(nadawca nieustalony)"
@@ -939,7 +939,7 @@
     "message": "(brak tematu)"
   },
   "logForwardedBy": {
-    "message": "przekazane przez"
+    "message": "za pośrednictwem"
   },
   "logObservedBadge": {
     "message": "obserwacja"
@@ -1290,7 +1290,7 @@
     "message": "Usługa AI otrzymuje nadawcę, adres Reply\u2011To, jeśli występuje, odbiorców, temat, datę i pierwsze 20 000 znaków treści, a odpowiedzieć może wyłącznie prawdopodobieństwem od 0,00 do 1,00."
   },
   "aiSecretsHint": {
-    "message": "Klucze API i tokeny logowania są przechowywane w profilu programu Thunderbird bez szyfrowania. Nigdy nie trafiają do dziennika ani do eksportu."
+    "message": "Klucze API i dane logowania są przechowywane w profilu programu Thunderbird bez szyfrowania. Nigdy nie trafiają do dziennika ani do eksportu."
   },
   "privacyText": {
     "message": "Nic innego nie opuszcza tego komputera, poza wiadomościami, które samodzielnie oceniasz w ramach testu. Nie ma telemetrii ani żadnych innych połączeń sieciowych."
@@ -1434,7 +1434,7 @@
     "message": "Ostatni problem: $1"
   },
   "apLastErrorRetry": {
-    "message": "Ostatnie zapytanie nie powiodło się. $1 Zostanie ponowione w razie potrzeby."
+    "message": "Ostatnie żądanie nie powiodło się. $1 Zostanie ponowione w razie potrzeby."
   },
   "apNoModel": {
     "message": "bez modelu"
@@ -1512,7 +1512,7 @@
     "message": "Usunąć usługę $1?"
   },
   "apRemoveText": {
-    "message": "Usługa oraz jej klucz lub logowanie zostaną usunięte z tego komputera."
+    "message": "Usługa oraz jej klucz lub dane logowania zostaną usunięte z tego komputera."
   },
   "moveUpNamed": {
     "message": "Przenieś usługę $1 wyżej"
@@ -1623,7 +1623,7 @@
     "message": "Adres musi zaczynać się od https. Tylko localhost i 127.0.0.1 mogą używać http."
   },
   "problem_endpoint_placeholder": {
-    "message": "Zastąp symbol zastępczy w adresie własną wartością."
+    "message": "Zastąp część adresu w nawiasach ostrych własną wartością."
   },
   "problem_model_missing": {
     "message": "Wpisz model."
@@ -1659,10 +1659,10 @@
     "message": "Poczta od nadawców z białej listy nigdy nie jest nigdzie wysyłana."
   },
   "consentAgree": {
-    "message": "Zgadzam się, zapisz"
+    "message": "Zaakceptuj i zapisz"
   },
   "consentAgreeLoad": {
-    "message": "Zgadzam się, wczytaj modele"
+    "message": "Zaakceptuj i wczytaj modele"
   },
   "localServerHint": {
     "message": "Usługa na tym komputerze odrzuca żądania dodatków, dopóki nie zezwoli się jej na źródło tego dodatku:"
@@ -1752,10 +1752,10 @@
     "message": "Sesja może być nadal otwarta"
   },
   "chatgptRevocationUnconfirmed": {
-    "message": "Logowanie usunięto z tego komputera, ale OpenAI nie potwierdziło zakończenia sesji. Aplikację możesz odłączyć w ustawieniach ChatGPT."
+    "message": "Dane logowania usunięto z tego komputera, ale OpenAI nie potwierdziło zakończenia sesji. Aplikację możesz odłączyć w ustawieniach ChatGPT."
   },
   "chatgptWelcomeTitle": {
-    "message": "Używany jest własny plan ChatGPT"
+    "message": "Używasz swojego planu ChatGPT"
   },
   "chatgptWelcomeText": {
     "message": "Ocenianie poczty od nieznanych nadawców, czyli tych spoza obu list, w Block Spam korzysta teraz z planu ChatGPT. Użycie możesz sprawdzać i kontrolować w ustawieniach ChatGPT."
@@ -1809,19 +1809,19 @@
     "message": "OpenAI zgłosiło błąd: $1"
   },
   "signInError_no_code": {
-    "message": "Adres nie zawiera kodu autoryzacji."
+    "message": "Adres nie zawiera kodu logowania. Skopiuj cały adres z paska adresu."
   },
   "signInError_registration_incomplete": {
-    "message": "Rejestracja nie zwróciła identyfikatora klienta. Rozpocznij logowanie ponownie."
+    "message": "OpenAI nie zarejestrowało Block Spam na potrzeby logowania. Rozpocznij logowanie ponownie."
   },
   "signInError_client_mismatch": {
-    "message": "Logowanie zwróciło inny identyfikator klienta. Rozpocznij logowanie ponownie."
+    "message": "Logowanie odpowiedziało dla innej aplikacji niż ta, która je rozpoczęła. Rozpocznij logowanie ponownie."
   },
   "signInError_exchange_failed": {
-    "message": "Nie udało się wymienić kodu autoryzacji: $1"
+    "message": "OpenAI nie dokończyło logowania: $1"
   },
   "signInError_invalid_token": {
-    "message": "Token ID jest nieprawidłowy: $1"
+    "message": "Odpowiedź OpenAI na logowanie jest nieprawidłowa: $1"
   },
   "signInError_account_mismatch": {
     "message": "Zalogowano się na inne konto ChatGPT. Zaloguj się na konto tej usługi albo dodaj nową usługę."
@@ -1989,7 +1989,7 @@
     "message": "Eksport"
   },
   "exportHint": {
-    "message": "Jeden plik z listami, ustawieniami i usługami AI, bez ich kluczy i logowań. Wpisy i foldery konta są zapisywane z adresem e\u2011mail tego konta."
+    "message": "Jeden plik z listami, ustawieniami i usługami AI, bez ich kluczy i danych logowania. Wpisy i foldery konta są zapisywane z adresem e\u2011mail tego konta."
   },
   "exportButton": {
     "message": "Eksportuj do pliku…"
@@ -2037,7 +2037,7 @@
     "message": "Zastąpić listy, ustawienia i usługi AI?"
   },
   "importReplaceText": {
-    "message": "Obecne listy, ustawienia i usługi AI zostaną zastąpione zawartością pliku. Klucze i logowania zostaną usunięte z tego komputera. Tej czynności nie można cofnąć."
+    "message": "Obecne listy, ustawienia i usługi AI zostaną zastąpione zawartością pliku. Klucze i dane logowania zostaną usunięte z tego komputera. Tej czynności nie można cofnąć."
   },
   "importReplaceConfirm": {
     "message": "Zastąp"
