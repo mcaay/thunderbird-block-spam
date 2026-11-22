@@ -196,7 +196,6 @@ Lists:
 - [ ] Add an address and a domain without choosing a kind. A wrong value ("not an address") is refused with the reason under the field, and the field keeps the focus.
 - [ ] Search and filter the entries, with scope "All accounts" and with one account.
 - [ ] Remove an entry: a confirmation with "Undo (Ctrl+Z)" (Cmd+Z on macOS) appears above the table and stays until the next action. Undo puts the entry back with its source and date, and the shortcut does the same. With the keyboard, the focus moves to the remove button of the next row.
-- [ ] "Sharing between accounts" (shared or per account) is in this pane, above the table. Its hint says that an entry added with the form uses its own "Applies to". With a single mail account a line says that it makes a difference only with two or more.
 - [ ] A click on a column header sorts the table by that column (all entries, not only the rows shown), a second click reverses the order, and the header shows an arrow. "Source:" narrows the table to what the AI, the scan, sent mail or you added.
 - [ ] "Add" is unavailable while the field is empty.
 - [ ] The line under the filter reads "Showing 200 of 4,001." without a filter, and "Matching: 12 of 4,001." with a filter or a search.
@@ -228,6 +227,7 @@ Learning and Incoming mail:
 
 Advanced:
 
+- [ ] With two or more mail accounts "Sharing between accounts" (shared or per account) is the first group, and the lead sentence of the pane names it. Its hint says that an entry added with the form under Lists uses its own "Applies to", and "Lists" in it opens the Lists pane. "Learn more" of the Lists pane says where sharing is set, with a link to Advanced.
 - [ ] Public mail providers: check a domain, treat a company domain as public and back.
 - [ ] Forwarding mailboxes and labels: add and remove a mailbox (removing offers Undo), change the labels and save. Save is filled only while the labels are changed.
 
@@ -323,9 +323,19 @@ Block and trust:
 - [ ] Popup: "Block" for the whole domain of a sender whose address is on the white list says "Removed from the white list: ..." in its result, and the tooltip of the button says so beforehand.
 - [ ] AI: change a field in the editor of a service and press Escape, Cancel or "Edit" of another row. Expected: a line "The changes to ... are not saved." with "Continue editing", which opens the editor with everything that was typed. Closing the tab asks first.
 - [ ] Export and import: "Merge lists" of a file whose entries are on the other list here reports them as moved and offers Undo. Undo restores the lists exactly. "Replace everything" asks first and says that it cannot be undone.
-- [ ] One mail account: the Lists pane shows no "Sharing between accounts", no "Applies to" menu and no "Applies to" column. With an entry of a removed account the column stays.
+- [ ] One mail account: the Advanced pane shows no "Sharing between accounts" and its lead sentence does not name it, "Learn more" of Lists has no sentence about it, and the Lists pane shows no "Applies to" menu and no "Applies to" column. With an entry of a removed account the column stays.
 - [ ] Overview: the status line stands directly under "Protection". "Check again" on the warning about a missing Spam folder answers "Checked at ...: the Spam folder is still missing." when nothing changed.
 - [ ] The warning about a missing Spam folder names Account Settings, "Spam Settings" and "Move new spam messages to:". Following it makes the warning go away after "Check again".
 - [ ] Incoming mail, "Mail without an AI verdict": first the sentence about which mail this is, then "What to do with it:", and the screening folders only with the third option.
 - [ ] The cutoff is a plain field: the arrow keys step it by 0.01, a value outside 0 to 1 is refused.
 
+
+## After review round 6
+
+Wording:
+
+- [ ] Overview, protection on, no new mail today: the status line reads "Last check: ... No new mail today yet."
+- [ ] Import a file with an AI service on a computer that has not allowed it yet: the warning, the row and the test say "Thunderbird may not connect to ... yet. Edit ... and press “Save” to allow it.", in Polish "Thunderbird nie ma jeszcze zgody na połączenia z ...".
+- [ ] Popup, "Test AI on selected messages": when every message got a score the line is "Scored: N. The scores are in the log.". "Without a score: N." appears only when a service failed for some.
+- [ ] Narrow the window while a sentence with "sign-in", "add-on" or the Polish "e-mail" stands at the end of a line (for example the dialog "Replace lists, settings and AI services?"): the word moves to the next line whole.
+- [ ] The editor of a service: no hint says "provider", "server" or "endpoint".
