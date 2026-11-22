@@ -126,7 +126,19 @@ export function aiSection(shell: Shell): Section {
    * when the pane is left, or by its close button. Nothing of it counts as unsaved.
    */
   let discarded: { key: string; draft: Draft } | null = null;
-  const discardNote = notice(() => (discarded === null ? null : rowControl(discarded.key === NEW_SERVICE ? null : discarded.key)));
+  const discardNote = notice(() => {
+    if (discarded === null) {
+      return null;
+    }
+    // Closed: the bar empties itself right after this. Then the row is drawn without it, so that nothing empty is left behind.
+    queueMicrotask(() => {
+      if (discarded !== null && discardedKey() === null) {
+        forgetDiscarded();
+        drawList();
+      }
+    });
+    return rowControl(discarded.key === NEW_SERVICE ? null : discarded.key);
+  });
   let welcomeOpen = false;
   let signInDrawn = "";
   /** The field for the pasted redirect address. It keeps its text while the panel is redrawn. */
@@ -592,6 +604,8 @@ export function aiSection(shell: Shell): Section {
   function forgetDiscarded(): void {
     discarded = null;
     discardNote.clear();
+    // It leaves the page with what it said: the row it stood in keeps nothing of it.
+    discardNote.element.remove();
   }
 
   /** Closes the editor after its service was saved: nothing of it is kept. */
@@ -614,8 +628,7 @@ export function aiSection(shell: Shell): Section {
     }
     const key = left.id ?? NEW_SERVICE;
     editor = null;
-    const changed = left.dirty();
-    if (changed) {
+    if (left.dirty()) {
       const active = document.activeElement;
       const draft: Draft = { editor: left, focus: active instanceof HTMLElement && left.element.contains(active) ? active : null };
       discarded = { key, draft };
@@ -623,13 +636,9 @@ export function aiSection(shell: Shell): Section {
     }
     drawList();
     if (focus) {
-      // With a confirmation the keyboard lands on its Undo, else on Edit of the row or on the menu for adding.
-      const undo = changed ? discardNote.element.querySelector<HTMLElement>('[data-focus="undo"]') : null;
-      if (undo !== null) {
-        undo.focus();
-      } else {
-        focusRow(left.id);
-      }
+      // The keyboard goes back to where the editor was opened from: Edit of the row, or the menu for adding. The
+      // confirmation is read out as a status, its Undo is the next thing in the row, and the Undo shortcut does the same.
+      focusRow(left.id);
     }
   }
 
