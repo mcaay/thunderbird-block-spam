@@ -5,7 +5,7 @@ import { CHATGPT_ORIGINS, USAGE_URL } from "../../ai/chatgptAuth";
 import { isLoopbackHost, originPattern, validateEndpoint } from "../../ai/http";
 import { checkDefinition, FIXED_ENDPOINTS, normalizeDefinition, PRESET_GROUPS, PRESETS } from "../../ai/presets";
 import type { AccessPointDefinition, DefinitionProblem, Preset } from "../../ai/presets";
-import { OUTPUT_LINE } from "../../core/score";
+import { isSpam, OUTPUT_LINE } from "../../core/score";
 import { DEFAULT_PROMPT } from "../../core/settings";
 import type { AccessPoint } from "../../core/types";
 import { stringsLocale, t, tCode } from "../../tb/i18n";
@@ -43,7 +43,7 @@ import {
   withMore,
 } from "../dom";
 import type { Child, DialogResult, FieldError, Keyed } from "../dom";
-import { mayRedraw, sameNumber } from "../fields";
+import { cutoffNumber, mayRedraw, sameNumber } from "../fields";
 import { formatLogTime, formatScore } from "../format";
 import { icon } from "../icons";
 import { LOOPBACK_ORIGIN, requestAccess } from "../permissions";
@@ -100,7 +100,10 @@ const NEW_SERVICE = "\u0000new";
 
 interface TestState {
   text: string;
-  kind: "busy" | "ok" | "error";
+  /** caution: the service answers, but it would have let the sample spam email pass. */
+  kind: "busy" | "ok" | "caution" | "error";
+  /** The score the sample spam email got. The line compares it with the cutoff as it is set now. */
+  score?: number;
   /** The state of the service the result belongs to. A result is dropped when the service has changed since. */
   stamp: string | null;
 }
@@ -202,6 +205,7 @@ export function aiSection(shell: Shell): Section {
     oninput: () => {
       cutoffError.set(null);
       cutoffStatus.clear();
+      sayCutoff();
     },
     onchange: () => saveCutoff(),
     onkeydown: (event) => {
@@ -217,12 +221,27 @@ export function aiSection(shell: Shell): Section {
       const base = cutoff.value.trim() === "" || !Number.isFinite(now) ? 0 : now;
       const next = Math.min(1, Math.max(0, Math.round((base + (event.key === "ArrowUp" ? 0.01 : -0.01)) * 100) / 100));
       cutoff.value = formatScore(next, stringsLocale());
+      sayCutoff();
       cutoffStepped = true;
       cutoffError.set(null);
       cutoffStatus.clear();
     },
     attrs: { inputmode: "decimal", autocomplete: "off", spellcheck: "false", role: "spinbutton", "aria-valuemin": "0", "aria-valuemax": "1" },
   });
+  /**
+   * What a screen reader is told about the field: it steps a number, so it says its value with its lowest and its
+   * highest one, also after a step with the arrow keys and after typing. While the text is no number from 0 to 1,
+   * no value is claimed and the text itself is read.
+   */
+  function sayCutoff(): void {
+    const value = cutoffNumber(cutoff.value);
+    if (value === null) {
+      cutoff.removeAttribute("aria-valuenow");
+    } else {
+      cutoff.setAttribute("aria-valuenow", String(value));
+    }
+    cutoff.setAttribute("aria-valuetext", cutoff.value.trim());
+  }
   // A value stepped with the arrow keys was not typed, so the field reports no change when it is left or Enter is pressed.
   cutoff.addEventListener("blur", () => saveSteppedCutoff());
   const cutoffError = fieldError(cutoff, "cutoff-error");
@@ -1083,9 +1102,7 @@ export function aiSection(shell: Shell): Section {
       let result: Omit<TestState, "stamp">;
       try {
         const outcome = await send("testAccessPoint", { id });
-        result = outcome.ok
-          ? { text: t("apTestScore", formatScore(outcome.score, stringsLocale())), kind: "ok" }
-          : { text: t("apTestFailed", diagnosticSentence(outcome.error)), kind: "error" };
+        result = outcome.ok ? { text: "", kind: "ok", score: outcome.score } : { text: t("apTestFailed", diagnosticSentence(outcome.error)), kind: "error" };
       } catch (error) {
         result = { text: t("apTestFailed", diagnosticSentence(errorText(error))), kind: "error" };
       }
@@ -1099,6 +1116,14 @@ export function aiSection(shell: Shell): Section {
       }
       drawList();
     })();
+  }
+
+  /** What a test that got an answer says: "Works" only when the sample spam email scored above the cutoff. Numbers are written as the page writes them. */
+  function testVerdict(score: number, cutoffNow: number): { text: string; kind: "ok" | "caution" } {
+    const locale = stringsLocale();
+    return isSpam(score, cutoffNow)
+      ? { text: t("apTestScore", formatScore(score, locale), formatScore(cutoffNow, locale)), kind: "ok" }
+      : { text: t("apTestScoreLow", formatScore(score, locale), formatScore(cutoffNow, locale)), kind: "caution" };
   }
 
   /** Forgets test results that a later request has overtaken, for example a test that worked before the key was rejected. */
@@ -1174,14 +1199,18 @@ export function aiSection(shell: Shell): Section {
     }
     const test = tests.get(point.id);
     if (test !== undefined) {
+      // The sample is spam: the service works for this add-on only when its score is above the cutoff, as the cutoff is
+      // set now. A score that is not would have let the sample pass: said as a caution, in the warning color.
+      const cutoffNow = model?.settings?.cutoff ?? null;
+      const said = test.score === undefined || cutoffNow === null ? { text: test.text, kind: test.kind } : testVerdict(test.score, cutoffNow);
       lines.push(
         h(
           "div",
-          { class: `service-state test ${test.kind}`, attrs: { role: test.kind === "error" ? "alert" : "status" } },
+          { class: `service-state test ${said.kind === "caution" ? "attention" : said.kind}`, attrs: { role: said.kind === "error" ? "alert" : "status" } },
           // A test in progress turns the same ring as the scan and the test of selected messages.
-          test.kind === "busy" ? h("span", { class: "spinner", attrs: { "aria-hidden": "true" } }) : null,
-          test.kind === "busy" ? " " : null,
-          test.text,
+          said.kind === "busy" ? h("span", { class: "spinner", attrs: { "aria-hidden": "true" } }) : null,
+          said.kind === "busy" ? " " : null,
+          said.text,
         ),
       );
     }
@@ -1365,6 +1394,8 @@ export function aiSection(shell: Shell): Section {
                 index,
                 points.length,
                 tests.get(point.id) ?? null,
+                // The line of a test compares its score with the cutoff.
+                tests.get(point.id)?.score === undefined ? null : (model?.settings?.cutoff ?? null),
                 point.cooldownUntil > now,
                 hostGranted(point),
                 signingIn,
@@ -1515,6 +1546,7 @@ export function aiSection(shell: Shell): Section {
         cutoff.value = storedCutoff;
         cutoffShown = storedCutoff;
       }
+      sayCutoff();
       maybeWelcome();
     },
     reveal(intent: Intent) {

@@ -11,7 +11,7 @@ import { REASONS } from "../src/core/decision";
 import { DIAGNOSTIC_CODES } from "../src/core/diagnostics";
 import { PROBLEM_KINDS, PROTECTION_STATES } from "../src/core/problems";
 import { ACCESS_POINT_TYPES, DEFAULT_PROMPT } from "../src/core/settings";
-import { LOG_LABELS, LOG_RESULTS, LOG_TITLES } from "../src/options/logLabels";
+import { LOG_BACK, LOG_LABELS, LOG_RESULTS, LOG_TITLES, LOG_UNDONE } from "../src/options/logLabels";
 // @ts-expect-error The build scripts are plain JavaScript modules.
 import { crc32, createZip } from "../scripts/zip.mjs";
 
@@ -84,6 +84,9 @@ describe("strings", () => {
     logLabel: LOG_LABELS,
     logTitle: LOG_TITLES,
     logResult: LOG_RESULTS,
+    // What is true again after Undo in a log row: the list the entry is on again, and where the message is.
+    logUndone: LOG_UNDONE,
+    logBack: LOG_BACK,
     // The short names of the problems.
     cause: PROBLEM_KINDS,
     // What happens to mail from unknown senders while no AI service gives a verdict, by the choice of Incoming mail:

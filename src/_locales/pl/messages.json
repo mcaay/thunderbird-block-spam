@@ -1223,8 +1223,23 @@
   "logMoveFailed": {
     "message": "Nie udało się przenieść wiadomości: $1"
   },
-  "logUndone": {
-    "message": "Cofnięto."
+  "logUndone_black_again": {
+    "message": "Cofnięto: $1 jest znowu na czarnej liście."
+  },
+  "logUndone_white_again": {
+    "message": "Cofnięto: $1 jest znowu na białej liście."
+  },
+  "logUndone_neither_again": {
+    "message": "Cofnięto: $1 znowu nie ma na żadnej liście."
+  },
+  "logBack_junk": {
+    "message": "Wiadomość wróciła do Niechcianych."
+  },
+  "logBack_inbox": {
+    "message": "Wiadomość wróciła do Odebranych."
+  },
+  "logBack_folder": {
+    "message": "Wiadomość wróciła do folderu „$1”."
   },
   "logShowMessage": {
     "message": "Pokaż wiadomość"
@@ -1533,7 +1548,10 @@
     "message": "Testowanie…"
   },
   "apTestScore": {
-    "message": "Działa: przykładowa wiadomość ze spamem otrzymała ocenę $1."
+    "message": "Działa: przykładowa wiadomość ze spamem otrzymała ocenę $1, powyżej progu $2."
+  },
+  "apTestScoreLow": {
+    "message": "Usługa odpowiada, ale przykładowa wiadomość ze spamem otrzymała ocenę $1, czyli nie powyżej progu $2: taka poczta zostałaby przepuszczona. Sprawdź model lub prompt."
   },
   "apTestFailed": {
     "message": "Test nie powiódł się. $1"

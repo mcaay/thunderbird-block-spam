@@ -1223,8 +1223,23 @@
   "logMoveFailed": {
     "message": "The message could not be moved: $1"
   },
-  "logUndone": {
-    "message": "Undone."
+  "logUndone_black_again": {
+    "message": "Taken back: $1 is on the black list again."
+  },
+  "logUndone_white_again": {
+    "message": "Taken back: $1 is on the white list again."
+  },
+  "logUndone_neither_again": {
+    "message": "Taken back: $1 is on neither list again."
+  },
+  "logBack_junk": {
+    "message": "The message is back in the Spam folder."
+  },
+  "logBack_inbox": {
+    "message": "The message is back in the Inbox."
+  },
+  "logBack_folder": {
+    "message": "The message is back in the folder “$1”."
   },
   "logShowMessage": {
     "message": "Show message"
@@ -1533,7 +1548,10 @@
     "message": "Testing…"
   },
   "apTestScore": {
-    "message": "Works: the sample spam email scored $1."
+    "message": "Works: the sample spam email scored $1, above the cutoff of $2."
+  },
+  "apTestScoreLow": {
+    "message": "The service answers, but the sample spam email scored $1, not above the cutoff of $2: such mail would pass. Check the model or the prompt."
   },
   "apTestFailed": {
     "message": "The test failed. $1"

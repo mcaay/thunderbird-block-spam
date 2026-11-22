@@ -12,6 +12,11 @@ export const LOG_TITLES = ["trust", "trust-move", "unblock", "unblock-move", "bl
 /** The lines that report the change on the lists, as the codes of their messages ("logResult_unblocked"). */
 export const LOG_RESULTS = ["trusted", "blocked", "moved-white", "moved-black", "unblocked", "already-trusted", "already-blocked"] as const;
 
+/** The lines that say what is true again after Undo, as the codes of their messages ("logUndone_black_again"). */
+export const LOG_UNDONE = ["black-again", "white-again", "neither-again"] as const;
+/** Where a message is after Undo moved it back, as the codes of their messages ("logBack_junk"). */
+export const LOG_BACK = ["junk", "inbox", "folder"] as const;
+
 export interface LogLabel {
   /** The label of the button, or of the note when nothing is left to do. */
   label: (typeof LOG_LABELS)[number];
@@ -56,4 +61,29 @@ export function logResult(outcome: Pick<LogOffer, "change" | "list" | "target"> 
     default:
       return { code: white ? "already-trusted" : "already-blocked", args: [value] };
   }
+}
+
+/**
+ * What is true about the lists again after Undo of an action: the entry it changed is back on the list it was on, or
+ * on neither. Null when the action changed nothing on the lists (it only moved the message).
+ */
+export function logUndone(outcome: Pick<LogOffer, "change" | "list" | "target">): { code: (typeof LOG_UNDONE)[number]; args: string[] } | null {
+  const value = outcome.target.value;
+  switch (outcome.change) {
+    case "add":
+      return { code: "neither-again", args: [value] };
+    case "move":
+      // It was moved to the list the action names: it is back on the other one.
+      return { code: outcome.list === "white" ? "black-again" : "white-again", args: [value] };
+    case "remove":
+      // Only an entry of the black list is removed, in front of a white one that then decides.
+      return { code: "black-again", args: [value] };
+    default:
+      return null;
+  }
+}
+
+/** The kind of folder a message is back in, by the roles Thunderbird gives the folder: the Spam folder, the Inbox, or a folder that is named. */
+export function backPlace(specialUse: readonly string[]): (typeof LOG_BACK)[number] {
+  return specialUse.includes("junk") ? "junk" : specialUse.includes("inbox") ? "inbox" : "folder";
 }

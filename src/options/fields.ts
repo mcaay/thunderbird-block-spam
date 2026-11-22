@@ -30,6 +30,15 @@ export function sameNumber(a: string, b: string): boolean {
   return a.trim() !== "" && b.trim() !== "" && number(a) === number(b);
 }
 
+/**
+ * The number a cutoff field holds, for what a screen reader is told about it: null while the text is not a number
+ * from 0 to 1. A comma is read as the decimal sign.
+ */
+export function cutoffNumber(text: string): number | null {
+  const value = Number(text.trim().replace(",", "."));
+  return text.trim() === "" || !Number.isFinite(value) || value < 0 || value > 1 ? null : value;
+}
+
 /** Two label lists that are the same once split at commas and trimmed. */
 export function sameLabels(a: string, b: string): boolean {
   const normalize = (text: string): string =>
