@@ -432,13 +432,16 @@
     "message": "brak folderu do sprawdzenia"
   },
   "chooseScreening": {
-    "message": "Wybierz folder"
+    "message": "Ustaw folder"
   },
   "chooseScreeningMany": {
-    "message": "Wybierz foldery"
+    "message": "Ustaw foldery"
   },
   "openAi": {
     "message": "Pokaż usługi AI"
+  },
+  "showSetting": {
+    "message": "Pokaż ustawienie"
   },
   "setupTitle": {
     "message": "Konfiguracja"
@@ -523,6 +526,9 @@
   },
   "wishWaiting": {
     "message": "Ochrona włączy się po zakończeniu skanowania."
+  },
+  "wishWaitingCancel": {
+    "message": "Jeśli anulujesz skanowanie, ochrona pozostanie wyłączona."
   },
   "wishCancel": {
     "message": "Nie włączaj"
@@ -744,10 +750,10 @@
     "message": "Problemy: $1"
   },
   "listsHint": {
-    "message": "Nadawca jest dopasowywany najpierw po adresie, a potem po domenie, więc wpis z adresem zawsze ma pierwszeństwo przed wpisem z domeną."
+    "message": "Poczta od nadawców z białej listy nigdy nie jest przenoszona ani wysyłana do usługi AI. Poczta od nadawców z czarnej listy trafia do Niechcianych. Wpis z adresem ma pierwszeństwo przed wpisem z domeną."
   },
   "listsMore": {
-    "message": "Zablokowany adres pozostaje zablokowany w zaufanej domenie, a zaufana osoba przechodzi mimo zablokowanej domeny. Biała lista powstaje na podstawie wysłanej poczty i zawiera także nadawców, którym ręcznie zaufano. Czarna lista zawiera nadawców zablokowanych ręcznie oraz tych, których usługa AI oceniła jako spam."
+    "message": "Nadawca jest dopasowywany najpierw po adresie, a potem po domenie. Zablokowany adres pozostaje zablokowany w zaufanej domenie, a zaufana osoba przechodzi mimo zablokowanej domeny. Biała lista powstaje na podstawie wysłanej poczty i zawiera także nadawców, którym ręcznie zaufano. Czarna lista zawiera nadawców zablokowanych ręcznie oraz tych, których usługa AI oceniła jako spam."
   },
   "listsMoreSharing": {
     "message": "To, czy wpisy tworzone przez uczenie, przez AI oraz przez blokowanie i ufanie są wspólne dla wszystkich kont, ustawia się w kategorii $1."
@@ -847,6 +853,9 @@
   },
   "listsNowManual": {
     "message": "Wpis $1 jest już na tej liście. Jego źródło to teraz „Ręcznie”."
+  },
+  "listsSourceBack": {
+    "message": "Cofnięto: źródłem wpisu $1 jest znowu „$2”."
   },
   "listsRemoved": {
     "message": "Usunięto $1."
@@ -1050,19 +1059,19 @@
     "message": "przeniesiono do Niechcianych"
   },
   "action_screening": {
-    "message": "przeniesiono do sprawdzenia"
+    "message": "przeniesiono do folderu do sprawdzenia"
   },
   "action_inbox": {
     "message": "przeniesiono do Odebranych"
   },
   "actionObserved_junk": {
-    "message": "przeniesiono by do Niechcianych"
+    "message": "trafiłaby do Niechcianych"
   },
   "actionObserved_screening": {
-    "message": "przeniesiono by do sprawdzenia"
+    "message": "trafiłaby do folderu do sprawdzenia"
   },
   "actionObserved_inbox": {
-    "message": "przeniesiono by do Odebranych"
+    "message": "trafiłaby do Odebranych"
   },
   "reason_white_address": {
     "message": "Adres jest na białej liście"
@@ -1326,7 +1335,7 @@
     "message": "Przenieś ją do folderu do sprawdzenia"
   },
   "noVerdictNoFolder": {
-    "message": "Bez folderu do sprawdzenia: $1. Poczta takiego konta zostaje na miejscu, dopóki nie wybierzesz folderu poniżej."
+    "message": "Bez folderu do sprawdzenia: $1. Poczta takiego konta zostaje na miejscu, dopóki nie wybierzesz lub nie utworzysz folderu poniżej."
   },
   "noVerdictWaiting": {
     "message": "Opcja „$1” zacznie obowiązywać po zakończeniu skanowania."

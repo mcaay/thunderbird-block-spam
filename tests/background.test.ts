@@ -1242,13 +1242,53 @@ describe("list entries from the settings page", () => {
     const { fake, background } = await setup();
     expect(await background.send("addEntry", { list: "black", value: "Mail.Outreach.example", scope: "all" })).toEqual({
       ok: true,
-      result: { value: "outreach.example", kind: "domain", list: "black", result: "added" },
+      // With what takes the add back: the key of the new entry.
+      result: { value: "outreach.example", kind: "domain", list: "black", result: "added", undo: { remove: ["domain all outreach.example"], restore: [] } },
     });
     expect(await background.send("addEntry", { list: "white", value: "Anna@Customer.example", scope: "all" })).toMatchObject({
       ok: true,
       result: { value: "anna@customer.example", kind: "address", list: "white" },
     });
     expect(fake.storage[KEY_ENTRIES]).toHaveLength(2);
+  });
+
+  it("hands the page what takes an add back exactly: the new entry goes, a moved or changed one comes back as it was", async () => {
+    const blocked = { list: "black", kind: "domain", value: "outreach.example", scope: "all", source: "ai", addedAt: 5 };
+    const learned = { list: "white", kind: "address", value: "anna@customer.example", scope: "all", source: "sent", addedAt: 6 };
+    const { fake, background } = await setup([blocked, learned]);
+    const undo = async (reply: Awaited<ReturnType<typeof background.send<"addEntry">>>): Promise<void> => {
+      if (!reply.ok) {
+        throw new Error(reply.error);
+      }
+      await background.send("removeEntries", { keys: reply.result.undo.remove });
+      await background.send("restoreEntries", { entries: reply.result.undo.restore });
+    };
+
+    // A new entry: Undo removes it.
+    const added = await background.send("addEntry", { list: "white", value: "new@customer.example", scope: "all" });
+    expect(added).toMatchObject({ ok: true, result: { result: "added", undo: { remove: ["address all new@customer.example"], restore: [] } } });
+    await undo(added);
+    expect(fake.storage[KEY_ENTRIES]).toEqual([blocked, learned]);
+
+    // An entry of the other list is moved: Undo puts it back with its list, its source and its date.
+    const moved = await background.send("addEntry", { list: "white", value: "outreach.example", scope: "all" });
+    expect(moved).toMatchObject({ ok: true, result: { result: "moved", undo: { remove: [], restore: [blocked] } } });
+    expect(fake.storage[KEY_ENTRIES]).toMatchObject([{ list: "white", value: "outreach.example", source: "manual" }, learned]);
+    await undo(moved);
+    expect(fake.storage[KEY_ENTRIES]).toEqual([blocked, learned]);
+
+    // An entry made by learning becomes one made by hand: Undo gives it its source back.
+    const marked = await background.send("addEntry", { list: "white", value: "anna@customer.example", scope: "all" });
+    expect(marked).toMatchObject({ ok: true, result: { result: "source-updated", undo: { remove: [], restore: [learned] } } });
+    await undo(marked);
+    expect(fake.storage[KEY_ENTRIES]).toEqual([blocked, learned]);
+
+    // Nothing changed: there is nothing to take back.
+    await background.send("addEntry", { list: "white", value: "hand@customer.example", scope: "all" });
+    expect(await background.send("addEntry", { list: "white", value: "hand@customer.example", scope: "all" })).toMatchObject({
+      ok: true,
+      result: { result: "unchanged", undo: { remove: [], restore: [] } },
+    });
   });
 
   it("answers a value that is neither an address nor a domain with a code for the page to translate", async () => {

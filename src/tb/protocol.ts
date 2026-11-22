@@ -67,10 +67,13 @@ export interface Requests {
   /** Calls that choice off, and forgets what the last one came to. */
   clearNoVerdictWish: { request: Record<string, never>; result: null };
   updateSettings: { request: { patch: SettingsPatch }; result: { invalid: string[] } };
-  /** Without a kind, a value with a name before an "@" is an address and anything else a domain. */
+  /**
+   * Without a kind, a value with a name before an "@" is an address and anything else a domain. `undo` is what takes
+   * the add back exactly: the key to remove, or the entry as it was before it was moved or marked as made by hand.
+   */
   addEntry: {
     request: { list: string; kind?: string; value: string; scope: string };
-    result: { value: string; kind: EntryKind; list: ListName; result: string };
+    result: { value: string; kind: EntryKind; list: ListName; result: string; undo: { remove: string[]; restore: Entry[] } };
   };
   removeEntries: { request: { keys: string[] }; result: { removed: number } };
   /** Undo of a removal: puts entries back exactly as they were. */

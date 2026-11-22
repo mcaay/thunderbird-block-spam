@@ -27,7 +27,7 @@ import { Engine } from "./core/engine";
 import type { CommandOutcome, CommandUndo, LogActionUndo, ScanProgress } from "./core/engine";
 import { applyImport, buildExport } from "./core/exportImport";
 import { KEY_ACCESS_POINTS, KEY_ATTENTION_NOTIFIED, KEY_LAST_COMMAND, KEY_LAST_IMPORT, KEY_PROTECTION_WISH, KEY_SETTINGS } from "./core/keys";
-import { whiteListIsOnlyIdentities } from "./core/lists";
+import { keyOf, whiteListIsOnlyIdentities } from "./core/lists";
 import { validateLogEntry } from "./core/log";
 import { isLogAction } from "./core/logAction";
 import { folderKey } from "./core/ports";
@@ -1151,11 +1151,15 @@ const handlers: Handlers = {
       args,
       accounts.map((account) => account.id),
     );
+    const key = keyOf(entry);
+    const previous = state.entries.get(key);
     const result = state.addEntry(entry, Date.now());
     await state.saveEntries();
     mail.resetCache();
     await withKeepAlive(() => engine.sweepIfNeeded());
-    return { value: entry.value, kind: entry.kind, list: entry.list, result };
+    // How the page takes the add back exactly: a new entry is removed, one that was moved or marked as made by hand is put back as it was.
+    const undo = { remove: result === "added" ? [key] : [], restore: previous !== undefined && (result === "moved" || result === "source-updated") ? [previous] : [] };
+    return { value: entry.value, kind: entry.kind, list: entry.list, result, undo };
   },
 
   async removeEntries({ keys }) {

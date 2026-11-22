@@ -432,13 +432,16 @@
     "message": "no screening folder"
   },
   "chooseScreening": {
-    "message": "Choose a folder"
+    "message": "Set up the folder"
   },
   "chooseScreeningMany": {
-    "message": "Choose folders"
+    "message": "Set up the folders"
   },
   "openAi": {
     "message": "Show AI services"
+  },
+  "showSetting": {
+    "message": "Show the setting"
   },
   "setupTitle": {
     "message": "Setup"
@@ -523,6 +526,9 @@
   },
   "wishWaiting": {
     "message": "Protection switches on when the scan has finished."
+  },
+  "wishWaitingCancel": {
+    "message": "If you cancel the scan, protection stays off."
   },
   "wishCancel": {
     "message": "Don’t switch on"
@@ -744,10 +750,10 @@
     "message": "Problems: $1"
   },
   "listsHint": {
-    "message": "A sender is matched by address first, then by domain, so an address entry always beats a domain entry."
+    "message": "Mail from senders on the white list is never moved and never sent to an AI service. Mail from senders on the black list goes to the Spam folder. An address entry beats a domain entry."
   },
   "listsMore": {
-    "message": "A blocked address stays blocked inside a trusted domain, and a trusted person passes inside a blocked domain. The white list is learned from your sent mail and also holds senders you trusted by hand. The black list holds senders you blocked and senders an AI service scored as spam."
+    "message": "A sender is matched by address first, then by domain. A blocked address stays blocked inside a trusted domain, and a trusted person passes inside a blocked domain. The white list is learned from your sent mail and also holds senders you trusted by hand. The black list holds senders you blocked and senders an AI service scored as spam."
   },
   "listsMoreSharing": {
     "message": "Whether entries made by learning, by AI and by blocking or trusting are shared by all accounts is set under $1."
@@ -847,6 +853,9 @@
   },
   "listsNowManual": {
     "message": "$1 is already on that list. Its source is now “Manual”."
+  },
+  "listsSourceBack": {
+    "message": "Taken back: the source of $1 is “$2” again."
   },
   "listsRemoved": {
     "message": "Removed $1."
@@ -1326,7 +1335,7 @@
     "message": "Move it to a screening folder for you to review"
   },
   "noVerdictNoFolder": {
-    "message": "Without a screening folder: $1. Mail of such an account stays where it is until you choose a folder below."
+    "message": "Without a screening folder: $1. Mail of such an account stays where it is until you choose or create a folder below."
   },
   "noVerdictWaiting": {
     "message": "The option “$1” takes effect when the scan has finished."
