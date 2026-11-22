@@ -32,6 +32,15 @@ async function settle(): Promise<void> {
   }
 }
 
+/** Lets pending work run until the condition holds. A step that finishes off the thread (a digest) can need more than a fixed number of rounds. */
+async function settleUntil(done: () => boolean): Promise<void> {
+  const deadline = performance.now() + 5000;
+  while (!done() && performance.now() < deadline) {
+    await new Promise((resolve) => setImmediate(resolve));
+  }
+  await settle();
+}
+
 /** A fake OpenAI: the token endpoint answers when the test releases it. */
 async function fakeOpenAi() {
   const factory = await tokenFactory();
@@ -158,7 +167,8 @@ describe("incoming mail with unavailable headers", () => {
     expect(fake.moves).toEqual([]);
 
     await vi.advanceTimersByTimeAsync(30_000);
-    await settle();
+    // The queue goes on after the first message is marked as processed, which takes a digest: wait for the move itself.
+    await settleUntil(() => fake.moves.length > 0);
     expect(http.requests).toHaveLength(1);
     expect(fake.moves).toEqual([{ ids: [2], folderId: "f-junk" }]);
   });

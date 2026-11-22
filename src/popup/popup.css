@@ -465,6 +465,14 @@ button.decision:hover:not(:disabled, [aria-disabled="true"]) {
   padding: 0 8px;
 }
 
+/* A link on the fill of a result is a link, not a small button: the color of the result's text and its underline, as on a bar (see common.css). */
+.footer .result button.link,
+.footer .result button.link:hover:not(:disabled, [aria-disabled="true"]) {
+  min-height: 0;
+  padding: 0;
+  color: inherit;
+}
+
 .footer .switch > button {
   margin-inline-start: auto;
 }

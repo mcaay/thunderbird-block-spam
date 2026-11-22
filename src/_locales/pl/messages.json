@@ -750,7 +750,7 @@
     "message": "Problemy: $1"
   },
   "listsHint": {
-    "message": "Poczta od nadawców z białej listy nigdy nie jest przenoszona ani wysyłana do usługi AI. Poczta od nadawców z czarnej listy trafia do Niechcianych. Wpis z adresem ma pierwszeństwo przed wpisem z domeną."
+    "message": "Poczta od nadawców z białej listy nigdy nie jest traktowana jak spam ani wysyłana do usługi AI. Poczta od nadawców z czarnej listy trafia do Niechcianych. Wpis z adresem ma pierwszeństwo przed wpisem z domeną."
   },
   "listsMore": {
     "message": "Nadawca jest dopasowywany najpierw po adresie, a potem po domenie. Zablokowany adres pozostaje zablokowany w zaufanej domenie, a zaufana osoba przechodzi mimo zablokowanej domeny. Biała lista powstaje na podstawie wysłanej poczty i zawiera także nadawców, którym ręcznie zaufano. Czarna lista zawiera nadawców zablokowanych ręcznie oraz tych, których usługa AI oceniła jako spam."

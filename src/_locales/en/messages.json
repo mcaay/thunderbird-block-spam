@@ -750,7 +750,7 @@
     "message": "Problems: $1"
   },
   "listsHint": {
-    "message": "Mail from senders on the white list is never moved and never sent to an AI service. Mail from senders on the black list goes to the Spam folder. An address entry beats a domain entry."
+    "message": "Mail from senders on the white list is never treated as spam and never sent to an AI service. Mail from senders on the black list goes to the Spam folder. An address entry beats a domain entry."
   },
   "listsMore": {
     "message": "A sender is matched by address first, then by domain. A blocked address stays blocked inside a trusted domain, and a trusted person passes inside a blocked domain. The white list is learned from your sent mail and also holds senders you trusted by hand. The black list holds senders you blocked and senders an AI service scored as spam."
