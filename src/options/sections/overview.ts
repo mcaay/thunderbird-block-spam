@@ -13,7 +13,7 @@ import { stringsLocale, t, tCode, tn } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
 import { servicesOutcomeText, wishOutcomeText } from "../../tb/stateText";
 import { refreshGrants } from "../aiState";
-import { announce, bar, button, byId, checkRow, description, dialog, download, guard, h, iconButton, learnMore, notice, paneLink, reconcile, replace, setUnavailable, tNodes, whileBusy } from "../dom";
+import { announce, bar, button, byId, checkRow, description, dialog, download, guard, h, iconButton, learnMore, named, notice, paneLink, reconcile, replace, setUnavailable, tNodes, whileBusy } from "../dom";
 import type { Child, Keyed } from "../dom";
 import { formatLogTime, formatScore, formatShortTime } from "../format";
 import { icon } from "../icons";
@@ -314,6 +314,8 @@ export function overviewSection(shell: Shell): Section {
           ),
         );
         again.dataset.focus = "check";
+        // The name says which accounts are checked.
+        named(again, names);
         bars.push({
           key: "no-junk",
           signature: names,

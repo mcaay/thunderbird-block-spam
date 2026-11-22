@@ -14,7 +14,7 @@ function tieShortWords(message: string): string {
  * and texts that end with something other than a word (an address, a number in brackets) are left as they are.
  */
 function tieLastWord(message: string): string {
-  return message.length < 60 ? message : message.replace(/ (?=[\p{L}\p{N}\u2019'-]{1,12}[\u201d")\]]?[.!?\u2026]?$)/u, "\u00a0");
+  return message.length < 60 ? message : message.replace(/ (?=[\p{L}\p{N}\u2019'-]{1,12}[\u201d")\]]?[.!?:\u2026]?$)/u, "\u00a0");
 }
 
 /**

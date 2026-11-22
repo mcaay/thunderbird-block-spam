@@ -138,7 +138,7 @@ export function incomingSection(shell: Shell): Section {
               {
                 id,
                 // The whole name of the chosen folder, for when the menu is too narrow for it.
-                title: chosen === null ? undefined : folderView(current, chosen).name,
+                title: chosen === null ? undefined : t("chosenFolder", folderView(current, chosen).name),
                 attrs: { "data-focus": "select", "aria-label": t("screeningFor", account.name) },
                 onchange: () => {
                   const folder = account.folders.find((candidate) => candidate.path === select.value);

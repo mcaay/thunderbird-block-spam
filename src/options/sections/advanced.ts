@@ -6,7 +6,7 @@ import type { SettingsPatch } from "../../core/edit";
 import { BUNDLED_PUBLIC_DOMAINS } from "../../data/publicDomains";
 import { stringsLocale, t, tCode } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
-import { address, addressed, button, byId, description, fieldError, focusNeighbor, guard, h, inlineStatus, learnMore, notice, reconcile, removeButton, replace } from "../dom";
+import { address, addressed, button, byId, description, fieldError, focusNeighbor, guard, h, inlineStatus, learnMore, named, notice, reconcile, removeButton, replace } from "../dom";
 import { icon } from "../icons";
 import type { Keyed } from "../dom";
 import { mayRedraw, sameLabels } from "../fields";
@@ -100,6 +100,9 @@ export function advancedSection(): Section {
     }
     makePublic.disabled = state.domain === null || state.isPublic;
     makeCustom.disabled = state.domain === null || !state.isPublic;
+    // The name of each button says which domain it acts on, once the field holds one.
+    named(makePublic, state.domain ?? "");
+    named(makeCustom, state.domain ?? "");
   }
 
   function change(toPublic: boolean): void {
@@ -144,7 +147,7 @@ export function advancedSection(): Section {
     },
     attrs: { spellcheck: "false", autocomplete: "off" },
   });
-  const addMailboxButton = h("button", { type: "submit", text: t("add"), disabled: true });
+  const addMailboxButton = h("button", { type: "submit", text: t("add"), disabled: true, attrs: { "aria-label": t("forwardingAddOne") } });
   const mailboxError = fieldError(mailbox, "forward-mailbox-error");
   const mailboxes = plainList({ label: t("forwardingTitle") }, mailbox);
   /** What the last removal of a mailbox did, with Undo. */
@@ -180,6 +183,8 @@ export function advancedSection(): Section {
       (message) => labelsError.set(message),
     ),
   );
+
+  named(saveLabels, t("forwardLabelsTitle"));
 
   function labelsDirty(): boolean {
     return !sameLabels(labels.value, labelsStored);

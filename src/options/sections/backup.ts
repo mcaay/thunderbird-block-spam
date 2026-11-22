@@ -5,7 +5,7 @@ import type { ImportMode } from "../../core/exportImport";
 import { t } from "../../tb/i18n";
 import { RequestError, send } from "../../tb/protocol";
 import type { ImportReply } from "../../tb/protocol";
-import { addressed, bar, button, byId, description, dialog, download, errorText, guard, h, inlineStatus, learnMore, option, replace, whileBusy } from "../dom";
+import { addressed, bar, button, byId, description, dialog, download, errorText, guard, h, inlineStatus, learnMore, named, option, replace, whileBusy } from "../dom";
 import type { Section } from "../section";
 
 function reportLines(report: ImportReply): string[] {
@@ -30,7 +30,8 @@ export function backupSection(): Section {
   const fileName = h("span", { class: "file-name", id: "import-file-name", text: t("importNoFile") });
   const choose = button(t("importChoose"), () => file.click());
   choose.setAttribute("aria-describedby", "import-file-name");
-  const mode = h("select", { id: "import-mode" }, option("merge", t("importMerge")), option("replace", t("importReplace")));
+  // The label next to it says "Mode:". The name says of what.
+  const mode = h("select", { id: "import-mode", attrs: { "aria-label": t("importModeName") } }, option("merge", t("importMerge")), option("replace", t("importReplace")));
   const problem = h("div", { class: "field-error", hidden: true, attrs: { role: "alert" } });
   // It can take the focus, for when the Undo button that was pressed is gone: then it reads what was restored.
   const report = h("div", { class: "import-report notice", tabIndex: -1, attrs: { role: "group" } });
@@ -106,6 +107,10 @@ export function backupSection(): Section {
                 ),
               ),
             );
+      if (undo !== null) {
+        // The name says what is taken back.
+        named(undo, t("importTitle"));
+      }
       report.removeAttribute("aria-label");
       replace(
         report,

@@ -2,7 +2,7 @@
 // another folder. Used for Sent folders and for monitored folders.
 
 import { t } from "../../tb/i18n";
-import { addressed, description, focusNeighbor, h, option, removeButton } from "../dom";
+import { addressed, description, focusNeighbor, h, named, option, removeButton } from "../dom";
 import type { Keyed } from "../dom";
 import type { AccountView, FolderView } from "../model";
 import type { FolderRef } from "../../core/types";
@@ -56,6 +56,8 @@ export function folderEditors(accounts: readonly AccountView[], options: FolderE
             }
           },
         });
+        // Every account has such a button: the name says whose it is.
+        named(add, account.name);
         select.addEventListener("input", () => {
           add.disabled = select.value === "";
           // The menus of one column share one width: a longer name is shortened, and the tooltip has all of it.

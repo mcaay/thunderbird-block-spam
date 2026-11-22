@@ -164,6 +164,15 @@ export async function whileBusy(element: HTMLElement, action: () => Promise<unkn
   }
 }
 
+/**
+ * Gives a control the accessible name "label: object": the words that are seen on it, then what it acts on, so that
+ * controls with the same label can be told apart by a screen reader. The name still starts with the visible text.
+ */
+export function named<T extends HTMLElement>(element: T, object: string, label = element.textContent ?? ""): T {
+  element.setAttribute("aria-label", object === "" ? label : t("labelNamed", label, object));
+  return element;
+}
+
 /** A button that shows only an icon. The label is its accessible name and its tooltip. */
 export function iconButton(name: IconName, label: string, onclick: (event: MouseEvent) => void, cls = ""): HTMLButtonElement {
   const element = h("button", { type: "button", class: `icon ${cls}`.trim(), title: label, attrs: { "aria-label": label } }, icon(name));
@@ -557,7 +566,8 @@ export function notice(): Notice {
             }
           });
         };
-        undoButton = button(undoLabel(), run);
+        // The name says what is taken back.
+        undoButton = named(button(undoLabel(), run), message);
         undoButton.dataset.focus = "undo";
         undoOwner = { notice: self, run };
         if (!undoKeyBound) {

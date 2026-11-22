@@ -322,15 +322,25 @@ h2 > .state {
   display: grid;
   grid-column: 1 / -1;
   grid-template-columns: subgrid;
-  align-items: center;
+  /* The number, the title and the label of the button share one center line: the first line of the step. */
+  align-items: start;
   padding: 8px 0;
   counter-increment: step;
+}
+
+/* The mark has a smaller font: the line of the title is 1.4 times the size of the page's text (1.1rem). */
+.step > .step-mark {
+  margin-top: calc((1.54rem - 22px) / 2);
+}
+
+.step > .step-action > button {
+  margin-top: calc((1.4em - 2.2em) / 2);
 }
 
 /* Wide enough for the longest label of both languages, so that the buttons keep their width from state to state. */
 .step-action > button {
   width: 100%;
-  min-width: 152px;
+  min-width: 160px;
 }
 
 .step + .step {
@@ -419,13 +429,22 @@ h2 > .state {
   border-top: 1px solid var(--separator);
 }
 
+/* The first line of the name and the remove button share one center line, also when a long name wraps. */
 .plain-list li {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   min-height: 30px;
-  padding: 2px 2px 2px 8px;
+  padding: 3px 2px 3px 8px;
   border-bottom: 1px solid var(--separator);
+}
+
+.plain-list li > .name {
+  padding-block: calc((24px - 1.4em) / 2);
+}
+
+.plain-list li > .note {
+  line-height: 24px;
 }
 
 .plain-list li:hover {
@@ -464,12 +483,17 @@ h2 > .state {
   /* Both columns have one width whatever the accounts and their folders are called. The first takes an account name that is an email address of forty characters in one line; a longer one wraps, as an address does. */
   grid-template-columns: 280px 220px auto minmax(0, 1fr);
   gap: 6px 8px;
-  align-items: center;
+  /* The first line of the account name and the menu share one center line, also when a long name wraps. */
+  align-items: start;
   margin: 6px 0;
 }
 
 .screening-row {
   display: contents;
+}
+
+.screening-row > label {
+  padding-block: calc((2.2em - 1.4em) / 2);
 }
 
 /* Every account starts a line of its own, also while the status at the end of the line before is hidden. */
@@ -484,6 +508,8 @@ h2 > .state {
 
 .screening-row > .no-candidate {
   margin: 0;
+  /* As high as the menu it stands in for (2.2 times the size of the page's text), so its one line is centered on the row. */
+  line-height: 2.42rem;
 }
 
 /* What the button did stands under the row it belongs to, where a sentence has room. */
@@ -807,6 +833,15 @@ td.empty {
 td.action {
   padding: 3px 4px;
   text-align: end;
+}
+
+/*
+ * A row with a button at its end: the text of the row stands on the center line of the button (24px with 3px
+ * above it), so the first line of every cell and the label of the button share one line.
+ */
+table.entries td:not(.action),
+table.log td:not(.col-action) {
+  padding-block: calc(3px + (24px - 1.4em) / 2);
 }
 
 table.entries .col-list {
@@ -1139,10 +1174,12 @@ table.log tr:focus-visible {
   color: var(--description);
 }
 
+/* The buttons stand on the center line of the name of the service, the first line of the row. */
 .service-actions {
   display: flex;
   gap: 4px;
   align-items: center;
+  margin-top: calc((1.4em - 2.2em) / 2);
 }
 
 .service-actions button.icon {
@@ -1371,9 +1408,10 @@ dialog.modal p {
     margin-top: 6px;
   }
 
-  .step-action > button {
+  .step > .step-action > button {
     width: auto;
-    min-width: 152px;
+    min-width: 160px;
+    margin-top: 0;
   }
 
   .step-action:empty {
@@ -1411,15 +1449,26 @@ dialog.modal p {
     border-bottom: 1px solid var(--separator);
   }
 
-  table.log td {
+  table.log td,
+  table.log td:not(.col-action) {
     width: auto;
     padding: 0;
     border: 0;
   }
 
-  table.log .col-time {
+  /* The time and the decision stand on the center line of the button at the end of the row. */
+  table.log td.col-time {
     grid-area: time;
+    padding-top: calc((24px - 1.4em) / 2);
     color: var(--deemphasized);
+  }
+
+  table.log .when {
+    display: block;
+  }
+
+  table.log .outcome-line {
+    padding-top: calc((24px - 1.4em) / 2);
   }
 
   /* In the stacked layout the row is a grid and paints its own frame. */

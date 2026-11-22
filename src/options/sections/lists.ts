@@ -88,7 +88,7 @@ export function listsSection(): Section {
   const addList = h("select", { id: "entry-list" }, option("white", t("listWhite")), option("black", t("listBlack")));
   const addScope = h("select", { id: "entry-scope" });
   const addStatus = inlineStatus();
-  const addButton = h("button", { type: "submit", text: t("add"), disabled: true });
+  const addButton = h("button", { type: "submit", text: t("add"), disabled: true, attrs: { "aria-label": t("listsAddName") } });
   /** The "Applies to" menu of the form. With fewer than two accounts it could change nothing, and is not shown. */
   const scopeField = h("div", { class: "field" }, h("label", { for: "entry-scope", text: t("listsScopeLabel") }), addScope);
   /**
@@ -159,7 +159,8 @@ export function listsSection(): Section {
       },
       "sort",
     );
-    press.title = t("sortBy", label);
+    // The header names its column. The tooltip says what a press does, without saying the name again.
+    press.title = t("sortBy");
     const cell = h("th", { attrs: { scope: "col" } }, press);
     headers.set(key, cell);
     return cell;

@@ -48,7 +48,7 @@
     "message": "Cofnij ($1)"
   },
   "dismiss": {
-    "message": "Zamknij"
+    "message": "Zamknij ten komunikat"
   },
   "noneYet": {
     "message": "Na razie brak."
@@ -701,6 +701,9 @@
   "listsAddTitle": {
     "message": "Dodawanie wpisu"
   },
+  "listsAddName": {
+    "message": "Dodaj wpis"
+  },
   "listsValueLabel": {
     "message": "Adres lub domena"
   },
@@ -801,7 +804,7 @@
     "message": "Dodano"
   },
   "sortBy": {
-    "message": "Sortuj według: $1"
+    "message": "Sortuj tabelę według tej kolumny"
   },
   "source_identity": {
     "message": "Własny adres"
@@ -1171,6 +1174,9 @@
   },
   "chooseFolder": {
     "message": "Wybierz folder"
+  },
+  "chosenFolder": {
+    "message": "Wybrany folder: $1"
   },
   "addFolder": {
     "message": "Dodaj folder"
@@ -1993,6 +1999,9 @@
   },
   "importModeLabel": {
     "message": "Tryb:"
+  },
+  "importModeName": {
+    "message": "Tryb importu"
   },
   "importMerge": {
     "message": "Scal listy"

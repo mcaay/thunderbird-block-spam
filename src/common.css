@@ -381,10 +381,10 @@ input[type="search"] {
   background-size: 14px;
 }
 
-/* With the focus its border is two pixels of the accent color, inside the field. */
-input[type="search"]:focus-visible {
-  outline-offset: -2px;
-}
+/*
+ * With the focus it has the border of every focused field: two pixels of the accent color, one of them outside the
+ * field. Thunderbird draws both inside its search field, where on the dark fill the accent color has only 2.5 to 1.
+ */
 
 input[type="search"]:dir(rtl) {
   background-position: right 9px center;

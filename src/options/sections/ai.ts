@@ -29,6 +29,7 @@ import {
   inlineStatus,
   isUnavailable,
   learnMore,
+  named,
   option,
   paneLink,
   reconcile,
@@ -240,12 +241,36 @@ export function aiSection(shell: Shell): Section {
     drawPromptState();
     prompt.focus();
   });
+  named(discardPromptButton, t("promptTitle"));
   const restorePromptButton = button(t("promptRestore"), () => {
     // Only fills the field: the stored prompt changes when Save is pressed.
     prompt.value = DEFAULT_PROMPT;
     promptError.set(null);
     drawPromptState();
     prompt.focus();
+  });
+  named(restorePromptButton, t("promptTitle"));
+
+  /** "Add…": its name says which service the menu next to it has chosen. */
+  const addServiceButton: HTMLButtonElement = button(t("serviceAdd"), () => {
+    const preset = PRESETS.find((item) => item.id === presetSelect.value) ?? null;
+    if (preset?.type === "chatgpt") {
+      void guard(async () => {
+        // The sign-in creates the service switched on: "scan first" is asked before it starts.
+        const asked = await askScanFirst(false);
+        if (asked.answer !== "cancel") {
+          startChatGpt(null, asked.asked ? asked.answer === "after-scan" : null);
+        }
+      });
+    } else if (preset !== null) {
+      if (editor !== null && editor.id === null && editor.dirty()) {
+        // The editor of a new service is open and holds typed text: it is not replaced by an empty one. The focus
+        // goes to it, where "Unsaved changes" stands next to Save, and Cancel keeps the text behind "Continue editing".
+        editor.focus();
+        return;
+      }
+      openEditor(null, preset);
+    }
   });
 
   replace(
@@ -264,26 +289,7 @@ export function aiSection(shell: Shell): Section {
       h("label", { for: "preset", text: t("serviceAddLabel") }),
       presetSelect,
       // "Add…": more is asked before anything is added, in the editor or in the consent dialog.
-      button(t("serviceAdd"), () => {
-        const preset = PRESETS.find((item) => item.id === presetSelect.value) ?? null;
-        if (preset?.type === "chatgpt") {
-          void guard(async () => {
-            // The sign-in creates the service switched on: "scan first" is asked before it starts.
-            const asked = await askScanFirst(false);
-            if (asked.answer !== "cancel") {
-              startChatGpt(null, asked.asked ? asked.answer === "after-scan" : null);
-            }
-          });
-        } else if (preset !== null) {
-          if (editor !== null && editor.id === null && editor.dirty()) {
-            // The editor of a new service is open and holds typed text: it is not replaced by an empty one. The focus
-            // goes to it, where "Unsaved changes" stands next to Save, and Cancel keeps the text behind "Continue editing".
-            editor.focus();
-            return;
-          }
-          openEditor(null, preset);
-        }
-      }),
+      addServiceButton,
     ),
     presetHint,
     signInFailed,
@@ -326,6 +332,7 @@ export function aiSection(shell: Shell): Section {
 
   function drawPresetHint(): void {
     const preset = PRESETS.find((item) => item.id === presetSelect.value);
+    named(addServiceButton, preset === undefined ? "" : tCode("preset", preset.id), t("serviceAdd"));
     if (preset === undefined) {
       replace(presetHint);
       return;
@@ -529,7 +536,7 @@ export function aiSection(shell: Shell): Section {
         "div",
         { class: "field" },
         h("label", { for: "sign-in-address", text: t("signInAddressLabel") }),
-        h("div", { class: "row tight" }, pasted, finishSignIn, button(t("cancel"), () => void guard(() => send("cancelSignIn", {})))),
+        h("div", { class: "row tight" }, pasted, finishSignIn, named(button(t("cancel"), () => void guard(() => send("cancelSignIn", {}))), t("signInTitle"))),
       ),
     );
     drawFinish();
@@ -750,11 +757,14 @@ export function aiSection(shell: Shell): Section {
           "div",
           { class: "row" },
           h("code", { class: "origin", text: location.origin }),
-          button(t("copy"), () =>
-            void guard(async () => {
-              await navigator.clipboard.writeText(location.origin);
-              copied.flash(t("copied"));
-            }),
+          named(
+            button(t("copy"), () =>
+              void guard(async () => {
+                await navigator.clipboard.writeText(location.origin);
+                copied.flash(t("copied"));
+              }),
+            ),
+            location.origin,
           ),
           copied.element,
         ),
@@ -984,6 +994,8 @@ export function aiSection(shell: Shell): Section {
     const loadButton = button(t("loadModels"), loadModels);
     // The form is submitted by this button and by Enter in a field. While a save runs, neither starts a second one.
     const saveButton = h("button", { type: "submit", class: "primary", text: t("save") });
+    // Several things on the pane can be saved: the name says which one this button saves.
+    named(saveButton, existing?.name ?? presetName);
     const element = h(
       "form",
       {
@@ -1024,7 +1036,7 @@ export function aiSection(shell: Shell): Section {
         { class: "row" },
         saveButton,
         statusSlot(unsavedNote, t("unsavedChanges")),
-        button(t("cancel"), () => leaveEditor(true)),
+        named(button(t("cancel"), () => leaveEditor(true)), existing?.name ?? presetName),
         saveStatus.element,
       ),
     );
@@ -1236,16 +1248,20 @@ export function aiSection(shell: Shell): Section {
         h(
           "div",
           { class: "row service-extra" },
-          withFocus(button(t(signedIn(point) ? "chatgptSignInAgain" : "chatgptContinue"), () => startChatGpt(point.id)), "sign-in"),
+          // Every ChatGPT plan service has these buttons: their names say whose they are.
+          withFocus(named(button(t(signedIn(point) ? "chatgptSignInAgain" : "chatgptContinue"), () => startChatGpt(point.id)), point.name), "sign-in"),
           signedIn(point)
             ? withFocus(
-                button(t("chatgptSignOut"), () =>
-                  void guard(async () => {
-                    const { revocationConfirmed } = await send("signOut", { id: point.id });
-                    if (!revocationConfirmed) {
-                      await dialog({ title: t("chatgptRevocationTitle"), body: [t("chatgptRevocationUnconfirmed")], confirmLabel: t("ok"), hideCancel: true });
-                    }
-                  }),
+                named(
+                  button(t("chatgptSignOut"), () =>
+                    void guard(async () => {
+                      const { revocationConfirmed } = await send("signOut", { id: point.id });
+                      if (!revocationConfirmed) {
+                        await dialog({ title: t("chatgptRevocationTitle"), body: [t("chatgptRevocationUnconfirmed")], confirmLabel: t("ok"), hideCancel: true });
+                      }
+                    }),
+                  ),
+                  point.name,
                 ),
                 "sign-out",
               )

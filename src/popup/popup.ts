@@ -11,7 +11,7 @@ import { findProblems, protectionState, scanIsComplete } from "../core/problems"
 import type { AccountFacts, Problem } from "../core/problems";
 import type { AccessPoint, Entry, LogEntry, Settings } from "../core/types";
 import { hostGranted, refreshGrants } from "../options/aiState";
-import { address, addressed, button, byId, errorText, h, iconButton, replace, setUnavailable, tNodes } from "../options/dom";
+import { address, addressed, button, byId, errorText, h, iconButton, named, replace, setUnavailable, tNodes } from "../options/dom";
 import type { Child } from "../options/dom";
 import { formatFullTime, formatLogTime, formatScore, formatShortTime } from "../options/format";
 import { icon } from "../options/icons";
@@ -155,6 +155,10 @@ function drawCommand(tabId: number | null): void {
         },
         "small",
       );
+  if (undo !== null) {
+    // The name says what is taken back: the first line of what the command did.
+    named(undo, record.lines[0] ?? "");
+  }
   const dismiss = iconButton("close", t("dismiss"), () => {
     lastCommand = null;
     drawCommand(tabId);

@@ -103,9 +103,12 @@ describe("the last word of a sentence", () => {
     const { t } = await withLocale("en", {
       hint: "Both dates are optional. An empty field sets no limit on that side.",
       short: "Scan sent mail",
+      leads: "Only stored settings are wrong. You can set each of them back to its default on its own, and everything else stays as it is:",
       ends: "Mail without an AI verdict goes to a screening folder, but these accounts have none: $1",
     });
     expect(t("hint")).toBe("Both dates are optional. An empty field sets no limit on that\u00a0side.");
+    // A sentence that leads into what follows ends with a colon: its last word is tied as well.
+    expect(t("leads")).toBe("Only stored settings are wrong. You can set each of them back to its default on its own, and everything else stays as it\u00a0is:");
     // Labels and buttons are short and are left alone.
     expect(t("short")).toBe("Scan sent mail");
     // A text that ends with an address is left alone: an address breaks by its own rule.

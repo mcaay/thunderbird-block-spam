@@ -14,7 +14,7 @@ import { BUNDLED_PUBLIC_DOMAINS } from "../../data/publicDomains";
 import { stringsLocale, t, tCode } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
 import { attemptsLines } from "../diagnostic";
-import { address, addressed, button, byId, dialog, errorText, guard, h, option, reconcile, replace, setUnavailable, tNodes } from "../dom";
+import { address, addressed, button, byId, dialog, errorText, guard, h, named, option, reconcile, replace, setUnavailable, tNodes } from "../dom";
 import type { Child } from "../dom";
 import { formatFullTime, formatScore, logTimeParts, matchesSearch, parseEntryDetail } from "../format";
 import { logReader } from "../logData";
@@ -299,6 +299,8 @@ export function logSection(): Section {
     if (result !== undefined && result.undo !== null) {
       const data = result.undo;
       const undoButton = setUnavailable(button(t("undo"), () => undo(key, data), "small"), working);
+      // Every row can have one: the name says whose decision is put back.
+      named(undoButton, entry.sender);
       undoButton.dataset.focus = "act";
       return { control: undoButton, feedback: h("div", { class: `row-feedback ${result.kind}` }, text) };
     }
@@ -390,7 +392,8 @@ export function logSection(): Section {
           entry.via === "" ? null : h("span", { class: "via" }, " ", t("logForwardedBy"), " ", address(entry.via)),
         ),
         // Up to two lines: a longer subject is cut, and the tooltip has all of it.
-        h("div", { class: "subject", text: subject, title: subject }),
+        // A subject can name an address or a domain: there it breaks like one.
+        h("div", { class: "subject", title: subject }, ...addressed(subject)),
         // With several accounts, the account has a line of its own under the subject, where its whole name has room.
         showAccount ? h("div", { class: "account description" }, ...addressed(entry.account)) : null,
       ),

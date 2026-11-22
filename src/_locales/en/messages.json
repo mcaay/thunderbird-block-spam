@@ -48,7 +48,7 @@
     "message": "Undo ($1)"
   },
   "dismiss": {
-    "message": "Dismiss"
+    "message": "Dismiss this message"
   },
   "noneYet": {
     "message": "None yet."
@@ -701,6 +701,9 @@
   "listsAddTitle": {
     "message": "Add an entry"
   },
+  "listsAddName": {
+    "message": "Add the entry"
+  },
   "listsValueLabel": {
     "message": "Address or domain"
   },
@@ -801,7 +804,7 @@
     "message": "Added"
   },
   "sortBy": {
-    "message": "Sort by: $1"
+    "message": "Sort the table by this column"
   },
   "source_identity": {
     "message": "Your address"
@@ -1171,6 +1174,9 @@
   },
   "chooseFolder": {
     "message": "Choose a folder"
+  },
+  "chosenFolder": {
+    "message": "Chosen folder: $1"
   },
   "addFolder": {
     "message": "Add folder"
@@ -1993,6 +1999,9 @@
   },
   "importModeLabel": {
     "message": "Mode:"
+  },
+  "importModeName": {
+    "message": "Mode of the import"
   },
   "importMerge": {
     "message": "Merge lists"
