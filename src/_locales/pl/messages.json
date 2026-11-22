@@ -816,7 +816,7 @@
     "message": "Dodano"
   },
   "sortBy": {
-    "message": "Sortuj tabelę według tej kolumny"
+    "message": "Sortuje tabelę według tej kolumny."
   },
   "source_identity": {
     "message": "Twój adres"
@@ -1104,25 +1104,25 @@
     "message": "Wpis $1 jest na białej liście. Wiadomość nie była przenoszona."
   },
   "logTitle_trust": {
-    "message": "Umieść $1 na białej liście"
+    "message": "Umieszcza $1 na białej liście."
   },
   "logTitle_trust_move": {
-    "message": "Umieść $1 na białej liście i przenieś wiadomość z powrotem do Odebranych"
+    "message": "Umieszcza $1 na białej liście i przenosi wiadomość z powrotem do Odebranych."
   },
   "logTitle_block": {
-    "message": "Umieść $1 na czarnej liście i przenieś wiadomość do Niechcianych"
+    "message": "Umieszcza $1 na czarnej liście i przenosi wiadomość do Niechcianych."
   },
   "logTitle_unblock": {
-    "message": "Usuń $1 z czarnej listy: wpis $2 jest już na białej liście"
+    "message": "Usuwa $1 z czarnej listy: wpis $2 jest już na białej liście."
   },
   "logTitle_unblock_move": {
-    "message": "Usuń $1 z czarnej listy i przenieś wiadomość z powrotem do Odebranych: wpis $2 jest już na białej liście"
+    "message": "Usuwa $1 z czarnej listy i przenosi wiadomość z powrotem do Odebranych: wpis $2 jest już na białej liście."
   },
   "logTitle_move_inbox": {
-    "message": "Wpis $1 jest już na białej liście, więc tylko wiadomość wraca do Odebranych"
+    "message": "Wpis $1 jest już na białej liście, więc tylko wiadomość wraca do Odebranych."
   },
   "logTitle_move_junk": {
-    "message": "Wpis $1 jest już na czarnej liście, więc tylko wiadomość jest przenoszona do Niechcianych"
+    "message": "Wpis $1 jest już na czarnej liście, więc tylko wiadomość jest przenoszona do Niechcianych."
   },
   "logResult_trusted": {
     "message": "Wpis $1 jest teraz na białej liście."

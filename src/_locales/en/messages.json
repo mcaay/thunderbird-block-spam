@@ -816,7 +816,7 @@
     "message": "Added"
   },
   "sortBy": {
-    "message": "Sort the table by this column"
+    "message": "Sorts the table by this column."
   },
   "source_identity": {
     "message": "Your address"
@@ -1104,25 +1104,25 @@
     "message": "$1 is on the white list. The message was never moved."
   },
   "logTitle_trust": {
-    "message": "Put $1 on the white list"
+    "message": "Puts $1 on the white list."
   },
   "logTitle_trust_move": {
-    "message": "Put $1 on the white list and move the message back to the Inbox"
+    "message": "Puts $1 on the white list and moves the message back to the Inbox."
   },
   "logTitle_block": {
-    "message": "Put $1 on the black list and move the message to the Spam folder"
+    "message": "Puts $1 on the black list and moves the message to the Spam folder."
   },
   "logTitle_unblock": {
-    "message": "Remove $1 from the black list: $2 is already on the white list"
+    "message": "Removes $1 from the black list: $2 is already on the white list."
   },
   "logTitle_unblock_move": {
-    "message": "Remove $1 from the black list and move the message back to the Inbox: $2 is already on the white list"
+    "message": "Removes $1 from the black list and moves the message back to the Inbox: $2 is already on the white list."
   },
   "logTitle_move_inbox": {
-    "message": "$1 is already on the white list, so only the message is moved back to the Inbox"
+    "message": "$1 is already on the white list, so only the message is moved back to the Inbox."
   },
   "logTitle_move_junk": {
-    "message": "$1 is already on the black list, so only the message is moved to the Spam folder"
+    "message": "$1 is already on the black list, so only the message is moved to the Spam folder."
   },
   "logResult_trusted": {
     "message": "$1 is on the white list now."
