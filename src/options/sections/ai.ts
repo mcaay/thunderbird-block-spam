@@ -197,6 +197,10 @@ export function aiSection(shell: Shell): Section {
     },
     onchange: () => saveCutoff(),
     onkeydown: (event) => {
+      if (event.key === "Enter") {
+        saveSteppedCutoff();
+        return;
+      }
       if ((event.key !== "ArrowUp" && event.key !== "ArrowDown") || event.altKey || event.ctrlKey || event.metaKey) {
         return;
       }
@@ -204,16 +208,21 @@ export function aiSection(shell: Shell): Section {
       const now = Number(cutoff.value.trim().replace(",", "."));
       const base = cutoff.value.trim() === "" || !Number.isFinite(now) ? 0 : now;
       const next = Math.min(1, Math.max(0, Math.round((base + (event.key === "ArrowUp" ? 0.01 : -0.01)) * 100) / 100));
-      cutoff.value = next.toFixed(2);
+      cutoff.value = formatScore(next, stringsLocale());
+      cutoffStepped = true;
       cutoffError.set(null);
       cutoffStatus.clear();
     },
     attrs: { inputmode: "decimal", autocomplete: "off", spellcheck: "false", role: "spinbutton", "aria-valuemin": "0", "aria-valuemax": "1" },
   });
+  // A value stepped with the arrow keys was not typed, so the field reports no change when it is left or Enter is pressed.
+  cutoff.addEventListener("blur", () => saveSteppedCutoff());
   const cutoffError = fieldError(cutoff, "cutoff-error");
   const cutoffStatus = inlineStatus();
   /** What the page put into the cutoff field last. Anything else in it is an edit. */
   let cutoffShown: string | null = null;
+  /** The value in the field was set with the arrow keys and was not saved yet. */
+  let cutoffStepped = false;
 
   const prompt = h("textarea", {
     rows: 14,
@@ -336,7 +345,14 @@ export function aiSection(shell: Shell): Section {
   // Cutoff and prompt.
 
   /** The cutoff is saved when the field is left or Enter is pressed, like every other setting. */
+  function saveSteppedCutoff(): void {
+    if (cutoffStepped) {
+      saveCutoff();
+    }
+  }
+
   function saveCutoff(): void {
+    cutoffStepped = false;
     // A comma is the decimal sign of many languages: it is read as one.
     const value = Number(cutoff.value.trim().replace(",", "."));
     if (cutoff.value.trim() === "" || !Number.isFinite(value) || value < 0 || value > 1) {
@@ -1438,7 +1454,8 @@ export function aiSection(shell: Shell): Section {
       }
       promptStored = settings.prompt;
       drawPromptState();
-      const storedCutoff = settings.cutoff.toFixed(2);
+      // Written the way the language of the page writes numbers, like the scores next to it: 0.85, or 0,85 in Polish.
+      const storedCutoff = formatScore(settings.cutoff, stringsLocale());
       if (mayRedraw({ value: cutoff.value, focused: document.activeElement === cutoff }, cutoffShown, storedCutoff, sameNumber)) {
         cutoff.value = storedCutoff;
         cutoffShown = storedCutoff;

@@ -24,9 +24,10 @@ export function mayRedraw(
   return shown === null || field.value === shown || same(field.value, stored);
 }
 
-/** Two cutoff texts that mean the same number, for example "0.9" and "0.90". */
+/** Two cutoff texts that mean the same number, for example "0.9", "0.90" and "0,9" (a comma is the decimal sign of many languages). */
 export function sameNumber(a: string, b: string): boolean {
-  return a.trim() !== "" && b.trim() !== "" && Number(a) === Number(b);
+  const number = (text: string): number => Number(text.trim().replace(",", "."));
+  return a.trim() !== "" && b.trim() !== "" && number(a) === number(b);
 }
 
 /** Two label lists that are the same once split at commas and trimmed. */

@@ -41,6 +41,11 @@ describe("fields that show a stored setting", () => {
   it("compare cutoffs as numbers and labels after trimming", () => {
     expect(sameNumber("0.9", "0.90")).toBe(true);
     expect(sameNumber("", "0.00")).toBe(false);
+    // A comma is the decimal sign of many languages: the field shows the cutoff the way the page writes numbers.
+    expect(sameNumber("0,9", "0.90")).toBe(true);
+    expect(sameNumber("0,9", "0,90")).toBe(true);
+    expect(sameNumber("0,9", "0,85")).toBe(false);
+    expect(mayRedraw({ value: "0,9", focused: false }, "0,85", "0,90", sameNumber)).toBe(true);
     expect(sameLabels(" From: ,, Od:", "From:, Od:")).toBe(true);
     expect(sameLabels("From:", "From:, Od:")).toBe(false);
   });
