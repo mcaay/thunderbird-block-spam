@@ -1916,14 +1916,8 @@
   "popupOpenSetup": {
     "message": "Open setup"
   },
-  "popupProblems_one": {
-    "message": "$1 problem needs your attention: $2."
-  },
-  "popupProblems_few": {
-    "message": "$1 problems need your attention: $2."
-  },
-  "popupProblems_many": {
-    "message": "$1 problems need your attention: $2."
+  "popupProblemsNamed": {
+    "message": "Needs your attention: $1."
   },
   "popupShowProblems": {
     "message": "Show in settings"

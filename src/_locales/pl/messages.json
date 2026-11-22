@@ -1916,14 +1916,8 @@
   "popupOpenSetup": {
     "message": "Otwórz konfigurację"
   },
-  "popupProblems_one": {
-    "message": "$1 problem wymaga uwagi: $2."
-  },
-  "popupProblems_few": {
-    "message": "$1 problemy wymagają uwagi: $2."
-  },
-  "popupProblems_many": {
-    "message": "$1 problemów wymaga uwagi: $2."
+  "popupProblemsNamed": {
+    "message": "Wymaga uwagi: $1."
   },
   "popupShowProblems": {
     "message": "Pokaż w ustawieniach"

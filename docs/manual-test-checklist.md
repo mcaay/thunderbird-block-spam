@@ -272,7 +272,7 @@ Block and trust:
 - [ ] The panel and the popup inside it have the same background and text color, in the light and in the dark theme: no seam, no lighter rectangle inside the rounded panel.
 - [ ] With several messages selected: their number, and the same buttons for all of them.
 - [ ] The last ten decisions. Tests and observed decisions say so and have a hollow dot. A click on a row opens the Log pane with that entry in view, marked and focused.
-- [ ] With a problem (for example a rejected key) the state reads "On, 1 problem" and a line that counts and names the problems, with "Show in settings", opens the Overview.
+- [ ] With a problem (for example a rejected key) the state reads "On, 1 problem" and a line that names the problems ("Needs your attention: AI service not used: OpenAI."), with "Show in settings", opens the Overview.
 - [ ] Without a mail account the popup says "No mail account" and that one has to be added first, and does not point at setup.
 - [ ] While protection waits for a scan the state reads "Switches on after the scan", and the footer says so and offers "Don’t switch on".
 - [ ] "Switch protection off" and "Switch protection on".

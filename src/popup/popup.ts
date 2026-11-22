@@ -607,7 +607,7 @@ async function draw(): Promise<void> {
   }
   scoreBox.hidden = !hasAi;
   replace(footer, scoreBox, switchBox(settings, status, hasAi));
-  // The warnings themselves, each with its fix, are on the Overview of the settings page. Here they are counted and named.
+  // The warnings themselves, each with its fix, are on the Overview of the settings page. Here the state in the header counts them and this line names them.
   const notice =
     problems.length === 0
       ? null
@@ -615,7 +615,7 @@ async function draw(): Promise<void> {
           "section",
           { class: "notice" },
           icon("warning"),
-          h("span", { class: "notice-text", attrs: { role: "status" } }, ...addressed(tn("popupProblems", problems.length, problemNames(problems, accessPoints)))),
+          h("span", { class: "notice-text", attrs: { role: "status" } }, ...addressed(t("popupProblemsNamed", problemNames(problems, accessPoints)))),
           button(t("popupShowProblems"), () => void openSettings({ pane: "overview", logKey: null }), "small"),
         );
   replace(content, notice, commandBox, selectionBox, recentBox, footer);
