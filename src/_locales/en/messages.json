@@ -2159,6 +2159,9 @@
   "importServicesOff": {
     "message": "AI services imported switched off: $1. Your sent mail is not scanned yet, so they would get mail from people you already write to. Scan it first, then switch them on under AI."
   },
+  "importNoVerdictKept": {
+    "message": "Mail without an AI verdict still stays where it is. Your sent mail is not scanned yet, so mail from people you already write to would be moved. Scan it first, then choose again under Incoming mail."
+  },
   "importSkippedAccount": {
     "message": "Skipped $1: no account with the address $2."
   },

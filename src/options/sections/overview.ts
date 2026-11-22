@@ -13,7 +13,7 @@ import { stringsLocale, t, tCode, tn } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
 import { beforeScanText, noVerdictOutcomeText, scanFirstReason, scanWaitReason, servicesOutcomeText, wishOutcomeText } from "../../tb/stateText";
 import { refreshGrants } from "../aiState";
-import { announce, bar, button, byId, checkRow, description, dialog, download, guard, h, iconButton, learnMore, named, notice, paneLink, reconcile, replace, setUnavailable, tNodes, whileBusy } from "../dom";
+import { announce, bar, button, byId, checkRow, closeButton, description, dialog, download, guard, h, iconButton, learnMore, named, notice, paneLink, reconcile, replace, setUnavailable, tNodes, whileBusy } from "../dom";
 import type { Child, Keyed } from "../dom";
 import { formatLogTime, formatScore, formatShortTime } from "../format";
 import { icon } from "../icons";
@@ -471,7 +471,7 @@ export function overviewSection(shell: Shell): Section {
     const text = noVerdictOutcomeText(outcome, outcome.action);
     const box = bar(outcome.kind === "on" ? "success" : "warning", [text], [
       button(t("catIncoming"), () => shell.go("incoming", { kind: "no-verdict" })),
-      iconButton("close", t("dismiss"), () =>
+      closeButton(() =>
         void guard(async () => {
           // The bar goes away: the keyboard goes back to the switch of the group.
           protection.input.focus();

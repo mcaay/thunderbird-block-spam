@@ -11,7 +11,7 @@ import type { Settings } from "../../core/types";
 import { t, tCode } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
 import { beforeScanText, noVerdictOutcomeText, whereText } from "../../tb/stateText";
-import { addressed, bar, button, byId, description, dialog, errorText, guard, h, iconButton, inlineStatus, notice, option, reconcile, replace, setUnavailable, whileBusy } from "../dom";
+import { addressed, bar, button, byId, closeButton, description, dialog, errorText, guard, h, inlineStatus, notice, option, reconcile, replace, setUnavailable, whileBusy } from "../dom";
 import { icon } from "../icons";
 import { chosenIn, folderRef, folderView, forgetAccounts, hasFolder, monitoredFolders, withoutFolder } from "../model";
 import type { Model } from "../model";
@@ -302,7 +302,7 @@ export function incomingSection(shell: Shell): Section {
       } else {
         const text = noVerdictOutcomeText(outcome, outcome.action);
         const box = bar(outcome.kind === "on" ? "success" : "warning", [text], [
-          iconButton("close", t("dismiss"), () =>
+          closeButton(() =>
             void guard(async () => {
               // The bar goes away: the keyboard goes back to the menu it was about.
               noVerdict.focus();

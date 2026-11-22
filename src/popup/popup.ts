@@ -125,7 +125,13 @@ function drawCommand(tabId: number | null): void {
   const shown = lastCommand;
   if (shown === null) {
     commandBox.hidden = undone === null;
-    replace(commandBox, undone === null ? null : resultBox(undone.lines, undone.failed, "", []));
+    // What Undo did stays until the next command: like the result of the command itself, it can be closed.
+    const close = iconButton("close", t("dismiss"), () => {
+      undone = null;
+      drawCommand(tabId);
+      restoreFocus(null);
+    });
+    replace(commandBox, undone === null ? null : resultBox(undone.lines, undone.failed, "", [close]));
     return;
   }
   const { record } = shown;

@@ -137,6 +137,8 @@ export type ImportReply = Omit<ImportReport, "undo"> & {
   undoId: string | null;
   /** AI services that were imported switched off, because protection is on and the sent mail was not scanned yet. */
   servicesOff: number;
+  /** The file would have started moving mail without an AI verdict, and that was not taken over, for the same reason. */
+  noVerdictKept: boolean;
 };
 
 export type RequestName = keyof Requests;

@@ -240,7 +240,11 @@ export function aiSection(shell: Shell): Section {
     } else {
       cutoff.setAttribute("aria-valuenow", String(value));
     }
-    cutoff.setAttribute("aria-valuetext", cutoff.value.trim());
+    if (cutoff.value.trim() === "") {
+      cutoff.removeAttribute("aria-valuetext");
+    } else {
+      cutoff.setAttribute("aria-valuetext", cutoff.value.trim());
+    }
   }
   // A value stepped with the arrow keys was not typed, so the field reports no change when it is left or Enter is pressed.
   cutoff.addEventListener("blur", () => saveSteppedCutoff());

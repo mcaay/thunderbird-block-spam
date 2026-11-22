@@ -27,6 +27,9 @@ function reportLines(report: ImportReply): string[] {
   if (report.servicesOff > 0) {
     lines.push(t("importServicesOff", report.servicesOff));
   }
+  if (report.noVerdictKept) {
+    lines.push(t("importNoVerdictKept"));
+  }
   for (const item of report.skipped) {
     lines.push(item.account === "" ? t("importSkippedFolder", item.item) : t("importSkippedAccount", item.item, item.account));
   }

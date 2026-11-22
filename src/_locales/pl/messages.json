@@ -2159,6 +2159,9 @@
   "importServicesOff": {
     "message": "Usługi AI zaimportowane jako wyłączone: $1. Wysłana poczta nie jest jeszcze przeskanowana, więc trafiałaby do nich poczta od osób, z którymi już korespondujesz. Najpierw ją przeskanuj, a potem włącz usługi w kategorii AI."
   },
+  "importNoVerdictKept": {
+    "message": "Poczta bez oceny AI nadal zostaje na miejscu. Wysłana poczta nie jest jeszcze przeskanowana, więc poczta od osób, z którymi już korespondujesz, byłaby przenoszona. Najpierw ją przeskanuj, a potem wybierz ponownie w kategorii Poczta przychodząca."
+  },
   "importSkippedAccount": {
     "message": "Pominięto $1: brak konta o adresie $2."
   },

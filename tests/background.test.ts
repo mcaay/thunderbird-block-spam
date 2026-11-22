@@ -1024,8 +1024,39 @@ describe("import while protection is on and the sent mail was not scanned", () =
     }
     const file = { ...(exported.result.file as unknown as Record<string, unknown>), accessPoints: [{ type: "systemone", name: "Local", enabled: true, endpoint: "http://127.0.0.1:8765/v1/decisions", model: "" }] };
     const reply = await background.send("importData", { file, mode: "replace" });
-    expect(reply).toMatchObject({ ok: true, result: { mode: "replace", accessPoints: 1, servicesOff: 1, undoId: null } });
+    expect(reply).toMatchObject({ ok: true, result: { mode: "replace", accessPoints: 1, servicesOff: 1, noVerdictKept: false, undoId: null } });
     expect(stored(fake)).toMatchObject([{ name: "Local", enabled: false }]);
+  });
+
+  it("does not take over a choice that would start moving mail without a verdict, and says so", async () => {
+    type Settings = ReturnType<typeof defaultSettings>;
+    const on = { ...defaultSettings(Date.now()), protection: true, protectionOnAt: 1 };
+    const exportOf = async (background: Background): Promise<Record<string, unknown>> => {
+      const exported = await background.send("exportData", {});
+      if (!exported.ok) {
+        throw new Error(exported.error);
+      }
+      return exported.result.file as unknown as Record<string, unknown>;
+    };
+    const moving = (file: Record<string, unknown>): Record<string, unknown> => ({ ...file, settings: { ...(file.settings as Record<string, unknown>), noVerdictAction: "junk" } });
+
+    const fake = new FakeBrowser({ [KEY_SETTINGS]: on });
+    const background = await loadBackground(fake, fakeFetch({}).fetch);
+    const reply = await background.send("importData", { file: moving(await exportOf(background)), mode: "replace" });
+    expect(reply).toMatchObject({ ok: true, result: { mode: "replace", noVerdictKept: true } });
+    expect((fake.storage[KEY_SETTINGS] as Settings).noVerdictAction).toBe("leave");
+
+    // A choice that moves mail already is the user's own: the file may change the folder.
+    const already = new FakeBrowser({ [KEY_SETTINGS]: { ...on, noVerdictAction: "screening" } });
+    const second = await loadBackground(already, fakeFetch({}).fetch);
+    expect(await second.send("importData", { file: moving(await exportOf(second)), mode: "replace" })).toMatchObject({ ok: true, result: { noVerdictKept: false } });
+    expect((already.storage[KEY_SETTINGS] as Settings).noVerdictAction).toBe("junk");
+
+    // While protection is off the choice is taken over: the question comes when protection is switched on.
+    const off = new FakeBrowser({ [KEY_SETTINGS]: defaultSettings(Date.now()) });
+    const third = await loadBackground(off, fakeFetch({}).fetch);
+    expect(await third.send("importData", { file: moving(await exportOf(third)), mode: "replace" })).toMatchObject({ ok: true, result: { noVerdictKept: false } });
+    expect((off.storage[KEY_SETTINGS] as Settings).noVerdictAction).toBe("junk");
   });
 });
 

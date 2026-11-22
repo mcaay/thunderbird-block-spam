@@ -1438,6 +1438,7 @@ const handlers: Handlers = {
       }
     }
     const previous = [...state.accessPoints];
+    const movedBefore = state.settings.noVerdictAction !== "leave";
     let report;
     try {
       report = applyImport(state, file, mode === "replace" ? "replace" : "merge", {
@@ -1459,6 +1460,7 @@ const handlers: Handlers = {
       throw error instanceof ValidationError && error.code === "" ? new ValidationError(error.message, "import-invalid") : error;
     }
     let servicesOff = 0;
+    let noVerdictKept = false;
     if (report.mode === "replace") {
       // The services that waited for the scan are gone with the replaced ones, and a choice that waited is settled by the settings of the file.
       if (wish.services !== null || wish.servicesOutcome !== null || wish.noVerdict !== null || wish.noVerdictOutcome !== null) {
@@ -1470,6 +1472,12 @@ const handlers: Handlers = {
         for (const point of state.accessPoints.filter((item) => item.enabled)) {
           point.enabled = false;
           servicesOff += 1;
+        }
+        if (!movedBefore && state.settings.noVerdictAction !== "leave") {
+          // The same for a choice of the file that would start moving mail without a verdict: mail from people the
+          // user writes to would be moved without the question having been asked. It stays where it is, and the report says so.
+          state.settings.noVerdictAction = "leave";
+          noVerdictKept = true;
         }
       }
     }
@@ -1496,7 +1504,7 @@ const handlers: Handlers = {
     }
     mail.resetCache();
     await withKeepAlive(() => engine.sweepIfNeeded());
-    return { ...summary, undoId, servicesOff };
+    return { ...summary, undoId, servicesOff, noVerdictKept };
   },
 
   async undoImport({ id }) {
