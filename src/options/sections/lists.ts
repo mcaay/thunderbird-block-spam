@@ -319,8 +319,9 @@ export function listsSection(): Section {
   }
 
   function remove(entry: Entry, row: HTMLElement): void {
-    // What the form said about its last entry is history once the list is changed again.
-    addStatus.clear();
+    // What the form said about its last entry is history once the list is changed again: it keeps its place above the table,
+    // so that the rows do not move under the pointer, and Undo now belongs to the removal alone.
+    addStatus.settle?.();
     // The row stays in its place as a quiet row, so nothing moves under the pointer. Undo puts the entry back exactly as it was, with its source and its date.
     removed.remove(
       row,

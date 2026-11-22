@@ -633,6 +633,8 @@ export interface Notice {
    */
   show(message: string, undo?: () => Promise<unknown> | void, undone?: string): void;
   clear(): void;
+  /** The confirmation keeps its place and gives up its Undo: for when the next action offers Undo right under it, where a bar that left would move everything below. */
+  settle?(): void;
 }
 
 /** The notice whose Undo the keyboard shortcut runs: the last one that was shown with Undo. */
@@ -708,6 +710,12 @@ export function notice(afterClose?: () => HTMLElement | null): Notice {
       }
       element.removeAttribute("aria-label");
       replace(element);
+    },
+    settle() {
+      if (undoOwner?.notice === self) {
+        undoOwner = null;
+      }
+      element.querySelector('button[data-focus="undo"]')?.remove();
     },
   };
   return self;

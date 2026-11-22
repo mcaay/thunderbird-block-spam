@@ -116,8 +116,13 @@ const sections: Record<PaneId, Section> = {
 function openPane(): void {
   const intent = pendingIntent;
   pendingIntent = null;
-  const pane = showPane(paneOfAddress(), !keepFocus);
+  const fromList = keepFocus;
   keepFocus = false;
+  const pane = showPane(paneOfAddress(), !fromList);
+  if (fromList) {
+    // Going to the address of a pane takes the focus off the link that had it: the category the arrow key went to takes it back.
+    links.get(pane)?.focus({ preventScroll: true });
+  }
   if (intent !== null) {
     sections[pane].reveal?.(intent);
   }
