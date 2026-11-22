@@ -1,6 +1,7 @@
 // Undo for the four commands, and what the popup learns about the sender of the selected message.
 
 import { describe, expect, it } from "vitest";
+import { undoneEntries } from "../../src/core/commands";
 import { entryKey } from "../../src/core/lists";
 import type { Entry } from "../../src/core/types";
 import { harness, INBOX1, JUNK1, SCREEN1 } from "../helpers/harness";
@@ -18,7 +19,8 @@ describe("undoing a command", () => {
       restore: [],
       moves: [{ accountId: "account1", messageId: msg.headerMessageId, from: INBOX1, to: JUNK1 }],
     });
-    expect(await h.engine.undoCommand(outcome.undo)).toEqual({ moved: 1, notFound: 0, failures: [] });
+    // The outcome says where the message is again, so that the line after Undo can name the place.
+    expect(await h.engine.undoCommand(outcome.undo)).toEqual({ moved: 1, notFound: 0, failures: [], back: [{ place: "inbox", folder: INBOX1 }] });
     expect(entries(h)).toEqual(before);
     expect(h.mail.ids(INBOX1)).toEqual([msg.id]);
     expect(h.mail.ids(JUNK1)).toEqual([]);
@@ -64,7 +66,7 @@ describe("undoing a command", () => {
     expect(h.mail.ids(JUNK1)).toEqual([a.id, b.id]);
     // The user deletes one of them from Junk before pressing Undo.
     h.mail.folder(JUNK1).messages = h.mail.folder(JUNK1).messages.filter((item) => item.id !== b.id);
-    expect(await h.engine.undoCommand(outcome.undo)).toEqual({ moved: 1, notFound: 1, failures: [] });
+    expect(await h.engine.undoCommand(outcome.undo)).toEqual({ moved: 1, notFound: 1, failures: [], back: [{ place: "inbox", folder: INBOX1 }] });
     expect(h.mail.ids(INBOX1)).toEqual([a.id]);
     expect(h.state.entries.has(entryKey("domain", "outreach.example", "all"))).toBe(false);
   });
@@ -74,8 +76,76 @@ describe("undoing a command", () => {
     const msg = h.mail.put(INBOX1, { author: "cold@outreach.example" });
     const outcome = await h.engine.runCommand("block-address", [msg]);
     h.mail.failMoves = true;
-    expect(await h.engine.undoCommand(outcome.undo)).toEqual({ moved: 0, notFound: 0, failures: ["move refused"] });
+    expect(await h.engine.undoCommand(outcome.undo)).toEqual({ moved: 0, notFound: 0, failures: ["move refused"], back: [] });
     expect(h.state.entries.size).toBe(0 + [...h.state.entries.values()].filter((entry) => entry.source === "identity").length);
+  });
+});
+
+describe("what is true again after a command was taken back", () => {
+  it("says for every entry which list it is on again, or that it is on neither", async () => {
+    const h = await harness();
+    h.state.addEntry({ list: "white", kind: "address", value: "anna@outreach.example", scope: "all", source: "sent" }, 6);
+    const anna = h.mail.put(INBOX1, { author: "anna@outreach.example" });
+    // Blocking the domain adds its entry and removes the white address that would still decide Anna.
+    const blocked = await h.engine.runCommand("block-domain", [anna]);
+    expect(undoneEntries(blocked.undo, h.state.entries)).toEqual([
+      { value: "outreach.example", list: null },
+      { value: "anna@outreach.example", list: "white" },
+    ]);
+    await h.engine.undoCommand(blocked.undo);
+
+    // Blocking the address moves its entry to the black list: taken back, it is on the white list again.
+    const moved = await h.engine.runCommand("block-address", [h.mail.put(INBOX1, { author: "anna@outreach.example" })]);
+    expect(undoneEntries(moved.undo, h.state.entries)).toEqual([{ value: "anna@outreach.example", list: "white" }]);
+  });
+
+  it("names an added entry also when it was removed by hand since, and leaves out an entry of which only the source goes back", async () => {
+    const h = await harness();
+    const outcome = await h.engine.runCommand("block-address", [h.mail.put(INBOX1, { author: "cold@outreach.example" })]);
+    h.state.removeEntry(entryKey("address", "cold@outreach.example", "all"));
+    expect(undoneEntries(outcome.undo, h.state.entries)).toEqual([{ value: "cold@outreach.example", list: null }]);
+
+    // Trusting a sender who was learned from sent mail only marks the entry as made by hand: it never leaves its list.
+    h.state.addEntry({ list: "white", kind: "address", value: "anna@customer.example", scope: "all", source: "sent" }, 6);
+    const trusted = await h.engine.runCommand("trust-address", [h.mail.put(INBOX1, { author: "anna@customer.example" })]);
+    expect(trusted.undo.restore).toHaveLength(1);
+    expect(undoneEntries(trusted.undo, h.state.entries)).toEqual([]);
+  });
+
+  it("says where a message is again: the Spam folder, the Inbox, or the folder it came from", async () => {
+    const h = await harness();
+    h.mail.addFolder(SCREEN1);
+    h.state.settings.screeningFolders = [SCREEN1];
+    const junked = await h.engine.runCommand("trust-address", [h.mail.put(JUNK1, { author: "a@customer.example" })]);
+    expect((await h.engine.undoCommand(junked.undo)).back).toEqual([{ place: "junk", folder: JUNK1 }]);
+    const screened = await h.engine.runCommand("trust-address", [h.mail.put(SCREEN1, { author: "b@customer.example" })]);
+    expect((await h.engine.undoCommand(screened.undo)).back).toEqual([{ place: "folder", folder: SCREEN1 }]);
+  });
+});
+
+describe("the entry a command leaves in place", () => {
+  it("is the entry of the other list that decides the sender and that the target beats", async () => {
+    const h = await harness();
+    h.state.addEntry({ list: "black", kind: "domain", value: "outreach.example", scope: "all", source: "ai" }, 5);
+    const msg = h.mail.put(JUNK1, { author: "mike@outreach.example" });
+    const { effects } = await h.engine.describeSender(msg);
+    // Trusting the address leaves the entry of the domain on the black list: the next sender of that domain is blocked again.
+    expect(effects["trust-address"]?.kept).toEqual({ value: "outreach.example", list: "black" });
+    // Trusting the domain moves that very entry, and a block is on the same side as the entry.
+    expect(effects["trust-domain"]?.kept).toBeNull();
+    expect(effects["block-address"]?.kept).toBeNull();
+    expect(effects["block-domain"]?.kept).toBeNull();
+  });
+
+  it("is none when the command removes the deciding entry, or when the sender is on neither list", async () => {
+    const h = await harness();
+    const msg = h.mail.put(INBOX1, { author: "anna@customer.example" });
+    expect(Object.values((await h.engine.describeSender(msg)).effects).map((effect) => effect.kept)).toEqual([null, null, null, null]);
+    h.state.addEntry({ list: "white", kind: "address", value: "anna@customer.example", scope: "all", source: "sent" }, 5);
+    const { effects } = await h.engine.describeSender(msg);
+    // A white address beats a black domain, so the block of the domain removes it: nothing that decides is left in place.
+    expect(effects["block-domain"]).toMatchObject({ lifted: [{ kind: "address", value: "anna@customer.example" }], kept: null });
+    expect(effects["block-address"]?.kept).toBeNull();
   });
 });
 

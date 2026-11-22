@@ -2166,7 +2166,7 @@
     "message": "Skipped the folder $1: it does not exist here."
   },
   "importUndone": {
-    "message": "Import undone. Entries removed again: $1. Entries moved back to the list they were on: $2."
+    "message": "Import taken back. Entries removed again: $1. Entries moved back to the list they were on: $2."
   },
   "popupSettings": {
     "message": "Settings"
@@ -2237,6 +2237,12 @@
   "tipMoveInbox": {
     "message": "Moves the message back to the Inbox."
   },
+  "tipKeptBlack": {
+    "message": "The entry $1 stays on the black list."
+  },
+  "tipKeptWhite": {
+    "message": "The entry $1 stays on the white list."
+  },
   "popupLastCommand": {
     "message": "Last command ($1):"
   },
@@ -2254,6 +2260,9 @@
   },
   "popupDomain": {
     "message": "Whole domain"
+  },
+  "popupDomainDeciding": {
+    "message": "Whole domain $1, the entry that decided:"
   },
   "popupBlockShort": {
     "message": "Block"
@@ -2319,7 +2328,16 @@
     "message": "Scored: $1. The scores are in the log."
   },
   "popupScoreDoneFailed": {
-    "message": "Scored: $1. Without a score: $2. The scores are in the log."
+    "message": "Scored: $1. Without a score: $2. The scores and the reasons are in the log."
+  },
+  "popupScoreNone_one": {
+    "message": "No AI service answered: the message got no score. The log says why."
+  },
+  "popupScoreNone_few": {
+    "message": "No AI service answered: none of the $1 messages got a score. The log says why."
+  },
+  "popupScoreNone_many": {
+    "message": "No AI service answered: none of the $1 messages got a score. The log says why."
   },
   "popupNothingSelected": {
     "message": "Select one or more messages in the message list first."
@@ -2364,7 +2382,10 @@
     "message": "To undo, click the Block Spam button in the toolbar."
   },
   "commandUndone": {
-    "message": "Undone. The lists are as they were before."
+    "message": "Taken back. The lists are as they were before."
+  },
+  "commandUndoneMany": {
+    "message": "Taken back: $1 entries. The lists are as they were before."
   },
   "commandUndoMoved": {
     "message": "Moved back: $1"

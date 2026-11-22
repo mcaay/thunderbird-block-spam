@@ -2237,6 +2237,12 @@
   "tipMoveInbox": {
     "message": "Przenosi wiadomość z powrotem do Odebranych."
   },
+  "tipKeptBlack": {
+    "message": "Wpis $1 pozostaje na czarnej liście."
+  },
+  "tipKeptWhite": {
+    "message": "Wpis $1 pozostaje na białej liście."
+  },
   "popupLastCommand": {
     "message": "Ostatnie polecenie ($1):"
   },
@@ -2254,6 +2260,9 @@
   },
   "popupDomain": {
     "message": "Cała domena"
+  },
+  "popupDomainDeciding": {
+    "message": "Cała domena $1, wpis, który zdecydował:"
   },
   "popupBlockShort": {
     "message": "Zablokuj"
@@ -2319,7 +2328,16 @@
     "message": "Ocenione wiadomości: $1. Oceny są w dzienniku."
   },
   "popupScoreDoneFailed": {
-    "message": "Ocenione wiadomości: $1. Bez oceny: $2. Oceny są w dzienniku."
+    "message": "Ocenione wiadomości: $1. Bez oceny: $2. Oceny i przyczyny są w dzienniku."
+  },
+  "popupScoreNone_one": {
+    "message": "Żadna usługa AI nie odpowiedziała: wiadomość nie otrzymała oceny. Przyczynę podaje dziennik."
+  },
+  "popupScoreNone_few": {
+    "message": "Żadna usługa AI nie odpowiedziała: żadna z $1 wiadomości nie otrzymała oceny. Przyczynę podaje dziennik."
+  },
+  "popupScoreNone_many": {
+    "message": "Żadna usługa AI nie odpowiedziała: żadna z $1 wiadomości nie otrzymała oceny. Przyczynę podaje dziennik."
   },
   "popupNothingSelected": {
     "message": "Najpierw zaznacz jedną lub kilka wiadomości na liście wiadomości."
@@ -2365,6 +2383,9 @@
   },
   "commandUndone": {
     "message": "Cofnięto. Listy są takie jak przedtem."
+  },
+  "commandUndoneMany": {
+    "message": "Cofnięto wpisy: $1. Listy są takie jak przedtem."
   },
   "commandUndoMoved": {
     "message": "Przeniesiono z powrotem: $1"

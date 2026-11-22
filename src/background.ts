@@ -17,7 +17,7 @@ import {
 import type { PendingSignIn } from "./ai/chatgptAuth";
 import { isLoopbackHost, validateEndpoint } from "./ai/http";
 import { checkDefinition, checkImportedDefinition, KEY_REQUIRED_TYPES, newAccessPoint, normalizeDefinition, requiredOrigins } from "./ai/presets";
-import { COMMANDS, isCommandName } from "./core/commands";
+import { COMMANDS, isCommandName, undoneEntries } from "./core/commands";
 import type { CommandName } from "./core/commands";
 import { errorText } from "./core/decision";
 import { applySettingsPatch, manualEntry } from "./core/edit";
@@ -43,7 +43,7 @@ import { BUNDLED_PUBLIC_DOMAINS } from "./data/publicDomains";
 import { t, tCode, tn } from "./tb/i18n";
 import { hold, withKeepAlive } from "./tb/keepAlive";
 import { collect, messagePages, messagesOfTab, ThunderbirdMail } from "./tb/mail";
-import { commandLines } from "./tb/commandText";
+import { commandLines, undoneLines } from "./tb/commandText";
 import { noVerdictOutcomeText, problemNames, servicesOutcomeText, wishOutcomeText } from "./tb/stateText";
 import { COMPANION_ID, KEY_PENDING_SIGN_IN } from "./tb/protocol";
 import type {
@@ -1589,7 +1589,7 @@ const handlers: Handlers = {
   },
 
   async undoCommand({ id }) {
-    const { engine } = need();
+    const { state, engine } = need();
     const stored = await storedCommand();
     if (stored === null || stored.id !== id) {
       // Another command was made since, or this one was taken back already.
@@ -1597,19 +1597,10 @@ const handlers: Handlers = {
     }
     await store.remove([KEY_LAST_COMMAND]);
     mail.resetCache();
+    // Read before the lists change: which entries come back, and which go.
+    const entries = undoneEntries(stored.undo, state.entries);
     const outcome = await withKeepAlive(() => engine.undoCommand(stored.undo));
-    const lines = [t("commandUndone")];
-    if (outcome.moved > 0) {
-      lines.push(t("commandUndoMoved", outcome.moved));
-    }
-    if (outcome.notFound > 0) {
-      lines.push(t("commandUndoNotFound", outcome.notFound));
-    }
-    const failure = outcome.failures[0];
-    if (failure !== undefined) {
-      lines.push(t("notifyMoveFailed", failure));
-    }
-    return { lines, failed: failure !== undefined };
+    return { lines: undoneLines(entries, outcome), failed: outcome.failures.length > 0 };
   },
 
   async dismissCommand({ id }) {

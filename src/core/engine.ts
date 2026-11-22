@@ -99,6 +99,8 @@ export interface CommandUndoOutcome {
   /** Messages that were no longer where the command had put them. */
   notFound: number;
   failures: string[];
+  /** Where each message that was moved back is again: the Spam folder, the Inbox, or another folder. */
+  back: { place: "junk" | "inbox" | "folder"; folder: FolderRef }[];
 }
 
 export interface TestScoreSummary {
@@ -140,6 +142,8 @@ export interface CommandPreview {
   change: "added" | "moved" | "none";
   lifted: Target[];
   moves: boolean;
+  /** The entry of the other list that decides the sender now and that the command would leave where it is. Null when there is none. */
+  kept: { value: string; list: ListName } | null;
 }
 
 /**
@@ -721,11 +725,12 @@ export class Engine {
     if (undo.remove.length > 0 || undo.restore.length > 0) {
       await state.saveEntries();
     }
-    const outcome: CommandUndoOutcome = { moved: 0, notFound: 0, failures: [] };
+    const outcome: CommandUndoOutcome = { moved: 0, notFound: 0, failures: [], back: [] };
     for (const move of undo.moves) {
       const result = await this.moveLogged(move.accountId, move.messageId, (folder) => sameFolder(folder, move.to), move.from);
       if (result.move === "moved") {
         outcome.moved += 1;
+        outcome.back.push({ place: context.isJunk(move.from) ? "junk" : context.inboxes.some((inbox) => sameFolder(inbox, move.from)) ? "inbox" : "folder", folder: move.from });
       } else if (result.move === "failed") {
         outcome.failures.push(result.failure);
       } else {
@@ -773,6 +778,7 @@ export class Engine {
         change: effect.change,
         lifted: effect.lifted.map((entry) => ({ kind: entry.kind, value: entry.value })),
         moves: command.startsWith("block") ? !inJunk : held,
+        kept: effect.kept === null ? null : { value: effect.kept.value, list: effect.kept.list },
       };
     }
     return {

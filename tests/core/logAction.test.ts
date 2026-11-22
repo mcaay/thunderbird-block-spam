@@ -399,10 +399,10 @@ describe("the sender a command would act on", () => {
       messageId: company.headerMessageId,
       unchanged: [],
       effects: {
-        "block-address": { target: { kind: "address", value: "mike@mail.outreach.example" }, change: "added", lifted: [], moves: true },
-        "block-domain": { target: { kind: "domain", value: "outreach.example" }, change: "added", lifted: [], moves: true },
-        "trust-address": { target: { kind: "address", value: "mike@mail.outreach.example" }, change: "added", lifted: [], moves: false },
-        "trust-domain": { target: { kind: "domain", value: "outreach.example" }, change: "added", lifted: [], moves: false },
+        "block-address": { target: { kind: "address", value: "mike@mail.outreach.example" }, change: "added", lifted: [], moves: true, kept: null },
+        "block-domain": { target: { kind: "domain", value: "outreach.example" }, change: "added", lifted: [], moves: true, kept: null },
+        "trust-address": { target: { kind: "address", value: "mike@mail.outreach.example" }, change: "added", lifted: [], moves: false, kept: null },
+        "trust-domain": { target: { kind: "domain", value: "outreach.example" }, change: "added", lifted: [], moves: false, kept: null },
       },
     });
     expect((await h.engine.describeSender(personal)).domainTarget).toEqual({ kind: "address", value: "friend@gmail.com" });

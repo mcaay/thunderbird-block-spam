@@ -3,7 +3,8 @@
 // that nothing changes that is not said.
 
 import type { CommandName } from "../core/commandNames";
-import type { CommandOutcome, CommandPreview } from "../core/engine";
+import type { UndoneEntry } from "../core/commands";
+import type { CommandOutcome, CommandPreview, CommandUndoOutcome } from "../core/engine";
 import { t, tCode } from "./i18n";
 
 const NOTIFICATION_TARGETS = 5;
@@ -78,5 +79,41 @@ export function commandTitle(command: CommandName, preview: CommandPreview | und
   if (preview.moves) {
     parts.push(t(block ? "tipMoveJunk" : "tipMoveInbox"));
   }
+  if (preview.kept !== null) {
+    // The entry that decides the sender now is not changed: the sentence says so, so that the next sender it decides is no surprise.
+    parts.push(t(preview.kept.list === "black" ? "tipKeptBlack" : "tipKeptWhite", preview.kept.value));
+  }
   return parts.join(" ");
+}
+
+/**
+ * What is said once a command was taken back, one fact per line, in the sentences of the log: which list the entry
+ * is on again (or that it is on neither), and where the message is. Several entries are counted.
+ */
+export function undoneLines(entries: readonly UndoneEntry[], outcome: CommandUndoOutcome): string[] {
+  const lines: string[] = [];
+  const [entry] = entries;
+  if (entries.length === 1 && entry !== undefined) {
+    lines.push(tCode("logUndone", entry.list === null ? "neither-again" : entry.list === "black" ? "black-again" : "white-again", entry.value));
+  } else if (entries.length > 1) {
+    lines.push(t("commandUndoneMany", entries.length));
+  }
+  const [back] = outcome.back;
+  if (outcome.moved === 1 && back !== undefined) {
+    lines.push(back.place === "folder" ? tCode("logBack", back.place, back.folder.path.replace(/^\//, "")) : tCode("logBack", back.place));
+  } else if (outcome.moved > 0) {
+    lines.push(t("commandUndoMoved", outcome.moved));
+  }
+  if (outcome.notFound > 0) {
+    lines.push(t("commandUndoNotFound", outcome.notFound));
+  }
+  const failure = outcome.failures[0];
+  if (failure !== undefined) {
+    lines.push(t("notifyMoveFailed", failure));
+  }
+  if (lines.length === 0) {
+    // Only the source of an entry went back: it never left its list.
+    lines.push(t("commandUndone"));
+  }
+  return lines;
 }

@@ -234,12 +234,12 @@ describe("block and trust without shortcuts", () => {
           accountId: "account1",
           messageId: "msg-1@test",
           unchanged: [],
-          // What each button would do, for its tooltip.
+          // What each button would do, for its tooltip: also which deciding entry of the other list it would leave in place.
           effects: {
-            "block-address": { target: { kind: "address", value: "mike@mail.outreach.example" }, change: "added", lifted: [], moves: true },
-            "block-domain": { target: { kind: "domain", value: "outreach.example" }, change: "added", lifted: [], moves: true },
-            "trust-address": { target: { kind: "address", value: "mike@mail.outreach.example" }, change: "added", lifted: [], moves: false },
-            "trust-domain": { target: { kind: "domain", value: "outreach.example" }, change: "added", lifted: [], moves: false },
+            "block-address": { target: { kind: "address", value: "mike@mail.outreach.example" }, change: "added", lifted: [], moves: true, kept: null },
+            "block-domain": { target: { kind: "domain", value: "outreach.example" }, change: "added", lifted: [], moves: true, kept: null },
+            "trust-address": { target: { kind: "address", value: "mike@mail.outreach.example" }, change: "added", lifted: [], moves: false, kept: null },
+            "trust-domain": { target: { kind: "domain", value: "outreach.example" }, change: "added", lifted: [], moves: false, kept: null },
           },
         },
       },
@@ -324,13 +324,35 @@ describe("undoing a command made by hand", () => {
 
     expect(await background.send("undoCommand", { id: done.result.id })).toEqual({
       ok: true,
-      result: { lines: ["commandUndone", "commandUndoMoved(1)"], failed: false },
+      // The line names what is true again, in the sentences of the log: the list of the entry, and the place of the message.
+      result: { lines: ["logUndone_neither_again(mike@outreach.example)", "logBack_inbox"], failed: false },
     });
     expect(fake.storage[KEY_ENTRIES]).toEqual([learned]);
     expect(fake.moves[1]).toEqual({ ids: [1], folderId: "f-inbox" });
     // Taken back once: there is nothing left to undo.
     expect(await background.send("lastCommand", {})).toEqual({ ok: true, result: { command: null } });
     expect(await background.send("undoCommand", { id: done.result.id })).toMatchObject({ ok: false, code: "undo-gone" });
+  });
+
+  it("counts the entries when taking a command back changes several, and says so when only the source of an entry goes back", async () => {
+    const learned = { list: "white", kind: "address", value: "mike@outreach.example", scope: "all", source: "sent", addedAt: 5 };
+    const { fake, background } = await setup([learned]);
+    // Blocking the domain adds its entry and removes the white address that would still decide the sender.
+    const blocked = await background.send("runCommand", { command: "block-domain", tabId: 1 });
+    if (!blocked.ok) {
+      throw new Error(blocked.error);
+    }
+    expect(await background.send("undoCommand", { id: blocked.result.id })).toEqual({ ok: true, result: { lines: ["commandUndoneMany(2)", "logBack_inbox"], failed: false } });
+    expect(fake.storage[KEY_ENTRIES]).toEqual([learned]);
+
+    // Trusting a sender who is on the white list already only marks the entry as made by hand: taken back, the lists are as they were.
+    const trusted = await background.send("runCommand", { command: "trust-address", tabId: 1 });
+    if (!trusted.ok) {
+      throw new Error(trusted.error);
+    }
+    expect(trusted.result.undoable).toBe(true);
+    expect(await background.send("undoCommand", { id: trusted.result.id })).toEqual({ ok: true, result: { lines: ["commandUndone"], failed: false } });
+    expect(fake.storage[KEY_ENTRIES]).toEqual([learned]);
   });
 
   it("keeps the command of a shortcut for the next time the popup opens, also after the background page was restarted", async () => {
