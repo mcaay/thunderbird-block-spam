@@ -923,3 +923,225 @@ export function download(filename: string, text: string): void {
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 60 * 1000);
 }
+
+// ---------------------------------------------------------------------------
+// Removing a row never moves anything under the pointer.
+
+/**
+ * The rows of one list that were removed and still stand in their place. A removed row is drawn as a quiet row
+ * that says it was removed, with Undo where its remove button was and the close button after it. It stays until
+ * it is closed, until the next other action in its list or until the pane is left (`clear`): only then do the
+ * rows below move up. Rows that are removed one after the other all keep their place meanwhile, so that the
+ * pointer never lands on a row that was not aimed at. Undo is one level, as everywhere: the newest removal has it.
+ */
+export interface RemovedRows {
+  /**
+   * Removes the row that `row` draws (an item with a `data-key`). `remove` takes it off the stored list, `undo`
+   * puts it back exactly as it was, and `undone` is what is said once it is back.
+   */
+  remove(row: HTMLElement, message: string, remove: () => Promise<unknown>, undo: () => Promise<unknown>, undone: string): void;
+  /**
+   * The keys of the rows to draw, in their order: the given keys of the list as it is stored, with the removed rows
+   * in the places they had. Where one instance serves several lists, `prefix` names the list: only the removed rows
+   * whose key starts with it belong to it.
+   */
+  order(keys: readonly string[], prefix?: string): string[];
+  /** Whether the row with this key is drawn as a removed row. */
+  has(key: string): boolean;
+  /** What a removed row holds: the sentence, Undo for the newest removal, the close button. `focus` is the kind of the remove button it stands for. */
+  content(key: string, focus?: string): Child[];
+  /** Changes whenever the removed rows whose key starts with the prefix have to be drawn anew. */
+  signature(prefix?: string): string;
+  /** The removed rows go, and the rows below them move up. */
+  clear(): void;
+}
+
+interface RemovedRow {
+  message: string;
+  /** The row it stood under, and its place among the rows, as they were when it was removed. */
+  after: string | null;
+  index: number;
+  /** Seen missing from the stored list: when its key is listed again after that, the row is back and is drawn as itself. */
+  gone: boolean;
+  restored: boolean;
+  restoring: boolean;
+  undo: (() => Promise<unknown>) | null;
+  undone: string;
+}
+
+/** Where a row that came back with Undo is said to a screen reader: the row itself is back in its place and says the rest. */
+let restoredLive: HTMLElement | null = null;
+
+export function removedRows(redraw: () => void): RemovedRows {
+  const rows = new Map<string, RemovedRow>();
+  /** One level of Undo: when another confirmation offers it, the removed rows keep their place and lose theirs. */
+  const owner: Notice = {
+    element: h("div"),
+    show() {},
+    clear() {
+      if (dropUndo()) {
+        redraw();
+      }
+    },
+  };
+  function dropUndo(): boolean {
+    let changed = false;
+    for (const entry of rows.values()) {
+      changed ||= entry.undo !== null;
+      entry.undo = null;
+    }
+    if (undoOwner?.notice === owner) {
+      undoOwner = null;
+    }
+    return changed;
+  }
+  function forget(key: string): void {
+    const entry = rows.get(key);
+    if (entry === undefined) {
+      return;
+    }
+    rows.delete(key);
+    if (entry.undo !== null && undoOwner?.notice === owner) {
+      undoOwner = null;
+    }
+    // A removed row that stood under this one now stands under what this one stood under.
+    for (const other of rows.values()) {
+      if (other.after === key) {
+        other.after = entry.after;
+      }
+    }
+  }
+  function run(key: string): void {
+    const entry = rows.get(key);
+    if (entry === undefined || entry.undo === null || entry.restoring) {
+      return;
+    }
+    const undo = entry.undo;
+    entry.restoring = true;
+    void guard(async () => {
+      try {
+        await undo();
+        // The row is drawn as itself again as soon as the stored list has it.
+        entry.restored = true;
+        redraw();
+        if (restoredLive === null) {
+          restoredLive = h("div", { class: "visually-hidden", attrs: { role: "status" } });
+          document.body.appendChild(restoredLive);
+        }
+        announce(restoredLive, entry.undone);
+      } finally {
+        entry.restoring = false;
+      }
+    });
+  }
+  return {
+    remove(row, message, remove, undo, undone) {
+      const key = row.dataset.key;
+      if (key === undefined) {
+        return;
+      }
+      if (undoOwner !== null && undoOwner.notice !== owner) {
+        undoOwner.notice.clear();
+      }
+      dropUndo();
+      const previous = row.previousElementSibling;
+      rows.set(key, {
+        message,
+        after: previous instanceof HTMLElement ? (previous.dataset.key ?? null) : null,
+        index: row.parentElement === null ? 0 : [...row.parentElement.children].indexOf(row),
+        gone: false,
+        restored: false,
+        restoring: false,
+        undo,
+        undone,
+      });
+      undoOwner = { notice: owner, run: () => run(key) };
+      if (!undoKeyBound) {
+        undoKeyBound = true;
+        document.addEventListener("keydown", onUndoKey);
+      }
+      // First the quiet row in the place of the row, then the removal itself: nothing moves in between.
+      redraw();
+      void guard(async () => {
+        try {
+          await remove();
+        } catch (error) {
+          forget(key);
+          redraw();
+          throw error;
+        }
+      });
+    },
+    order(keys, prefix = "") {
+      const present = new Set(keys);
+      for (const [key, entry] of [...rows]) {
+        if (!key.startsWith(prefix)) {
+          continue;
+        }
+        if (!present.has(key)) {
+          entry.gone = true;
+        } else if (entry.gone || entry.restored) {
+          forget(key);
+        }
+      }
+      const result = [...keys];
+      let waiting = [...rows.keys()].filter((key) => key.startsWith(prefix) && !present.has(key));
+      // A removed row stands under the row it stood under. Where that one is gone too, it keeps the place it had by its number.
+      for (let placed = true; placed && waiting.length > 0; ) {
+        placed = false;
+        for (const key of waiting) {
+          const after = rows.get(key)?.after ?? null;
+          const at = after === null ? 0 : result.indexOf(after) + 1;
+          if (after === null || at > 0) {
+            result.splice(at, 0, key);
+            waiting = waiting.filter((other) => other !== key);
+            placed = true;
+            break;
+          }
+        }
+      }
+      for (const key of waiting) {
+        result.splice(Math.min(rows.get(key)?.index ?? result.length, result.length), 0, key);
+      }
+      return result;
+    },
+    has: (key) => rows.has(key),
+    content(key, focus = "remove") {
+      const entry = rows.get(key);
+      if (entry === undefined) {
+        return [];
+      }
+      // The sentence is a status: a screen reader hears the removal, and the name of Undo says what is taken back.
+      const text = h("span", { class: "removed-text", attrs: { role: "status" } }, ...addressed(entry.message));
+      const undoButton = entry.undo === null ? null : named(button(undoLabel(), () => run(key), "small"), entry.message);
+      if (undoButton !== null) {
+        // It stands where the remove button was and is the control of the same kind: the keyboard stays on it when the row changes.
+        undoButton.dataset.focus = focus;
+      }
+      const close = closeButton(() => {
+        // The quiet row goes: the keyboard goes on with the row next to it, or with what follows the list.
+        const row = close.closest<HTMLElement>("[data-key]");
+        if (row !== null && row.contains(document.activeElement)) {
+          focusNeighbor(row, null);
+          if (row.contains(document.activeElement)) {
+            focusAfter(row);
+          }
+        }
+        forget(key);
+        redraw();
+      });
+      return [text, undoButton, close];
+    },
+    signature(prefix = "") {
+      return JSON.stringify([...rows].filter(([key]) => key.startsWith(prefix)).map(([key, entry]) => [key, entry.message, entry.undo !== null]));
+    },
+    clear() {
+      if (rows.size === 0) {
+        return;
+      }
+      dropUndo();
+      rows.clear();
+      redraw();
+    },
+  };
+}

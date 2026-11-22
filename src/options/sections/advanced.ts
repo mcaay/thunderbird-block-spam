@@ -8,7 +8,7 @@ import type { Settings } from "../../core/types";
 import { BUNDLED_PUBLIC_DOMAINS } from "../../data/publicDomains";
 import { stringsLocale, t, tCode } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
-import { address, addressed, button, byId, description, fieldError, focusNeighbor, guard, h, inlineStatus, learnMore, named, notice, option, paneLink, reconcile, removeButton, replace, tNodes } from "../dom";
+import { address, addressed, button, byId, description, fieldError, guard, h, inlineStatus, learnMore, named, option, paneLink, reconcile, removeButton, removedRows, replace, tNodes } from "../dom";
 import { icon } from "../icons";
 import type { Keyed } from "../dom";
 import { mayRedraw, sameLabels } from "../fields";
@@ -25,43 +25,53 @@ async function update(patch: SettingsPatch): Promise<string[]> {
 /** A list of domains or addresses: plain rows with a remove button each, or one line saying that there is none. */
 interface PlainList {
   element: HTMLElement;
-  /** Draws the items. `onRemove` gets the item whose remove button was pressed. */
-  draw(items: readonly string[], onRemove: (item: string) => void): void;
+  /** Draws the items. `remover` says how an item is taken off the stored list, and how Undo puts it back. */
+  draw(items: readonly string[], remover: (item: string) => { remove: () => Promise<unknown>; undo: () => Promise<unknown> }): void;
+  /** The rows that were removed leave their places. */
+  clear(): void;
 }
 
-/** `labelledBy` names the heading of the list, `fallback` takes the focus when the last row is removed. */
-function plainList(label: { labelledBy: string } | { label: string }, fallback: HTMLElement): PlainList {
+/**
+ * `labelledBy` names the heading of the list. A removed item stays in its place as a quiet row with Undo, so that
+ * nothing moves under the pointer: `redraw` draws the list again when such a row comes or goes.
+ */
+function plainList(label: { labelledBy: string } | { label: string }, redraw: () => void): PlainList {
   const list = h("ul", {
     class: "plain-list",
     attrs: "labelledBy" in label ? { "aria-labelledby": label.labelledBy } : { "aria-label": label.label },
   });
   const empty = description(t("noneYet"));
+  const gone = removedRows(redraw);
   return {
     element: h("div", {}, empty, list),
-    draw(items, onRemove) {
-      list.hidden = items.length === 0;
-      empty.hidden = items.length > 0;
+    draw(items, remover) {
+      const keys = gone.order(items);
+      list.hidden = keys.length === 0;
+      empty.hidden = keys.length > 0;
       reconcile(
         list,
-        items.map(
-          (item): Keyed => ({
-            key: item,
-            signature: "",
-            build: () => {
-              const row = h("li", {}, h("span", { class: "name" }, address(item)));
-              row.appendChild(
-                removeButton(t("removeNamed", item), () => {
-                  // The row is about to go: the keyboard goes on with the row next to it, or with the field for adding.
-                  focusNeighbor(row, fallback);
-                  onRemove(item);
-                }),
-              );
-              return row;
-            },
-          }),
+        keys.map(
+          (item): Keyed =>
+            gone.has(item)
+              ? { key: item, signature: `removed|${gone.signature(item)}`, build: () => h("li", { class: "removed-row" }, ...gone.content(item)) }
+              : {
+                  key: item,
+                  signature: "",
+                  build: () => {
+                    const row = h("li", {}, h("span", { class: "name" }, address(item)));
+                    row.appendChild(
+                      removeButton(t("removeNamed", item), () => {
+                        const { remove, undo } = remover(item);
+                        gone.remove(row, t("listsRemoved", item), remove, undo, t("listsRestored", item));
+                      }),
+                    );
+                    return row;
+                  },
+                },
         ),
       );
     },
+    clear: () => gone.clear(),
   };
 }
 
@@ -100,10 +110,14 @@ export function advancedSection(): Section {
   const verdict = h("p", { class: "verdict", attrs: { role: "status" } });
   const makePublic = button(t("publicMakePublic"), () => change(true));
   const makeCustom = button(t("publicMakeCustom"), () => change(false));
-  const added = plainList({ labelledBy: "public-added-title" }, domain);
-  const removed = plainList({ labelledBy: "public-removed-title" }, domain);
-  /** What the last removal from the lists of this group did, with Undo. */
-  const domainNotice = notice();
+  /** Draws the lists again when a removed row comes or goes. */
+  const redraw = (): void => {
+    if (model !== null) {
+      section.render(model);
+    }
+  };
+  const added = plainList({ labelledBy: "public-added-title" }, redraw);
+  const removed = plainList({ labelledBy: "public-removed-title" }, redraw);
 
   function current(): { domain: string | null; isPublic: boolean } {
     const value = normalizeDomain(domain.value);
@@ -141,7 +155,9 @@ export function advancedSection(): Section {
       return;
     }
     const value = state.domain;
-    domainNotice.clear();
+    // The next action in these lists: the rows that were removed leave their places.
+    added.clear();
+    removed.clear();
     void guard(
       async () => {
         if (toPublic) {
@@ -176,9 +192,7 @@ export function advancedSection(): Section {
   });
   const addMailboxButton = h("button", { type: "submit", text: t("add"), disabled: true, attrs: { "aria-label": t("forwardingAddOne") } });
   const mailboxError = fieldError(mailbox, "forward-mailbox-error");
-  const mailboxes = plainList({ label: t("forwardingTitle") }, mailbox);
-  /** What the last removal of a mailbox did, with Undo. */
-  const mailboxNotice = notice();
+  const mailboxes = plainList({ label: t("forwardingTitle") }, redraw);
   const labels = h("input", { type: "text", id: "forward-labels", oninput: () => drawLabelsState(), attrs: { spellcheck: "false", autocomplete: "off" } });
   const labelsError = fieldError(labels, "forward-labels-error");
   const labelsStatus = inlineStatus();
@@ -240,7 +254,8 @@ export function advancedSection(): Section {
       mailbox.focus();
       return;
     }
-    mailboxNotice.clear();
+    // The next action in this list: the rows that were removed leave their places.
+    mailboxes.clear();
     void guard(
       async () => {
         await update({ forwardingMailboxes: [...settings.forwardingMailboxes, value] });
@@ -263,7 +278,6 @@ export function advancedSection(): Section {
     h("div", { class: "row" }, h("label", { for: "public-domain", text: t("publicDomainLabel") }), domain, makePublic, makeCustom),
     domainError.element,
     verdict,
-    domainNotice.element,
     h("h3", { text: t("publicAddedTitle"), id: "public-added-title" }),
     added.element,
     h("h3", { text: t("publicRemovedTitle"), id: "public-removed-title" }),
@@ -285,7 +299,6 @@ export function advancedSection(): Section {
       addMailboxButton,
     ),
     mailboxError.element,
-    mailboxNotice.element,
     mailboxes.element,
     h("h3", { text: t("forwardLabelsTitle") }),
     labelsUnused,
@@ -295,7 +308,7 @@ export function advancedSection(): Section {
   );
   describe();
 
-  return {
+  const section: Section = {
     render(next: Model) {
       model = next;
       const settings = next.settings;
@@ -310,24 +323,30 @@ export function advancedSection(): Section {
         lead.textContent = leadText;
       }
       newScope.value = settings.newEntryScope;
-      // Removing gives a confirmation with Undo. Undo applies to the list as it is then, not as it was.
-      const removable = (name: "publicDomainsAdded" | "publicDomainsRemoved" | "forwardingMailboxes", where: typeof domainNotice) => (item: string) =>
-        void guard(async () => {
-          await update({ [name]: settings[name].filter((other) => other !== item) });
-          where.show(
-            t("listsRemoved", item),
-            async () => {
-              const current = model?.settings;
-              if (current !== null && current !== undefined) {
-                await update({ [name]: [...current[name].filter((other) => other !== item), item] });
-              }
-            },
-            t("listsRestored", item),
-          );
-        });
-      added.draw(settings.publicDomainsAdded, removable("publicDomainsAdded", domainNotice));
-      removed.draw(settings.publicDomainsRemoved, removable("publicDomainsRemoved", domainNotice));
-      mailboxes.draw(settings.forwardingMailboxes, removable("forwardingMailboxes", mailboxNotice));
+      // A removed item stays in its place as a quiet row with Undo. Both apply to the list as it is then, not as it
+      // was when the row was drawn, and Undo puts the item back in the place it had.
+      const remover = (name: "publicDomainsAdded" | "publicDomainsRemoved" | "forwardingMailboxes") => (item: string) => {
+        const index = model?.settings?.[name].indexOf(item) ?? -1;
+        return {
+          remove: async () => {
+            const current = model?.settings;
+            if (current !== null && current !== undefined) {
+              await update({ [name]: current[name].filter((other) => other !== item) });
+            }
+          },
+          undo: async () => {
+            const current = model?.settings;
+            if (current !== null && current !== undefined) {
+              const rest = current[name].filter((other) => other !== item);
+              const at = index < 0 ? rest.length : Math.min(index, rest.length);
+              await update({ [name]: [...rest.slice(0, at), item, ...rest.slice(at)] });
+            }
+          },
+        };
+      };
+      added.draw(settings.publicDomainsAdded, remover("publicDomainsAdded"));
+      removed.draw(settings.publicDomainsRemoved, remover("publicDomainsRemoved"));
+      mailboxes.draw(settings.forwardingMailboxes, remover("forwardingMailboxes"));
       labelsUnused.hidden = settings.forwardingMailboxes.length > 0;
       describe();
       const stored = settings.forwardLabels.join(", ");
@@ -344,8 +363,10 @@ export function advancedSection(): Section {
       return labelsDirty() || mailbox.value.trim() !== "";
     },
     leave() {
-      domainNotice.clear();
-      mailboxNotice.clear();
+      added.clear();
+      removed.clear();
+      mailboxes.clear();
     },
   };
+  return section;
 }

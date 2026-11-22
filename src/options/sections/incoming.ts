@@ -11,7 +11,7 @@ import type { Settings } from "../../core/types";
 import { t, tCode } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
 import { beforeScanText, noVerdictOutcomeText, whereText } from "../../tb/stateText";
-import { addressed, bar, button, byId, closeButton, description, dialog, errorText, guard, h, inlineStatus, notice, option, reconcile, replace, setUnavailable, whileBusy } from "../dom";
+import { addressed, bar, button, byId, closeButton, description, dialog, errorText, guard, h, inlineStatus, option, reconcile, removedRows, replace, setUnavailable, whileBusy } from "../dom";
 import { icon } from "../icons";
 import { chosenIn, folderRef, folderView, forgetAccounts, hasFolder, monitoredFolders, withoutFolder } from "../model";
 import type { Model } from "../model";
@@ -28,8 +28,12 @@ export function incomingSection(shell: Shell): Section {
   const root = byId("incoming");
   let model: Model | null = null;
   const monitored = h("div", { class: "accounts" });
-  /** What the last change of the monitored folders did, with Undo. */
-  const changed = notice();
+  /** The monitored folders that were removed and still stand in their place as quiet rows with Undo. */
+  const changed = removedRows(() => {
+    if (model !== null) {
+      section.render(model);
+    }
+  });
   const screening = h("div", { class: "screening", attrs: { role: "group", "aria-labelledby": "screening-title" } });
   /** What "Create folder" did, per account. Kept across redraws. */
   const created = new Map<string, { text: string; ok: boolean }>();
@@ -100,7 +104,6 @@ export function incomingSection(shell: Shell): Section {
     dependent,
     h("h2", { text: t("monitoredTitle") }),
     description(t("monitoredHint")),
-    changed.element,
     noAccounts,
     monitored,
   );
@@ -365,7 +368,7 @@ export function incomingSection(shell: Shell): Section {
   // what it does right now, a choice that waits for the scan, what became of it, and the warning before the scan.
   noVerdict.parentElement?.after(nowLine, choiceNote, choiceOutcome, unscanned);
 
-  return {
+  const section: Section = {
     render(next: Model) {
       model = next;
       const settings = next.settings;
@@ -392,21 +395,21 @@ export function incomingSection(shell: Shell): Section {
           candidates: (account) => folderCandidates("monitored", account.folders, chosenIn(account, settings)),
           removable: (account, folder) => !hasFolder(account.inboxes, folder),
           fixedNote: t("monitoredAlways"),
-          onRemove: (account, folder) =>
-            void guard(async () => {
-              await update({ monitoredFoldersAdded: withoutFolder(settings.monitoredFoldersAdded, folder) });
-              changed.show(
-                t("folderRemoved", folder.name, account.name),
-                async () => {
-                  // Applied to the folders as they are now, not as they were when this one was removed.
-                  const current = model?.settings;
-                  if (current !== null && current !== undefined) {
-                    await update({ monitoredFoldersAdded: [...withoutFolder(current.monitoredFoldersAdded, folder), folderRef(folder)] });
-                  }
-                },
-                t("folderRestored", folder.name, account.name),
-              );
-            }),
+          removed: changed,
+          onRemove: (account, folder, row) =>
+            changed.remove(
+              row,
+              t("folderRemoved", folder.name, account.name),
+              () => update({ monitoredFoldersAdded: withoutFolder(settings.monitoredFoldersAdded, folder) }),
+              async () => {
+                // Applied to the folders as they are now, not as they were when this one was removed.
+                const current = model?.settings;
+                if (current !== null && current !== undefined) {
+                  await update({ monitoredFoldersAdded: [...withoutFolder(current.monitoredFoldersAdded, folder), folderRef(folder)] });
+                }
+              },
+              t("folderRestored", folder.name, account.name),
+            ),
           onAdd: (_account, folder) => {
             changed.clear();
             void guard(() => update({ monitoredFoldersAdded: [...settings.monitoredFoldersAdded, folder] }));
@@ -436,4 +439,5 @@ export function incomingSection(shell: Shell): Section {
       }
     },
   };
+  return section;
 }

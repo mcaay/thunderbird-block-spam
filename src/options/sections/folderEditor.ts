@@ -2,8 +2,8 @@
 // another folder. Used for Sent folders and for monitored folders.
 
 import { t } from "../../tb/i18n";
-import { addressed, description, focusNeighbor, h, named, option, removeButton } from "../dom";
-import type { Keyed } from "../dom";
+import { addressed, description, h, named, option, removeButton } from "../dom";
+import type { Keyed, RemovedRows } from "../dom";
 import type { AccountView, FolderView } from "../model";
 import type { FolderRef } from "../../core/types";
 
@@ -18,7 +18,10 @@ export interface FolderEditorOptions {
   removable: (account: AccountView, folder: FolderRef) => boolean;
   /** Said next to a folder that cannot be removed. */
   fixedNote: string;
-  onRemove: (account: AccountView, folder: FolderView) => void;
+  /** The folders that were removed and still stand in their place as quiet rows with Undo. */
+  removed: RemovedRows;
+  /** `row` is the row of the folder: it is handed to `removed`, which keeps it in its place. */
+  onRemove: (account: AccountView, folder: FolderView, row: HTMLElement) => void;
   onAdd: (account: AccountView, folder: FolderRef) => void;
 }
 
@@ -31,9 +34,12 @@ export function folderEditors(accounts: readonly AccountView[], options: FolderE
       (folder) => account.folders.find((candidate) => candidate.path === folder.path) ?? { ...folder, name: folder.path.replace(/^\//, ""), specialUse: [] },
     );
     const candidates = options.candidates(account);
+    // A folder that was removed keeps its place in the list as a quiet row, until the next other action in the list.
+    const prefix = `${account.id}\n`;
+    const keys = options.removed.order(chosen.map((folder) => prefix + folder.path), prefix);
     return {
       key: account.id,
-      signature: JSON.stringify([account.name, chosen, candidates, chosen.map((folder) => options.removable(account, folder))]),
+      signature: JSON.stringify([account.name, chosen, candidates, chosen.map((folder) => options.removable(account, folder)), keys, options.removed.signature(prefix)]),
       build: () => {
         const selectId = `${options.id}-add-${account.id}`;
         const select = h(
@@ -63,7 +69,15 @@ export function folderEditors(accounts: readonly AccountView[], options: FolderE
           // The menus of one column share one width: a longer name is shortened, and the tooltip has all of it.
           select.title = select.value === "" ? "" : (select.selectedOptions[0]?.textContent ?? "");
         });
-        const rows = chosen.map((folder) => {
+        const rows = keys.map((key) => {
+          const path = key.slice(prefix.length);
+          const folder = chosen.find((candidate) => candidate.path === path);
+          if (folder === undefined || options.removed.has(key)) {
+            // Undo stands where the remove button was, and takes the focus that button had.
+            const quiet = h("li", { class: "removed-row" }, ...options.removed.content(key, `remove:${path}`));
+            quiet.dataset.key = key;
+            return quiet;
+          }
           const removable = options.removable(account, folder);
           const row = h(
             "li",
@@ -71,12 +85,9 @@ export function folderEditors(accounts: readonly AccountView[], options: FolderE
             h("span", { class: "name", text: folder.name, title: folder.path }),
             removable ? null : h("span", { class: "note", text: options.fixedNote }),
           );
+          row.dataset.key = key;
           if (removable) {
-            const remove = removeButton(t("removeNamedIn", folder.name, account.name), () => {
-              // The row is about to go: the keyboard goes on with the next row, or with the menu for adding.
-              focusNeighbor(row, candidates.length === 0 ? null : select);
-              options.onRemove(account, folder);
-            });
+            const remove = removeButton(t("removeNamedIn", folder.name, account.name), () => options.onRemove(account, folder, row));
             remove.dataset.focus = `remove:${folder.path}`;
             row.appendChild(remove);
           }
@@ -98,7 +109,8 @@ export function folderEditors(accounts: readonly AccountView[], options: FolderE
           candidates.length === 0
             ? rows.length === 0
               ? null
-              : description(t("noFolderToAdd"))
+              : // As high as the row with the menu that stands here otherwise, so that the lists below keep their place when a folder is removed.
+                description(t("noFolderToAdd"), null, "add-line")
             : h("div", { class: "row" }, h("label", { for: selectId, class: "visually-hidden", text: t("folderToAdd", account.name) }), select, add),
         );
       },

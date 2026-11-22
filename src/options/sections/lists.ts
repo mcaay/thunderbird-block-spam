@@ -12,17 +12,15 @@ import {
   byId,
   errorText,
   fieldError,
-  focusNeighbor,
-  guard,
   h,
   inlineStatus,
   learnMore,
-  notice,
   oneTabStop,
   option,
   paneLink,
   reconcile,
   removeButton,
+  removedRows,
   replace,
   tNodes,
   withMore,
@@ -44,9 +42,8 @@ export function listsSection(): Section {
   let limit = PAGE;
   /** The column the table is sorted by, and its direction. Newest first until a header is pressed. */
   let sort: { key: SortKey; descending: boolean } = { key: "date", descending: true };
-  /** What the last removal did, with Undo. It stands between the filter and the table. */
-  // Closed, the keyboard goes on with the table it stands above: the row that was focused last.
-  const removed = notice(() => tabStop.stop());
+  /** The entries that were removed and still stand in their place as quiet rows with Undo, until the next other action in the table. */
+  const removed = removedRows(() => draw());
 
   const counts = h("p", { class: "counts" });
   const filter = h(
@@ -159,6 +156,7 @@ export function listsSection(): Section {
       () => {
         // Text reads from A to Z first, dates from the newest.
         sort = sort.key === key ? { key, descending: !sort.descending } : { key, descending: key === "date" };
+        removed.clear();
         limit = PAGE;
         draw();
       },
@@ -201,7 +199,6 @@ export function listsSection(): Section {
       search,
     ),
     summary,
-    removed.element,
     h(
       "table",
       { class: "entries" },
@@ -235,6 +232,8 @@ export function listsSection(): Section {
   );
 
   function reset(): void {
+    // Another view of the table: the rows that were removed leave their places.
+    removed.clear();
     limit = PAGE;
     draw();
   }
@@ -284,15 +283,21 @@ export function listsSection(): Section {
   }
 
   function remove(entry: Entry, row: HTMLElement): void {
-    // The row is about to go: the keyboard goes on with the row next to it, or with the field for a new entry.
-    focusNeighbor(row, addValue);
     // What the form said about its last entry is history once the list is changed again.
     addStatus.clear();
-    void guard(async () => {
-      await send("removeEntries", { keys: [keyOf(entry)] });
-      // Undo puts the entry back exactly as it was, with its source and its date.
-      removed.show(t("listsRemoved", entry.value), () => send("restoreEntries", { entries: [entry] }), t("listsRestored", entry.value));
-    });
+    // The row stays in its place as a quiet row, so nothing moves under the pointer. Undo puts the entry back exactly as it was, with its source and its date.
+    removed.remove(
+      row,
+      t("listsRemoved", entry.value),
+      () => send("removeEntries", { keys: [keyOf(entry)] }),
+      () => send("restoreEntries", { entries: [entry] }),
+      t("listsRestored", entry.value),
+    );
+  }
+
+  /** An entry that was removed: one quiet line over all columns, as high as the row it stands for. */
+  function removedRow(key: string): HTMLElement {
+    return h("tr", { class: "removed-row", tabIndex: -1 }, h("td", { colSpan: showScope ? 6 : 5, class: "removed" }, h("div", { class: "removed-line" }, ...removed.content(key))));
   }
 
   function row(entry: Entry): HTMLElement {
@@ -337,9 +342,11 @@ export function listsSection(): Section {
       summary.textContent = count;
     }
     summary.hidden = total === 0;
+    const shown = new Map(matching.slice(0, limit).map((entry) => [keyOf(entry), entry]));
+    const keys = removed.order([...shown.keys()]);
     reconcile(
       rows,
-      matching.length === 0
+      keys.length === 0
         ? [
             {
               key: "empty",
@@ -348,11 +355,12 @@ export function listsSection(): Section {
                 h("tr", { class: "empty-row" }, h("td", { colSpan: showScope ? 6 : 5, class: "empty", text: t(model?.entries.length === 0 ? "listsEmpty" : "listsNoMatch") })),
             },
           ]
-        : matching.slice(0, limit).map((entry) => ({
-            key: keyOf(entry),
-            signature: JSON.stringify([entry.list, entry.source, entry.addedAt, scopeLabel(entry), showScope]),
-            build: () => row(entry),
-          })),
+        : keys.map((key) => {
+            const entry = shown.get(key);
+            return entry === undefined || removed.has(key)
+              ? { key, signature: `removed|${removed.signature(key)}|${showScope}`, build: () => removedRow(key) }
+              : { key, signature: JSON.stringify([entry.list, entry.source, entry.addedAt, scopeLabel(entry), showScope]), build: () => row(entry) };
+          }),
     );
     // Rows that were drawn anew or added join the one tab stop.
     tabStop.sync();
@@ -361,6 +369,7 @@ export function listsSection(): Section {
       matching.length > limit
         ? button(t("showMore", Math.min(PAGE, matching.length - limit), matching.length - limit), () => {
             const first = limit;
+            removed.clear();
             limit += PAGE;
             draw();
             // The button was drawn anew, or is gone with the last rows: the keyboard stays on it, or goes on with the first new row.

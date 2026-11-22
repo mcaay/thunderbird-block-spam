@@ -6,7 +6,7 @@ import type { FolderRef, Settings } from "../../core/types";
 import { t } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
 import { wishOutcomeText } from "../../tb/stateText";
-import { button, byId, description, fieldError, guard, h, learnMore, notice, reconcile, replace, setUnavailable, withMore } from "../dom";
+import { button, byId, description, fieldError, guard, h, learnMore, reconcile, removedRows, replace, setUnavailable, withMore } from "../dom";
 import { endOfLocalDay } from "../fields";
 import { chosenIn, hasFolder, sentFolders, withoutFolder } from "../model";
 import type { AccountView, Model } from "../model";
@@ -45,8 +45,13 @@ export function learningSection(shell: Shell): Section {
   /** The settings as last drawn. An Undo applies to them, not to what they were when the folder was removed. */
   let latest: Settings | null = null;
   const folders = h("div", { class: "accounts" });
-  /** What the last change of the Sent folders did, with Undo. */
-  const changed = notice();
+  /** The Sent folders that were removed and still stand in their place as quiet rows with Undo. */
+  let shown: Model | null = null;
+  const changed = removedRows(() => {
+    if (shown !== null) {
+      section.render(shown);
+    }
+  });
   // The field itself is Thunderbird's own date control. What it expects and what an empty field means is said under it.
   const from = h("input", { type: "date", id: "scan-from", oninput: () => rangeError.set(null), attrs: { "aria-describedby": "scan-dates-hint" } });
   const to = h("input", { type: "date", id: "scan-to", oninput: () => rangeError.set(null), attrs: { "aria-describedby": "scan-dates-hint" } });
@@ -121,14 +126,14 @@ export function learningSection(shell: Shell): Section {
     status.element,
     h("h2", { text: t("sentFoldersTitle") }),
     description(t("sentFoldersHint")),
-    changed.element,
     noAccounts,
     folders,
     wishLine,
   );
 
-  return {
+  const section: Section = {
     render(model: Model) {
+      shown = model;
       const settings = model.settings;
       if (settings === null) {
         return;
@@ -142,19 +147,19 @@ export function learningSection(shell: Shell): Section {
           candidates: (account) => folderCandidates("sent", account.folders, chosenIn(account, settings)),
           removable: () => true,
           fixedNote: "",
-          onRemove: (account, folder) =>
-            void guard(async () => {
-              await update(removePatch(account, folder, settings));
-              changed.show(
-                t("folderRemoved", folder.name, account.name),
-                async () => {
-                  if (latest !== null) {
-                    await update(addPatch(account, folder, latest));
-                  }
-                },
-                t("folderRestored", folder.name, account.name),
-              );
-            }),
+          removed: changed,
+          onRemove: (account, folder, row) =>
+            changed.remove(
+              row,
+              t("folderRemoved", folder.name, account.name),
+              () => update(removePatch(account, folder, settings)),
+              async () => {
+                if (latest !== null) {
+                  await update(addPatch(account, folder, latest));
+                }
+              },
+              t("folderRestored", folder.name, account.name),
+            ),
           onAdd: (account, folder) => {
             changed.clear();
             void guard(() => update(addPatch(account, folder, settings)));
@@ -185,4 +190,5 @@ export function learningSection(shell: Shell): Section {
       changed.clear();
     },
   };
+  return section;
 }

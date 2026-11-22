@@ -485,6 +485,14 @@ h2 > .state {
   margin-top: 12px;
 }
 
+/* The line that stands in for the row with the menu, while no folder is left to add, has the height and the margins of that row. */
+.account-block > .add-line {
+  display: flex;
+  align-items: center;
+  min-height: calc(2.2em / 0.9);
+  margin: 6px 0;
+}
+
 /* The folder menus of all accounts share one width, whatever the folders are called: a longer name is shortened, and the tooltip has all of it. */
 .account-block .row > select {
   width: 220px;
@@ -796,6 +804,8 @@ tbody tr.empty-row:hover {
 tbody tr:hover .description,
 tbody tr:hover .row-note,
 tbody tr:hover .row-feedback.plain,
+tbody tr:hover .removed-text,
+.plain-list li:hover .removed-text,
 .plain-list li:hover .note {
   color: var(--deemphasized);
 }
@@ -811,7 +821,8 @@ tbody tr:hover .row-feedback:not(.error, .plain) {
   color: var(--success-hover);
 }
 
-tbody tr:hover button:not(.icon, .link, [aria-disabled="true"]) {
+tbody tr:hover button:not(.icon, .link, [aria-disabled="true"]),
+.plain-list li:hover button:not(.icon, .link, [aria-disabled="true"]) {
   border-color: var(--button-border-on-fill);
 }
 
@@ -848,6 +859,34 @@ td.action {
 table.entries td:not(.action),
 table.log td:not(.col-action) {
   padding-block: calc(3px + (24px - 1.4em) / 2);
+}
+
+/*
+ * A row that was removed stays in its place as a quiet row, so that nothing moves under the pointer: the sentence
+ * that says so in the quieter color, Undo where the remove button was, and the close button after it. It is as
+ * high as the row it stands for (the 24 pixels of its buttons with 3 above and below).
+ */
+table.entries td.removed {
+  padding: 3px 4px 3px 8px;
+}
+
+.removed-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.removed-text {
+  flex: 1;
+  min-width: 0;
+  padding-block: calc((24px - 1.4em) / 2);
+  overflow-wrap: anywhere;
+  color: var(--description);
+}
+
+.removed-line > button,
+.plain-list li.removed-row > button {
+  flex: none;
 }
 
 table.entries .col-list {
@@ -1314,6 +1353,14 @@ dialog.modal p {
   justify-content: flex-end;
   gap: 8px;
   margin-top: 16px;
+}
+
+/* The buttons of a dialog follow those of Thunderbird's own dialogs as measured: 32 pixels high and at least 79 wide, with a padding of 6 pixels and a label of weight 600, the default button and the other one alike. */
+.dialog-actions button {
+  min-width: 79px;
+  min-height: 32px;
+  padding: 6px;
+  font-weight: 600;
 }
 
 /* Narrow windows: the categories become a row at the top that wraps, so that every category stays in view. */
