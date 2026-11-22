@@ -200,9 +200,10 @@ export function overviewSection(shell: Shell): Section {
         void whileBusy(reset, () =>
           guard(async () => {
             await send("repairSetting", { name });
+            // The button that was pressed goes away with the warning. It gives the focus up first, so that the focus ring follows to the confirmation.
+            reset.blur();
             await shell.refresh();
             repaired.show(t("fatalRepaired", label, standard));
-            // The button that was pressed is gone with the warning: the confirmation takes the focus and is read.
             repaired.element.focus({ preventScroll: true });
           }),
         ),

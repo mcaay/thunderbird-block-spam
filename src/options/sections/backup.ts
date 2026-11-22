@@ -34,12 +34,13 @@ export function backupSection(): Section {
   // Nothing to import before a file is chosen: the button is unavailable until then.
   const importButton = button(t("importButton"), () => void whileBusy(importButton, runImport).then(drawImport));
   function drawImport(): void {
-    const had = document.activeElement === importButton;
-    importButton.disabled = file.files?.[0] === undefined;
-    if (had && importButton.disabled) {
-      // The file is used up and the button unavailable again: the keyboard goes back to where the next file is chosen.
+    const empty = file.files?.[0] === undefined;
+    if (empty && document.activeElement === importButton) {
+      // The file is used up and the button about to be unavailable again: the keyboard goes back to where the next
+      // file is chosen. The focus moves first, so that the focus ring moves with it.
       choose.focus();
     }
+    importButton.disabled = empty;
   }
   drawImport();
 
