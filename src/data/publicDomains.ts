@@ -4,6 +4,11 @@
 // based on the HubSpot list of free email provider domains, plus the minimum list
 // from appendix A of the design specification. See THIRD_PARTY_LICENSES.md.
 //
+// It also holds platforms on which many unrelated senders share one domain (newsletter
+// and shop platforms such as substack.com, tenant addresses under onmicrosoft.com). They
+// are treated like a public mail provider, so that one verdict on one sender never
+// blocks or trusts the whole platform.
+//
 // One domain per line, sorted. Users add and remove domains in settings; those
 // changes are stored separately and never rewrite this file.
 
@@ -312,6 +317,7 @@ bboy.zzn.com
 bcvibes.com
 beddly.com
 beeebank.com
+beehiiv.com
 beenhad.com
 beep.ru
 beer.com
@@ -442,6 +448,8 @@ buryfans.com
 business-man.com
 businessman.net
 busta-rhymes.com
+buttondown.com
+buttondown.email
 buyersusa.com
 bvimailbox.com
 byom.de
@@ -1231,6 +1239,7 @@ getairmail.ga
 getairmail.gq
 getonemail.net
 ghanamail.com
+ghost.io
 ghostmail.com
 ghosttexter.de
 giga4u.de
@@ -3129,6 +3138,7 @@ mailc.net
 mailcan.com
 mailcat.biz
 mailcc.com
+mailchimpapp.com
 mailchoose.co
 mailcity.com
 mailclub.fr
@@ -3527,6 +3537,7 @@ online.ie
 online.ms
 online.nl
 onlinewiz.com
+onmicrosoft.com
 onmilwaukee.com
 onobox.com
 op.pl
@@ -3952,6 +3963,7 @@ shitmail.org
 shitware.nl
 shockinmytown.cu.cc
 shootmail.com
+shopifyemail.com
 shortmail.com
 shotgun.hu
 showslow.de
@@ -4106,6 +4118,7 @@ student.su
 studentcenter.org
 stuffmail.de
 subram.com
+substack.com
 sudanmail.net
 sudolife.me
 sudolife.net

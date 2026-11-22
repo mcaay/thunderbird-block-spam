@@ -141,6 +141,14 @@ describe("smartTarget", () => {
     expect(sender && smartTarget(sender, publicDomains)).toEqual({ kind: "domain", value: "example.co.uk" });
   });
 
+  it("is the address on a platform that many unrelated senders share", () => {
+    // One verdict on one newsletter must not block or trust every newsletter of the platform.
+    for (const address of ["some.newsletter@substack.com", "other@mail.beehiiv.com", "anna@firma.onmicrosoft.com"]) {
+      const sender = parseSender(address);
+      expect(sender && smartTarget(sender, publicDomains)).toEqual({ kind: "address", value: address });
+    }
+  });
+
   it("follows the edited list without touching entries", () => {
     const sender = parseSender("jan@example.com");
     const edited = buildPublicDomains(BUNDLED_PUBLIC_DOMAINS, ["example.com"], ["gmail.com"]);
