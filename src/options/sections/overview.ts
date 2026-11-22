@@ -517,7 +517,8 @@ export function overviewSection(shell: Shell): Section {
     if (waitingServices > 0) {
       parts.push(tn("statusAiWaiting", waitingServices));
     }
-    statusLine.textContent = parts.join(" ");
+    // The line breaks between its sentences, never inside "Last check: …" or "AI services available: 2 of 2.".
+    replace(statusLine, ...parts.flatMap((part, index) => [index === 0 ? null : " ", h("span", { class: "sentence", text: part })]));
     statusLine.hidden = parts.length === 0;
   }
 

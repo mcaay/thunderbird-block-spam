@@ -180,8 +180,8 @@ export function logSection(): Section {
           { attrs: { role: "row" } },
           header(t("colTime"), "col-time"),
           header(t("colMessage"), "col-message"),
-          header(t("colOutcome"), "col-outcome"),
-          header(t("colScore"), "col-score"),
+          // One column says the decision and, at the end of its first line, the score: its header names both.
+          h("th", { class: "col-outcome", attrs: { role: "columnheader", scope: "col" } }, h("span", { text: t("colOutcome") }), " ", h("span", { class: "score-head", text: t("colScore") })),
           h("th", { class: "col-action", attrs: { role: "columnheader", scope: "col" } }, h("span", { class: "visually-hidden", text: t("colActions") })),
         ),
       ),
@@ -313,8 +313,8 @@ export function logSection(): Section {
 
   /**
    * What a row offers and what its last action did. The button stands at the end of
-   * the row. The result of an action is said in the row itself, under the decision it
-   * changed, and Undo takes the place of the button that was pressed.
+   * the row. The result of an action is said in the row itself, on a line of its own under
+   * its cells, and Undo takes the place of the button that was pressed.
    */
   function rowControls(entry: LogEntry, key: string, current: Offer | null): { control: Child; feedback: Child } {
     const result = results.get(key);
@@ -426,20 +426,24 @@ export function logSection(): Section {
         h(
           "div",
           { class: "outcome-line" },
-          ...outcomeParts,
-          entry.score === null
-            ? null
-            : h("span", { class: "score-inline", text: score, title: t("logScoreTitle", score) }),
+          // The first line: the decision at its start and the number alone at its end, in one column from row to row.
+          // Who gave the score is said in the reason of the decision.
+          h(
+            "div",
+            { class: "outcome-first" },
+            ...outcomeParts,
+            entry.score === null ? null : " ",
+            entry.score === null ? null : h("span", { class: "score-inline", text: score, title: t("logScoreTitle", score) }),
+          ),
           actionText === "" ? null : h("div", { class: "outcome-done", text: actionText }),
         ),
         // An entry of a list is named by its address or domain, which breaks like one.
         ...detailLines(entry).map((line) => h("div", { class: "detail description" }, ...addressed(line))),
-        controls.feedback,
       ),
-      // The number alone. Who gave it is said in the reason of the decision.
-      cell("col-score", entry.score === null ? null : h("span", { text: score, title: t("logScoreTitle", score) })),
       // What can be done with the row: the action that undoes the decision, and under it the way to the message itself.
       cell("col-action", controls.control, h("div", { class: "show-message-line" }, messageLink(entry, key))),
+      // What the last action of the row did: a line of its own under the cells, as wide as the row has room, so it reads as one sentence.
+      controls.feedback === null ? null : cell("col-feedback", controls.feedback),
     );
   }
 
@@ -503,7 +507,7 @@ export function logSection(): Section {
             {
               key: "empty",
               signature: emptyText,
-              build: () => h("tr", { class: "empty-row", attrs: { role: "row" } }, h("td", { colSpan: 5, class: "empty", text: emptyText, attrs: { role: "cell" } })),
+              build: () => h("tr", { class: "empty-row", attrs: { role: "row" } }, h("td", { colSpan: 4, class: "empty", text: emptyText, attrs: { role: "cell" } })),
             },
           ]
         : matching.slice(0, limit).map((entry) => {

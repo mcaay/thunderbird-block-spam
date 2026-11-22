@@ -1,6 +1,6 @@
 // The toolbar popup: the state of protection (the same one the settings page shows),
 // the last block or trust command with Undo, what the lists and the log say about the
-// selected message with the buttons to block and trust its sender, the last ten
+// selected message with the buttons to block and trust its sender, the six newest
 // decisions (each opens its entry in the log), the AI test of selected messages and
 // the protection switch.
 
@@ -25,7 +25,7 @@ import { problemLines } from "../tb/stateText";
 import { send } from "../tb/protocol";
 import type { CommandRecord, SettingsTarget, Status } from "../tb/protocol";
 
-const RECENT = 10;
+const RECENT = 6;
 
 const stateBox = byId("state");
 const content = byId("content");
@@ -376,7 +376,7 @@ function decisionRow(entry: LogEntry, now: number): HTMLElement {
     {
       type: "button",
       class: "decision",
-      // The tooltip has all of what the row shows, for when it is too long for its line, and the subject and the reason.
+      // The tooltip has all of what the row shows, for an address that is too long for its line, and the subject and the reason.
       title: `${sender}\n${entry.subject}\n${outcome}\n${tCode("reason", entry.reason)}\n${formatFullTime(entry.time)}`,
       // A screen reader hears the name and, as the description, only what the name does not say: the subject and the reason.
       attrs: { "aria-label": t("popupRowLabel", sender, outcome, time), "aria-description": [entry.subject, tCode("reason", entry.reason)].filter((part) => part !== "").join(". ") },
@@ -393,7 +393,7 @@ function decisionRow(entry: LogEntry, now: number): HTMLElement {
 function drawRecent(): void {
   const now = Date.now();
   const entries = log.slice(0, RECENT);
-  // The popup shows the last ten. The way to all of them stands next to the heading.
+  // The popup shows the six newest. The way to all of them stands next to the heading.
   const all = button(t("otherWaysLogLink"), () => void openSettings({ pane: "log", logKey: null }).catch(() => undefined), "link");
   all.dataset.focus = "open-log";
   replace(

@@ -28,14 +28,22 @@ body:dir(rtl) {
   background-color: var(--soft);
 }
 
+/*
+ * The name and the icon keep their place whatever the state under the name says: they stand where a state of one
+ * line centers them in the 70 pixels above the list, and a state that needs two lines grows downward.
+ */
 .brand {
   display: flex;
   flex: none;
-  align-items: center;
+  align-items: flex-start;
   gap: 5.5px;
-  height: 70px;
+  min-height: 70px;
   margin: 0 6px;
-  padding: 0 6.5px;
+  padding: 18.5px 6.5px 3px;
+}
+
+.brand > img {
+  margin-top: 4.5px;
 }
 
 /* The name of the add-on, and under it the state of protection: visible on every pane, and one click from the switch. */
@@ -591,6 +599,8 @@ h2 > .state {
 .filters input[type="search"] {
   flex: 1 1 200px;
   min-width: 200px;
+  /* Controls of one row have one height: next to menus the search field takes theirs. Thunderbird's taller one stands alone on its page. */
+  height: 2.2em;
 }
 
 /* A menu of the filters shows a long name cut, with all of it as its tooltip, so that the row keeps its shape. */
@@ -883,8 +893,44 @@ table.keys tbody tr:hover {
  * or anywhere as the last resort: it never paints over the sender next to it.
  */
 table.log .col-time {
-  width: 82px;
   font-variant-numeric: tabular-nums;
+}
+
+/*
+ * A row is a grid, in the wide layout too: the time, "Sender and subject", the decision and the action stand in
+ * one line of cells, and what the last action of the row did has a line of its own under them, from the start of
+ * "Sender and subject" to the end of the row. The cells keep the roles of a table.
+ */
+table.log,
+table.log thead,
+table.log tbody,
+table.log th,
+table.log td {
+  display: block;
+}
+
+table.log tr {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr) 290px 128px;
+  border-bottom: 1px solid var(--separator);
+}
+
+table.log thead tr {
+  border-bottom-color: var(--header-line);
+}
+
+table.log th,
+table.log td {
+  border-bottom: 0;
+}
+
+table.log td.empty {
+  grid-column: 1 / -1;
+}
+
+table.log td.col-feedback {
+  grid-column: 2 / -1;
+  padding-top: 0;
 }
 
 table.log .when .date {
@@ -897,17 +943,17 @@ table.log .when .clock {
 }
 
 /*
- * "Sender and subject" identifies the message and is the widest column: it takes what the others leave. The decision is
- * wide enough for its word with its badges and for what was done about the message, each in one line in both languages.
+ * "Sender and subject" identifies the message and is the widest column: it takes what the others leave. The decision
+ * has the room of its word with its badges and of the score, and the reasons under it wrap late. The score is the
+ * number alone at the end of the first line, so it stands in one column from row to row: who gave it is said in the
+ * reason of the decision, and nothing depends on the name of a service. The header names both in the same places.
  */
-table.log .col-outcome {
-  width: 244px;
-}
-
-/* The number alone: who gave it is said in the reason of the decision, so the column never depends on the name of a service. */
-table.log .col-score {
-  width: 56px;
-  font-variant-numeric: tabular-nums;
+table.log th.col-outcome,
+table.log .outcome-first {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 /* The account has a line of its own under the subject, where its whole name has room. A name that is an address breaks like one. */
@@ -938,7 +984,6 @@ table.log .col-action button.small + .show-message-line {
 
 /* As wide as the widest button of both languages and its padding. */
 table.log .col-action {
-  width: 128px;
   text-align: end;
 }
 
@@ -999,10 +1044,8 @@ table.log .detail {
   margin-inline-start: 2px;
 }
 
-/* The score has its own column. In the stacked layout of narrow windows it follows the outcome. */
+/* The score: the number alone, at the end of the first line of the decision. In the stacked layout of narrow windows it follows the outcome. */
 .score-inline {
-  display: none;
-  margin-inline-start: 6px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1011,13 +1054,12 @@ table.log .detail {
   color: var(--description);
 }
 
-/* What an action of the row did, with Undo. */
+/* What an action of the row did: a line of its own under the cells of the row. */
 .row-feedback {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 8px;
-  margin-top: 4px;
   color: var(--success);
 }
 
@@ -1033,41 +1075,23 @@ table.log .detail {
 /*
  * The entry the popup pointed at: a frame in the accent color with a heavier edge at its
  * start. No fill, so that every text of the row keeps the contrast it has on the page.
- * A table row paints no shadow along its top and bottom, so the frame is drawn on its
- * cells: every cell its top and bottom edge, the first one the start, the last one the end.
+ * The row is a grid and paints the frame itself.
  */
-table.log tr.highlight > td {
+table.log tr.highlight {
   box-shadow:
-    inset 0 1px 0 AccentColor,
-    inset 0 -1px 0 AccentColor;
+    inset 3px 0 0 AccentColor,
+    inset 0 0 0 1px AccentColor;
 }
 
-table.log tr.highlight > td:first-child {
+table.log tr.highlight:dir(rtl) {
   box-shadow:
-    inset 0 1px 0 AccentColor,
-    inset 0 -1px 0 AccentColor,
-    inset 3px 0 0 AccentColor;
+    inset -3px 0 0 AccentColor,
+    inset 0 0 0 1px AccentColor;
 }
 
-table.log tr.highlight > td:last-child {
-  box-shadow:
-    inset 0 1px 0 AccentColor,
-    inset 0 -1px 0 AccentColor,
-    inset -1px 0 0 AccentColor;
-}
-
-table.log tr.highlight > td:first-child:dir(rtl) {
-  box-shadow:
-    inset 0 1px 0 AccentColor,
-    inset 0 -1px 0 AccentColor,
-    inset -3px 0 0 AccentColor;
-}
-
-table.log tr.highlight > td:last-child:dir(rtl) {
-  box-shadow:
-    inset 0 1px 0 AccentColor,
-    inset 0 -1px 0 AccentColor,
-    inset 1px 0 0 AccentColor;
+/* A focus ring inside the marked row is drawn one pixel inside its control, so that a pixel of the page stays between the ring and the frame on every edge. */
+table.log tr.highlight td.col-action :focus-visible {
+  outline-offset: -1px;
 }
 
 table.log tr:focus-visible {
@@ -1087,6 +1111,11 @@ table.log tr:focus-visible {
 .service {
   padding: 8px 2px 8px 8px;
   border-bottom: 1px solid var(--separator);
+}
+
+/* A bar inside a service row has the width of the column, like every other bar of the page. */
+.service > .notice {
+  margin-inline: -8px -2px;
 }
 
 .service-main {
@@ -1317,9 +1346,14 @@ dialog.modal p {
   /* The name and the state of protection head the row of categories, in one line. */
   .brand {
     flex: 1 1 100%;
-    height: auto;
+    align-items: center;
+    min-height: 0;
     margin: 0 2px;
     padding: 2px 8px 4px;
+  }
+
+  .brand > img {
+    margin-top: 0;
   }
 
   .brand img {
@@ -1412,7 +1446,7 @@ dialog.modal p {
   }
 }
 
-/* Below 900 pixels a log row is stacked: time, outcome and score, then the message, then the reason. */
+/* Below 900 pixels a log row is stacked: the time, then the message, then the decision with its reasons. */
 
 @media (max-width: 899px) {
   table.log,
@@ -1429,27 +1463,28 @@ dialog.modal p {
     clip-path: inset(50%);
   }
 
-  /* The first column has the content width of the time column of the wide layout, so every row starts its outcome at the same place, whatever the account is called. */
+  /*
+   * The order of the wide table: the time, then sender, subject and account, then the decision with what was done
+   * and its reasons as one block that starts at the same edge as the sender, set apart from the account by a small
+   * gap. The action stays at the end of the first line. The first column has the content width of the time column
+   * of the wide layout.
+   */
   table.log tr {
-    display: grid;
     grid-template-columns: 72px minmax(0, 1fr) 120px;
     grid-template-areas:
-      "time outcome action"
-      "message message action"
-      "reason reason reason";
-    gap: 1px 10px;
+      "time message action"
+      ". outcome outcome"
+      ". feedback feedback";
+    gap: 0 10px;
     padding: 6px 8px;
-    border-bottom: 1px solid var(--separator);
   }
 
   table.log td,
   table.log td:not(.col-action) {
-    width: auto;
     padding: 0;
-    border: 0;
   }
 
-  /* The time and the decision stand on the center line of the button at the end of the row. */
+  /* The time and the sender stand on the center line of the button at the end of the row. */
   table.log td.col-time {
     grid-area: time;
     padding-top: calc((24px - 1.4em) / 2);
@@ -1460,60 +1495,29 @@ dialog.modal p {
     display: block;
   }
 
-  table.log .outcome-line {
+  table.log td.col-message {
+    grid-area: message;
     padding-top: calc((24px - 1.4em) / 2);
   }
 
-  /* In the stacked layout the row is a grid and paints its own frame. */
-  table.log tr.highlight {
-    box-shadow:
-      inset 3px 0 0 AccentColor,
-      inset 0 0 0 1px AccentColor;
-  }
-
-  table.log tr.highlight:dir(rtl) {
-    box-shadow:
-      inset -3px 0 0 AccentColor,
-      inset 0 0 0 1px AccentColor;
-  }
-
-  table.log tr.highlight > td,
-  table.log tr.highlight > td:first-child,
-  table.log tr.highlight > td:last-child {
-    box-shadow: none;
-  }
-
-  table.log .col-message {
-    grid-area: message;
-  }
-
-  table.log .col-outcome {
-    display: contents;
-  }
-
-  table.log .outcome-line {
+  table.log td.col-outcome {
     grid-area: outcome;
+    margin-top: 5px;
   }
 
-  table.log .col-outcome > .description,
-  table.log .col-outcome > .row-feedback {
-    grid-column: 1 / -1;
+  table.log td.col-feedback {
+    grid-area: feedback;
+    margin-top: 4px;
   }
 
-  table.log .col-score {
-    display: none;
-  }
-
-  table.log .score-inline {
-    display: inline;
+  /* The score follows the word of the decision. */
+  table.log .outcome-first {
+    justify-content: flex-start;
   }
 
   table.log td.col-action {
     grid-area: action;
-    width: auto;
-    padding: 0;
   }
-
 
   table.log tr.empty-row {
     display: block;
@@ -1552,12 +1556,6 @@ dialog.modal p {
   tbody tr:hover,
   .plain-list li:hover {
     background-color: transparent;
-  }
-
-  table.log tr.highlight > td,
-  table.log tr.highlight > td:first-child,
-  table.log tr.highlight > td:last-child {
-    box-shadow: none;
   }
 
   /* The state of protection is a link: it takes the color of links, and the icon says which state it is. */

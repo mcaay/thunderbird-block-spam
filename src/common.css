@@ -188,14 +188,17 @@ pre {
 }
 
 /* A key or a key combination. The platform font draws the modifier glyphs of macOS best. */
+/* A small quiet mark, not a control: it has one size wherever it stands, and it is lower than a line of any text it stands in, so the pitch of the lines stays. */
 kbd {
   display: inline-block;
   min-width: 2em;
-  padding: 1px 6px;
+  padding: 0 5px;
   font: inherit;
+  font-size: 1rem;
+  line-height: 1.4;
   letter-spacing: 0.06em;
   text-align: center;
-  border: 1px solid var(--border);
+  border: 1px solid var(--separator);
   border-radius: 4px;
   background-color: var(--soft);
 }
@@ -760,6 +763,12 @@ details[open] > summary::before {
 .address .glue,
 .keep {
   white-space: nowrap;
+}
+
+/* One sentence of a line that is built from several short ones: the line breaks between its sentences, and inside one only when that sentence alone is longer than the line. */
+.sentence {
+  display: inline-block;
+  max-width: 100%;
 }
 
 /* A link that is a button underneath, so that it does not navigate. */

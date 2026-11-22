@@ -322,15 +322,16 @@ section > p:last-child {
 .decision {
   display: grid;
   /*
-   * The sender identifies the row: its address stays whole while it fits, and the outcome gives way first. An outcome
-   * that is cut keeps the room that "Spam 0.97" needs, and the dot, the tooltip and the name of the row still say all of it.
+   * Two lines, always, so that every row has the same height and nothing is cut: the dot, the address and the time on
+   * the first, the outcome with its score and marks on the second. Only an address that is longer than the panel is
+   * shortened, and the tooltip and the name of the row have all of it.
    */
-  grid-template-columns: 8px minmax(0, max-content) minmax(4.6em, 1fr) auto;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
   gap: 0 7px;
   align-items: center;
   width: 100%;
   min-height: 26px;
-  padding: 2px 6px;
+  padding: 3px 6px;
   text-align: start;
   color: inherit;
   border: 0;
@@ -367,13 +368,20 @@ button.decision:hover:not(:disabled, [aria-disabled="true"]) {
 }
 
 .decision .what {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-align: end;
+  text-align: start;
 }
 
-.decision.own .what {
-  text-align: start;
+/* The outcome has the second line to itself, from the edge of the address to the end of the row. */
+.decisions .decision .what {
+  grid-row: 2;
+  grid-column: 2 / -1;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.decisions .decision .when {
+  grid-row: 1;
+  grid-column: 3;
 }
 
 .decision .when {
@@ -424,9 +432,20 @@ button.decision:hover:not(:disabled, [aria-disabled="true"]) {
 
 /* The two boxes are groups for the code only: their sentences and buttons are laid out by the footer itself. */
 .footer .score,
-.footer .switch,
-.footer .score > .row {
+.footer .switch {
   display: contents;
+}
+
+/* The answers of a question stand on a line of their own, under the question. */
+.footer .score > .row {
+  display: flex;
+  flex: 0 0 100%;
+  gap: 8px;
+}
+
+/* While the footer asks, or waits for the scores, the switch of protection is not shown: no far-reaching button stands among the answers. It comes back with the result. */
+.footer:has(.score > .row, .score .spinner) .switch {
+  display: none;
 }
 
 .footer p,
