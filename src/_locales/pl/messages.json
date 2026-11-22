@@ -858,7 +858,7 @@
     "message": "przeniesiono do Niechcianych"
   },
   "action_screening": {
-    "message": "przeniesiono do folderu do sprawdzenia"
+    "message": "przeniesiono do sprawdzenia"
   },
   "action_inbox": {
     "message": "przeniesiono do Odebranych"
@@ -867,7 +867,7 @@
     "message": "trafiłaby do Niechcianych"
   },
   "actionObserved_screening": {
-    "message": "trafiłaby do folderu do sprawdzenia"
+    "message": "trafiłaby do sprawdzenia"
   },
   "actionObserved_inbox": {
     "message": "trafiłaby do Odebranych"

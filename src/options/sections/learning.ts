@@ -5,6 +5,7 @@ import { folderCandidates } from "../../core/folders";
 import type { FolderRef, Settings } from "../../core/types";
 import { t } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
+import { wishOutcomeText } from "../../tb/stateText";
 import { button, byId, description, fieldError, guard, h, learnMore, notice, reconcile, replace, setUnavailable } from "../dom";
 import { endOfLocalDay } from "../fields";
 import { chosenIn, hasFolder, sentFolders, withoutFolder } from "../model";
@@ -51,6 +52,8 @@ export function learningSection(shell: Shell): Section {
   const to = h("input", { type: "date", id: "scan-to", oninput: () => rangeError.set(null), attrs: { "aria-describedby": "scan-dates-hint" } });
   const rangeError = fieldError(to, "scan-range-error");
   const status = scanStatusView();
+  /** What the scan means for protection that waits for it, or waited: said here too, where the scan is started and cancelled. */
+  const wishLine = h("p", { class: "wish-line", hidden: true, attrs: { role: "status" } });
   let accountCount = 0;
   let scanRunning = false;
   let starting = false;
@@ -120,6 +123,7 @@ export function learningSection(shell: Shell): Section {
     h("div", { class: "description", id: "scan-dates-hint", text: t("scanDatesHint") }),
     rangeError.element,
     status.element,
+    wishLine,
   );
 
   return {
@@ -169,6 +173,12 @@ export function learningSection(shell: Shell): Section {
       }
       cancel.hidden = !running;
       status.update(model);
+      const { waiting, outcome } = model.status.wish;
+      const said = waiting ? t("wishWaiting") : outcome === null ? "" : wishOutcomeText(outcome);
+      if (wishLine.textContent !== said) {
+        wishLine.textContent = said;
+      }
+      wishLine.hidden = said === "";
     },
     leave() {
       changed.clear();

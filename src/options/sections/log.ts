@@ -459,6 +459,8 @@ export function logSection(): Section {
       account.hidden = accounts.length < 2;
     }
     const where = account.hidden ? "all" : account.value;
+    // The whole name of the chosen account, for when the menu is too narrow for it.
+    account.title = where === "all" ? "" : (account.selectedOptions[0]?.textContent ?? "");
     const matching = entries.filter(
       (entry) =>
         inPeriod(entry.time, when, now) &&

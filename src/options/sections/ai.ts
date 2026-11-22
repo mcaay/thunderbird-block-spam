@@ -269,9 +269,10 @@ export function aiSection(shell: Shell): Section {
     replace(
       presetHint,
       tCode("presetHint", preset.id),
-      preset.keyUrl === undefined ? null : " ",
+      // A link stays with the word before it: it never stands alone on the last line.
+      preset.keyUrl === undefined ? null : "\u00a0",
       preset.keyUrl === undefined ? null : externalLink(t("getKey"), preset.keyUrl),
-      preset.docsUrl === undefined ? null : " ",
+      preset.docsUrl === undefined ? null : preset.keyUrl === undefined ? "\u00a0" : " ",
       preset.docsUrl === undefined ? null : externalLink(t("documentation"), preset.docsUrl),
     );
   }
@@ -801,7 +802,7 @@ export function aiSection(shell: Shell): Section {
         canLoadModels ? loadButton : null,
         canLoadModels ? modelStatus.element : null,
       ),
-      type === "chatgpt" ? null : field(t("fieldKey"), key, errors.key, [t("keyHint"), keyLocalHint, keyLink === null ? null : " ", keyLink]),
+      type === "chatgpt" ? null : field(t("fieldKey"), key, errors.key, [t("keyHint"), keyLocalHint, keyLink === null ? null : "\u00a0", keyLink]),
       localNote,
       h(
         "div",
@@ -883,7 +884,7 @@ export function aiSection(shell: Shell): Section {
             : (point.auth?.email ?? "") === ""
               ? [t("chatgptUsingPlan")]
               : addressed(t("chatgptUsingPlanAs", point.auth?.email ?? ""))),
-          signedIn(point) ? " " : null,
+          signedIn(point) ? "\u00a0" : null,
           signedIn(point) ? externalLink(t("chatgptManageUsage"), USAGE_URL) : null,
         ),
       );

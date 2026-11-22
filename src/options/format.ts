@@ -64,22 +64,32 @@ export function breakableParts(value: string): string[] {
 /** Something that reads like an email address or like a domain: name@host.tld, host.tld. */
 const ADDRESS_LIKE = /[^\s@,;:()<>"\u201e\u201d\u201c]+@(?:[\p{L}\p{N}-]+\.)+\p{L}{2,}|(?:[\p{L}\p{N}][\p{L}\p{N}-]*\.)+\p{L}{2,}/gu;
 
+/** A piece of a text: an address or a domain with the punctuation that closes the sentence or the bracket right after it, or other text. */
+export interface TextPiece {
+  text: string;
+  address: boolean;
+  /** For an address: what follows it without a space (".", ",", ")."), which has to stay on its line. Otherwise empty. */
+  tail: string;
+}
+
 /**
  * A text taken apart into what reads like an address or a domain and everything else,
- * in order. Joined again the pieces give the text.
+ * in order. Joined again, with the tails, the pieces give the text.
  */
-export function addressPieces(text: string): { text: string; address: boolean }[] {
-  const pieces: { text: string; address: boolean }[] = [];
+export function addressPieces(text: string): TextPiece[] {
+  const pieces: TextPiece[] = [];
   let last = 0;
   for (const match of text.matchAll(ADDRESS_LIKE)) {
     if (match.index > last) {
-      pieces.push({ text: text.slice(last, match.index), address: false });
+      pieces.push({ text: text.slice(last, match.index), address: false, tail: "" });
     }
-    pieces.push({ text: match[0], address: true });
-    last = match.index + match[0].length;
+    const end = match.index + match[0].length;
+    const tail = /^[.,;:!?)\u201d\u2019"]+/.exec(text.slice(end))?.[0] ?? "";
+    pieces.push({ text: match[0], address: true, tail });
+    last = end + tail.length;
   }
   if (last < text.length) {
-    pieces.push({ text: text.slice(last), address: false });
+    pieces.push({ text: text.slice(last), address: false, tail: "" });
   }
   return pieces;
 }

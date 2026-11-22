@@ -521,6 +521,11 @@ h2 > .state {
   max-width: 320px;
 }
 
+/* A menu of the filters shows a long name cut, with all of it as its tooltip, so that the row keeps its shape. */
+.filters select {
+  max-width: 220px;
+}
+
 /* A second label in the row of filters keeps a little more distance from the menu before it. */
 .filters select + label {
   margin-inline-start: 6px;
@@ -583,6 +588,10 @@ textarea {
 
 .scan-status p {
   margin: 0;
+}
+
+.wish-line {
+  margin: 0 0 6px;
 }
 
 /* Tables. */
@@ -670,6 +679,7 @@ tbody tr.empty-row:hover {
  */
 tbody tr:hover .description,
 tbody tr:hover .row-note,
+tbody tr:hover .row-feedback.plain,
 .plain-list li:hover .note {
   color: var(--deemphasized);
 }
@@ -681,7 +691,7 @@ tbody tr:hover button.link:not(:active) {
 tbody tr:hover .outcome-trusted,
 tbody tr:hover .outcome-passed,
 tbody tr:hover .outcome-released,
-tbody tr:hover .row-feedback:not(.error) {
+tbody tr:hover .row-feedback:not(.error, .plain) {
   color: var(--success-hover);
 }
 
@@ -787,6 +797,13 @@ table.log .account {
   white-space: nowrap;
 }
 
+/* In its narrow column the account takes one line and is cut, with all of it in the tooltip: there an address is plain text. */
+table.log .account .address,
+table.log .account .part {
+  display: inline;
+  max-width: none;
+}
+
 /* The subject takes one line and is cut when it is long. */
 table.log .subject {
   overflow: hidden;
@@ -815,7 +832,7 @@ table.log .scorer {
 
 /* As wide as the widest button of both languages and its padding. */
 table.log .col-action {
-  width: 124px;
+  width: 128px;
   text-align: end;
 }
 
@@ -1276,7 +1293,7 @@ dialog.modal p {
   /* The first column has the content width of the time column of the wide layout, so every row starts its outcome at the same place, whatever the account is called. */
   table.log tr {
     display: grid;
-    grid-template-columns: 72px minmax(0, 1fr) 116px;
+    grid-template-columns: 72px minmax(0, 1fr) 120px;
     grid-template-areas:
       "time outcome action"
       "message message action"
@@ -1307,6 +1324,13 @@ dialog.modal p {
     overflow: visible;
     white-space: normal;
     overflow-wrap: anywhere;
+  }
+
+  /* On a line of its own the account breaks like every address. */
+  table.log .account .address,
+  table.log .account .part {
+    display: inline-block;
+    max-width: 100%;
   }
 
   /* In the stacked layout the row is a grid and paints its own frame. */

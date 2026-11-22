@@ -67,8 +67,10 @@ export function incomingSection(shell: Shell): Section {
     noAccounts,
     monitored,
     h("h2", { text: t("noVerdictTitle") }),
-    h("div", { class: "row" }, h("label", { for: "no-verdict", text: t("noVerdictLabel") }), noVerdict),
+    // What a screening folder is stands with the heading, in every state: one of the options names it.
     h("div", { class: "description", id: "no-verdict-hint", text: t("screeningHint") }),
+    h("div", { class: "row" }, h("label", { for: "no-verdict", text: t("noVerdictLabel") }), noVerdict),
+    // Directly under the menu, and only while the option that uses them is chosen.
     dependent,
   );
 

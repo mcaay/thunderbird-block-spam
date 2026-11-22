@@ -681,6 +681,14 @@ button.link:active:not(:disabled, [aria-disabled="true"]) {
     border-color: GrayText;
   }
 
+  /* A filled button that is unavailable loses its fill, like every other one: the gray text would not show on it. */
+  button.primary:disabled,
+  button.destructive:disabled,
+  button.primary[aria-disabled="true"],
+  button.destructive[aria-disabled="true"] {
+    background-color: ButtonFace;
+  }
+
   /* An icon button has no border while it is available. Unavailable it keeps none: its icon is gray. */
   button.icon[aria-disabled="true"] {
     border-color: transparent;
@@ -700,18 +708,20 @@ button.link:active:not(:disabled, [aria-disabled="true"]) {
     border: 1px solid CanvasText;
   }
 
+  /* The system's color for a selected item is the strong one: its color for selected text is too pale to bound anything. */
   progress::-moz-progress-bar {
-    background-color: Highlight;
+    background-color: SelectedItem;
   }
 
   .spinner {
     border-color: GrayText;
-    border-top-color: Highlight;
+    border-top-color: SelectedItem;
   }
 
   input[type="checkbox"]:checked {
-    border-color: Highlight;
-    background-color: Highlight;
+    forced-color-adjust: none;
+    border-color: SelectedItem;
+    background-color: SelectedItem;
   }
 }
 

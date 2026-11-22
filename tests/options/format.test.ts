@@ -125,8 +125,21 @@ describe("addresses and domains inside a sentence", () => {
     expect(found("Rig alice, version 1.0.0, http://127.0.0.1:8765, np. tak, e.g. this")).toEqual([]);
   });
 
-  it("gives back the whole text when its pieces are joined", () => {
+  it("keeps the punctuation that follows an address with it, so that it never starts a line", () => {
+    expect(addressPieces("On the black list (entry promo@bulk-mail.test). Next")).toEqual([
+      { text: "On the black list (entry ", address: false, tail: "" },
+      { text: "promo@bulk-mail.test", address: true, tail: ")." },
+      { text: " Next", address: false, tail: "" },
+    ]);
+    expect(addressPieces("a@b.test, c@d.test")).toEqual([
+      { text: "a@b.test", address: true, tail: "," },
+      { text: " ", address: false, tail: "" },
+      { text: "c@d.test", address: true, tail: "" },
+    ]);
+  });
+
+  it("gives back the whole text when its pieces and their tails are joined", () => {
     const text = "Without a screening folder: zamowienia.hurtowe@drukarnia-centrum.test, Rig bob. Their mail stays.";
-    expect(addressPieces(text).map((piece) => piece.text).join("")).toBe(text);
+    expect(addressPieces(text).map((piece) => piece.text + piece.tail).join("")).toBe(text);
   });
 });

@@ -207,29 +207,8 @@ export function address(value: string, tail = ""): HTMLElement {
  * built with address(), so that it breaks like one wherever it is shown.
  */
 export function addressed(text: string): Child[] {
-  const pieces = addressPieces(text);
-  const nodes: Child[] = [];
-  pieces.forEach((piece, index) => {
-    if (!piece.address) {
-      return;
-    }
-    const before = pieces[index - 1];
-    const after = pieces[index + 1];
-    if (before !== undefined && !before.address) {
-      nodes.push(before.text);
-    }
-    // What closes the sentence or the bracket right after the address goes with it.
-    const tail = after !== undefined && !after.address ? (/^[.,;:!?)\u201d\u2019"]+/.exec(after.text)?.[0] ?? "") : "";
-    if (after !== undefined && tail !== "") {
-      after.text = after.text.slice(tail.length);
-    }
-    nodes.push(address(piece.text, tail));
-  });
-  const end = pieces.at(-1);
-  if (end !== undefined && !end.address) {
-    nodes.push(end.text);
-  }
-  return nodes.filter((node) => node !== "");
+  // What closes the sentence or the bracket right after an address goes with it, so that it never starts a line.
+  return addressPieces(text).map((piece) => (piece.address ? address(piece.text, piece.tail) : piece.text));
 }
 
 /** A link to a page outside Thunderbird. It opens in the default browser. */
@@ -633,10 +612,13 @@ export async function guard(action: () => Promise<unknown>, onError?: (message: 
  */
 export function tNodes(key: string, ...parts: (Node | string)[]): Child[] {
   const text = t(key, ...parts.map((_, index) => `\uE000${index}\uE001`));
-  return text
-    .split(/\uE000(\d+)\uE001/)
-    .map((piece, index): Child => (index % 2 === 0 ? piece : (parts[Number(piece)] ?? "")))
-    .filter((piece) => piece !== "");
+  const pieces = text.split(/\uE000(\d+)\uE001/);
+  // An element that ends the sentence (a link, a key) stays with the word before it: it never stands alone on the last line.
+  const last = pieces.length - 1;
+  if (last >= 2 && /^[.!?\u2026)\u201d"]*$/.test(pieces[last] ?? "")) {
+    pieces[last - 2] = (pieces[last - 2] ?? "").replace(/ $/, "\u00a0");
+  }
+  return pieces.map((piece, index): Child => (index % 2 === 0 ? piece : (parts[Number(piece)] ?? ""))).filter((piece) => piece !== "");
 }
 
 // ---------------------------------------------------------------------------
