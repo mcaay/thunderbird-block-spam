@@ -579,6 +579,12 @@ export function overviewSection(shell: Shell): Section {
     },
     leave() {
       repaired.clear();
+      // What became of protection that waited for the scan was shown here and is history once the pane is left, like every confirmation in place.
+      if (model?.status.wish.outcome !== null && model?.status.wish.outcome !== undefined) {
+        void send("clearProtectionWish", {})
+          .then(() => shell.refresh())
+          .catch(() => undefined);
+      }
     },
   };
 }

@@ -1611,7 +1611,7 @@
     "message": "Zaloguj się w karcie, która się otworzyła. Ta strona zaktualizuje się sama po zakończeniu logowania."
   },
   "signInManual": {
-    "message": "Zaloguj się w karcie, która się otworzyła, albo w przeglądarce. Na końcu przeglądarka wyświetli stronę błędu dla adresu zaczynającego się od http://127.0.0.1:1455. Tak ma być: skopiuj ten adres z paska adresu, wklej go w polu poniżej i naciśnij „Dokończ logowanie”."
+    "message": "Zaloguj się w karcie, która się otworzyła, albo w przeglądarce. Na końcu przeglądarka wyświetli stronę błędu dla adresu zaczynającego się od http://127.0.0.1:1455. Tak ma być: skopiuj ten adres z paska adresu, wklej go w polu poniżej, a potem naciśnij obok niego „Dokończ logowanie”."
   },
   "signInOpenBrowser": {
     "message": "Otwórz w mojej przeglądarce"
@@ -1620,7 +1620,7 @@
     "message": "Kopiuj adres logowania"
   },
   "signInPasteHint": {
-    "message": "Jeśli ta strona nie zaktualizuje się sama: na końcu logowania przeglądarka wyświetla stronę błędu dla adresu zaczynającego się od http://127.0.0.1:1455. Tak ma być. Skopiuj ten adres z paska adresu, wklej go w polu poniżej i naciśnij „Dokończ logowanie”."
+    "message": "Jeśli ta strona nie zaktualizuje się sama: na końcu logowania przeglądarka wyświetla stronę błędu dla adresu zaczynającego się od http://127.0.0.1:1455. Tak ma być. Skopiuj ten adres z paska adresu, wklej go w polu poniżej, a potem naciśnij obok niego „Dokończ logowanie”."
   },
   "signInAddressLabel": {
     "message": "Adres strony błędu"

@@ -1611,7 +1611,7 @@
     "message": "Sign in in the tab that opened. This page updates by itself when the sign-in is complete."
   },
   "signInManual": {
-    "message": "Sign in in the tab that opened, or in your browser. At the end the browser shows an error page for an address that starts with http://127.0.0.1:1455. That is expected: copy that address from the address bar, paste it into the field below and press “Finish sign-in”."
+    "message": "Sign in in the tab that opened, or in your browser. At the end the browser shows an error page for an address that starts with http://127.0.0.1:1455. That is expected: copy that address from the address bar, paste it into the field below, then press “Finish sign-in” next to it."
   },
   "signInOpenBrowser": {
     "message": "Open in my browser instead"
@@ -1620,7 +1620,7 @@
     "message": "Copy the sign-in address"
   },
   "signInPasteHint": {
-    "message": "If this page does not update by itself: at the end of the sign-in the browser shows an error page for an address that starts with http://127.0.0.1:1455. That is expected. Copy that address from the address bar, paste it into the field below and press “Finish sign-in”."
+    "message": "If this page does not update by itself: at the end of the sign-in the browser shows an error page for an address that starts with http://127.0.0.1:1455. That is expected. Copy that address from the address bar, paste it into the field below, then press “Finish sign-in” next to it."
   },
   "signInAddressLabel": {
     "message": "Address of the error page"

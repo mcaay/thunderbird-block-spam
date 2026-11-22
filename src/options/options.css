@@ -441,7 +441,8 @@ h2 > .state {
 /* One grid for all accounts, so that the folder menus line up under each other. */
 .screening {
   display: grid;
-  grid-template-columns: fit-content(240px) minmax(140px, 260px) auto minmax(0, 1fr);
+  /* The first column takes an account name that is an email address of forty characters in one line. */
+  grid-template-columns: fit-content(320px) minmax(140px, 260px) auto minmax(0, 1fr);
   gap: 6px 8px;
   align-items: center;
   margin: 6px 0;
