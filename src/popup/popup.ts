@@ -466,6 +466,8 @@ function scoreButton(): HTMLButtonElement {
       }
     })();
   });
+  // The label is short enough for one row with the switch in every language. The tooltip is the whole sentence.
+  element.title = t("popupScoreSelectedTitle");
   element.dataset.role = "score";
   element.dataset.focus = "score";
   element.classList.add("small");

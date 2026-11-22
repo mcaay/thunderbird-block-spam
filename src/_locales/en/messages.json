@@ -1010,6 +1010,12 @@
   "reason_ai_below": {
     "message": "The AI score is not above the cutoff"
   },
+  "logScoredAbove": {
+    "message": "$1 scored it above the cutoff"
+  },
+  "logScoredNotAbove": {
+    "message": "$1 did not score it above the cutoff"
+  },
   "reason_no_ai": {
     "message": "No AI service is switched on"
   },
@@ -1057,9 +1063,6 @@
   },
   "logBlackEntryScoped": {
     "message": "On the black list: $1 ($2)"
-  },
-  "logScoredBy": {
-    "message": "Scored by $1"
   },
   "logScoreTitle": {
     "message": "Spam probability $1"
@@ -1258,15 +1261,6 @@
   },
   "screeningCreateFor": {
     "message": "Create the folder “$1” for $2"
-  },
-  "screeningUse": {
-    "message": "Use the folder “$1”"
-  },
-  "screeningUseFor": {
-    "message": "Use the folder “$1” for $2"
-  },
-  "screeningIsChosen": {
-    "message": "The folder “$1” is the screening folder already."
   },
   "screeningCreated": {
     "message": "The folder “$1” is now the screening folder."
@@ -1724,14 +1718,11 @@
   "chatgptNamedAccount": {
     "message": "ChatGPT plan ($1)"
   },
-  "chatgptUsingPlan": {
-    "message": "Using ChatGPT plan."
-  },
-  "chatgptUsingPlanAs": {
-    "message": "Using the ChatGPT plan of $1."
-  },
   "chatgptSignedOut": {
     "message": "Not signed in."
+  },
+  "chatgptSignedInAs": {
+    "message": "Signed in as $1."
   },
   "chatgptManageUsage": {
     "message": "Manage usage"
@@ -2188,6 +2179,9 @@
   },
   "popupScoreSelected": {
     "message": "Test AI on selected messages…"
+  },
+  "popupScoreSelectedTitle": {
+    "message": "Test AI on the selected messages: the scores go to the log and nothing is moved."
   },
   "popupScoreConfirm": {
     "message": "Selected messages: $1. Their content will be sent to your AI services, also for senders on your lists. Nothing is moved and no entry is created. The scores appear in the log."

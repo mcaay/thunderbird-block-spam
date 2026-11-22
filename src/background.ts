@@ -871,11 +871,14 @@ async function completeAttempt(pending: StoredSignIn, callbackUrl: string): Prom
     if (point === undefined) {
       // Protection is on and nobody was learned yet: unless the user said "use it anyway", the service waits for the scan.
       waits = state.settings.protection && scanStillNeeded(state) && pending.afterScan !== false && !state.accessPoints.some((item) => item.enabled);
+      // The name says what the service is. Only a second such service carries the address, so that the two can be told apart.
+      const plain = t("chatgptDefaultName");
+      const taken = state.accessPoints.some((item) => item.name === plain);
       point = newAccessPoint(
         crypto.randomUUID(),
         {
           type: "chatgpt",
-          name: auth.email === "" ? t("chatgptDefaultName") : t("chatgptNamedAccount", auth.email),
+          name: taken && auth.email !== "" ? t("chatgptNamedAccount", auth.email) : plain,
           enabled: !waits,
           endpoint: CHATGPT_RESPONSES_URL,
           model: "",

@@ -14,7 +14,7 @@ const STATE_ICONS: Record<ProtectionState, IconName> = {
   "no-account": "warning",
   problems: "warning",
   waiting: "clock",
-  observing: "success",
+  observing: "eye",
   on: "success",
   off: "off",
 };

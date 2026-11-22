@@ -35,7 +35,6 @@ import {
   reconcile,
   replace,
   setUnavailable,
-  statusSlot,
   tNodes,
   whileBusy,
   withMore,
@@ -307,8 +306,8 @@ export function aiSection(shell: Shell): Section {
     description(t("promptLanguage")),
     description(t("outputLineLabel")),
     h("pre", { class: "code-block", text: OUTPUT_LINE }),
-    // "Unsaved changes" stands right after the button that saves them, in a place that is kept free: the buttons after it never move.
-    h("div", { class: "row" }, savePromptButton, statusSlot(promptStatus, t("unsavedChanges"), t("saved")), discardPromptButton, restorePromptButton),
+    // The buttons stand 8px apart. "Unsaved changes" stands after the last of them, so nothing moves when it appears.
+    h("div", { class: "row" }, savePromptButton, discardPromptButton, restorePromptButton, promptStatus.element),
     // Where a prompt or a cutoff is tried: the two tools for it live elsewhere, and this is the place that says so.
     // The names in these sentences are the labels themselves, so they cannot drift apart.
     description(t("tryOnMail", t("popupScoreSelected"))),
@@ -1031,12 +1030,14 @@ export function aiSection(shell: Shell): Section {
       ),
       type === "chatgpt" ? null : field(t("fieldKey"), key, errors.key, [t("keyHint"), keyLocalHint, keyLink === null ? null : "\u00a0", keyLink]),
       localNote,
+      // Signing in again and signing out of a ChatGPT plan service are done here, not in its row.
+      existing !== null && type === "chatgpt" && signedIn(existing) ? signInGroup(existing, () => name.focus()) : null,
       h(
         "div",
         { class: "row" },
         saveButton,
-        statusSlot(unsavedNote, t("unsavedChanges")),
         named(button(t("cancel"), () => leaveEditor(true)), existing?.name ?? presetName),
+        unsavedNote.element,
         saveStatus.element,
       ),
     );
@@ -1126,20 +1127,8 @@ export function aiSection(shell: Shell): Section {
     }
     const remedy = point.needsAttention ? remedyOf(point) : null;
     // A missing sign-in is said once: by the line that needs attention when there is one, which also says what to do.
-    if (point.type === "chatgpt" && remedy !== "sign-in") {
-      lines.push(
-        h(
-          "div",
-          { class: "service-state" },
-          ...(!signedIn(point)
-            ? [t("chatgptSignedOut")]
-            : (point.auth?.email ?? "") === ""
-              ? [t("chatgptUsingPlan")]
-              : addressed(t("chatgptUsingPlanAs", point.auth?.email ?? ""))),
-          signedIn(point) ? "\u00a0" : null,
-          signedIn(point) ? externalLink(t("chatgptManageUsage"), USAGE_URL) : null,
-        ),
-      );
+    if (point.type === "chatgpt" && remedy !== "sign-in" && !signedIn(point)) {
+      lines.push(h("div", { class: "service-state", text: t("chatgptSignedOut") }));
     }
     if (remedy !== null) {
       // In the row itself the remedy points at the button that stands right below, not at "its row".
@@ -1242,38 +1231,25 @@ export function aiSection(shell: Shell): Section {
     );
 
     const chatgpt: Child[] = [];
-    // The sign-in buttons stay while the row is edited: the line above them points at them.
-    if (point.type === "chatgpt") {
-      chatgpt.push(
-        h(
-          "div",
-          { class: "row service-extra" },
-          // Every ChatGPT plan service has these buttons: their names say whose they are.
-          withFocus(named(button(t(signedIn(point) ? "chatgptSignInAgain" : "chatgptContinue"), () => startChatGpt(point.id)), point.name), "sign-in"),
-          signedIn(point)
-            ? withFocus(
-                named(
-                  button(t("chatgptSignOut"), () =>
-                    void guard(async () => {
-                      const { revocationConfirmed } = await send("signOut", { id: point.id });
-                      if (!revocationConfirmed) {
-                        await dialog({ title: t("chatgptRevocationTitle"), body: [t("chatgptRevocationUnconfirmed")], confirmLabel: t("ok"), hideCancel: true });
-                      }
-                    }),
-                  ),
-                  point.name,
-                ),
-                "sign-out",
-              )
-            : null,
-        ),
-      );
+    // A service without a sign-in has the button for it in its row, where the warning leads. It stays while the row is
+    // edited: the line above it points at it. Signing in again and signing out are in the editor of the service.
+    if (point.type === "chatgpt" && !signedIn(point)) {
+      chatgpt.push(h("div", { class: "row service-extra" }, withFocus(named(button(t("chatgptContinue"), () => startChatGpt(point.id)), point.name), "sign-in")));
     }
 
-    const facts: Child[] = [`${tCode("type", point.type)} · ${point.model === "" ? t("apNoModel") : point.model}`];
+    const modelName = point.model === "" ? t("apNoModel") : point.model;
+    const facts: Child[] = [];
     if (point.type !== "chatgpt") {
       // The host is a domain and breaks like one.
-      facts.push(" · ", address(hostOf(point.endpoint)));
+      facts.push(`${tCode("type", point.type)} · ${modelName} · `, address(hostOf(point.endpoint)));
+    } else {
+      // Each thing once: the name says that this is the ChatGPT plan, so the line under it has the address and the model.
+      const kind = tCode("type", point.type);
+      const email = point.auth?.email ?? "";
+      facts.push(point.name.includes(kind) ? null : `${kind} · `, email === "" ? null : address(email), email === "" ? null : " · ", modelName);
+      if (signedIn(point)) {
+        facts.push("\u00a0 ", externalLink(t("chatgptManageUsage"), USAGE_URL));
+      }
     }
     return h(
       "li",
@@ -1297,6 +1273,34 @@ export function aiSection(shell: Shell): Section {
       editing?.element ?? (drafts.has(point.id) ? draftLine(point.id, drafts.get(point.id)?.editor.name ?? point.name) : null),
       signingIn ? signInPanel : null,
     );
+  }
+
+  /**
+   * Signing in again and signing out of a ChatGPT plan service: a part of its editor, so that its row says each thing
+   * once. Signing out leaves the editor open with what was typed, and the row then offers the sign-in.
+   */
+  function signInGroup(point: AccessPoint, back: () => void): HTMLElement {
+    const email = point.auth?.email ?? "";
+    const group = h("div", { class: "field sign-in-group" });
+    const again = named(button(t("chatgptSignInAgain"), () => startChatGpt(point.id)), point.name);
+    // Where the keyboard goes back to when the sign-in it started has ended.
+    again.dataset.focus = "sign-in";
+    const out = named(
+      button(t("chatgptSignOut"), () =>
+        void guard(async () => {
+          const { revocationConfirmed } = await send("signOut", { id: point.id });
+          // Signed out: the two buttons go, and the keyboard goes on in the editor.
+          group.hidden = true;
+          back();
+          if (!revocationConfirmed) {
+            await dialog({ title: t("chatgptRevocationTitle"), body: [t("chatgptRevocationUnconfirmed")], confirmLabel: t("ok"), hideCancel: true });
+          }
+        }),
+      ),
+      point.name,
+    );
+    replace(group, email === "" ? null : h("div", { class: "description" }, ...addressed(t("chatgptSignedInAs", email))), h("div", { class: "row" }, again, out));
+    return group;
   }
 
   function drawList(): void {

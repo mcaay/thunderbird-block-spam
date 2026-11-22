@@ -18,8 +18,13 @@
   --hover: color-mix(in srgb, var(--text) 10%, transparent);
   --selected: light-dark(#e4e4e7, #52525b);
   --button: light-dark(#e4e4e7, #52525b);
-  --button-hover: light-dark(#f4f4f5, #3f3f46);
-  --button-active: light-dark(#d4d4d8, #71717a);
+  /* As Thunderbird's own: in the dark theme a button gets lighter under the pointer and darker while pressed. */
+  --button-hover: light-dark(#f4f4f5, #71717a);
+  --button-active: light-dark(#d4d4d8, #3f3f46);
+  /* On the dark hover fill Thunderbird's label color (#f4f4f5) has 4.4 to 1: white keeps it at 4.5 or more. */
+  --button-text-hover: light-dark(#18181b, #ffffff);
+  /* The border under the pointer: in the dark theme Thunderbird's own (17 percent of the label over the fill). */
+  --button-border-hover: light-dark(var(--border), color-mix(in srgb, #ffffff 17%, #71717a));
   /*
    * Thunderbird's own light button border (#a1a1aa) has a contrast of 2.6 to 1 on the page. The border of its
    * fields and tables is the nearest of its tokens that reaches 3 to 1 there, so the light theme uses that one.
@@ -222,10 +227,14 @@ select {
 
 button:hover:not(:disabled, [aria-disabled="true"]),
 select:hover:not(:disabled) {
+  color: var(--button-text-hover);
+  border-color: var(--button-border-hover);
   background-color: var(--button-hover);
 }
 
 button:active:not(:disabled, [aria-disabled="true"]) {
+  color: var(--button-text);
+  border-color: var(--button-border);
   background-color: var(--button-active);
 }
 
@@ -247,10 +256,14 @@ button.primary {
 }
 
 button.primary:hover:not(:disabled, [aria-disabled="true"]) {
+  color: var(--primary-text);
+  border-color: var(--primary-border);
   background-color: var(--primary-hover);
 }
 
 button.primary:active:not(:disabled, [aria-disabled="true"]) {
+  color: var(--primary-text);
+  border-color: var(--primary-border);
   background-color: var(--primary-active);
 }
 
@@ -261,6 +274,8 @@ button.destructive {
 }
 
 button.destructive:hover:not(:disabled, [aria-disabled="true"]) {
+  color: var(--destructive-text);
+  border-color: transparent;
   background-color: var(--destructive-hover);
 }
 
@@ -303,6 +318,11 @@ button.icon {
   color: inherit;
   border-color: transparent;
   background-color: transparent;
+}
+
+/* Under the pointer an icon button gets the fill of a button, and still no border. */
+button.icon:hover:not(:disabled, [aria-disabled="true"]) {
+  border-color: transparent;
 }
 
 button.icon.quiet {
@@ -695,12 +715,13 @@ details[open] > summary::before {
   white-space: nowrap;
 }
 
-.state.on,
-.state.observing {
+/* The green of "on" belongs to "on" alone. While protection only observes, nothing is moved: that state has the neutral color of "off". */
+.state.on {
   color: var(--success);
 }
 
 .state.off,
+.state.observing,
 .state.waiting {
   color: var(--deemphasized);
 }
@@ -747,6 +768,7 @@ button.link {
 }
 
 button.link:hover:not(:disabled, [aria-disabled="true"]) {
+  color: var(--link);
   background: none;
 }
 

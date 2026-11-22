@@ -1010,6 +1010,12 @@
   "reason_ai_below": {
     "message": "Ocena AI nie przekracza progu"
   },
+  "logScoredAbove": {
+    "message": "Usługa $1 oceniła ją powyżej progu"
+  },
+  "logScoredNotAbove": {
+    "message": "Usługa $1 nie oceniła jej powyżej progu"
+  },
   "reason_no_ai": {
     "message": "Żadna usługa AI nie jest włączona"
   },
@@ -1057,9 +1063,6 @@
   },
   "logBlackEntryScoped": {
     "message": "Na czarnej liście: $1 ($2)"
-  },
-  "logScoredBy": {
-    "message": "Usługa oceniająca: $1"
   },
   "logScoreTitle": {
     "message": "Prawdopodobieństwo spamu: $1"
@@ -1258,15 +1261,6 @@
   },
   "screeningCreateFor": {
     "message": "Utwórz folder „$1” dla konta $2"
-  },
-  "screeningUse": {
-    "message": "Użyj folderu „$1”"
-  },
-  "screeningUseFor": {
-    "message": "Użyj folderu „$1” dla konta $2"
-  },
-  "screeningIsChosen": {
-    "message": "Folder „$1” jest już folderem do sprawdzenia."
   },
   "screeningCreated": {
     "message": "Folder „$1” jest teraz folderem do sprawdzenia."
@@ -1724,14 +1718,11 @@
   "chatgptNamedAccount": {
     "message": "Plan ChatGPT ($1)"
   },
-  "chatgptUsingPlan": {
-    "message": "Używany jest plan ChatGPT."
-  },
-  "chatgptUsingPlanAs": {
-    "message": "Używany jest plan ChatGPT konta $1."
-  },
   "chatgptSignedOut": {
     "message": "Brak zalogowania."
+  },
+  "chatgptSignedInAs": {
+    "message": "Zalogowano jako $1."
   },
   "chatgptManageUsage": {
     "message": "Zarządzaj użyciem"
@@ -2187,7 +2178,10 @@
     "message": "$1: $2, $3. Pokaż w dzienniku."
   },
   "popupScoreSelected": {
-    "message": "Przetestuj AI na zaznaczonych wiadomościach…"
+    "message": "Przetestuj AI na zaznaczonych…"
+  },
+  "popupScoreSelectedTitle": {
+    "message": "Przetestuj AI na zaznaczonych wiadomościach: oceny trafią do dziennika i nic nie zostanie przeniesione."
   },
   "popupScoreConfirm": {
     "message": "Zaznaczone wiadomości: $1. Ich treść zostanie wysłana do usług AI, także w przypadku nadawców z list. Nic nie zostanie przeniesione i żaden wpis nie powstanie. Oceny pojawią się w dzienniku."

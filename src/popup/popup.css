@@ -116,27 +116,28 @@ section > p:last-child {
   margin-bottom: 0;
 }
 
-/* Protection is on but something needs the user: one line that leads to the warnings in the settings. */
+/*
+ * Protection is on but something needs the user. The first row says so and leads to the warnings in the settings:
+ * the icon, the title and the button share one center line. The causes stand below it at the full width of the
+ * panel, so that the button never takes room from them, in whatever language.
+ */
 .notice {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 4px 8px;
+  align-items: center;
   /* The line that bounds it in high contrast has its place in every theme, so the block is of one height everywhere. */
   border-bottom: 1px solid transparent;
   background-color: var(--bar-warning);
 }
 
-/* The icon, the first line and the label of the button share one center line. */
 .notice > .icon {
-  flex: none;
-  margin-top: 4px;
   color: var(--icon-warning);
 }
 
+/* The title and the causes are one status for a screen reader, and two rows of the block for the eye. */
 .notice-text {
-  flex: 1;
-  min-width: 0;
-  padding-block: 3.5px;
+  display: contents;
 }
 
 .notice-title {
@@ -145,14 +146,17 @@ section > p:last-child {
 
 /* One cause per line. */
 .notice .causes {
-  margin: 2px 0 0;
+  grid-row: 2;
+  grid-column: 1 / -1;
+  margin: 0;
   padding: 0;
   list-style: none;
   overflow-wrap: anywhere;
 }
 
 .notice button {
-  flex: none;
+  grid-row: 1;
+  grid-column: 3;
 }
 
 .sender {
@@ -322,11 +326,10 @@ p.result {
 .decision {
   display: grid;
   /*
-   * The sender identifies the row: it gets all the room the outcome leaves and never
-   * less than 30 percent of the row, which leaves the longest outcome of both languages
-   * ("Przepuszczona 0,02 (obserwacja)") whole. Only an outcome longer than that is cut.
+   * The sender identifies the row: its address stays whole while it fits, and the outcome gives way first. An outcome
+   * that is cut keeps room for the start of its word, and the dot, the tooltip and the name of the row still say all of it.
    */
-  grid-template-columns: 8px minmax(30%, 1fr) minmax(0, auto) auto;
+  grid-template-columns: 8px minmax(0, max-content) minmax(4em, 1fr) auto;
   gap: 0 7px;
   align-items: center;
   width: 100%;
@@ -339,7 +342,9 @@ p.result {
   background-color: transparent;
 }
 
-.decision:hover {
+/* A row of a list, not a button: under the pointer it gets the quiet fill of a row, on which its quieter texts keep their contrast. */
+button.decision:hover:not(:disabled, [aria-disabled="true"]) {
+  color: inherit;
   background-color: var(--hover);
 }
 
@@ -404,44 +409,43 @@ p.result {
 }
 
 /*
- * The footer is quieter than the buttons for the selected message: small buttons as wide as their text, in one
- * row, the AI test at the start and the switch of protection at the end. Where the two do not fit into one row,
- * as in the longer languages, they take a row each and both start at the same edge.
+ * The footer is quieter than the buttons for the selected message, and it has one arrangement in every state and
+ * language: what it asks or answers (the question before a test, its result, the note that protection waits for the
+ * scan) takes a full line above, and the buttons stand in one row below, the AI test at the start and the switch
+ * of protection at the end.
  */
 .footer {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
+  align-items: center;
   gap: 6px 8px;
 }
 
+/* The two boxes are groups for the code only: their sentences and buttons are laid out by the footer itself. */
 .footer .score,
-.footer .switch {
-  min-width: 0;
+.footer .switch,
+.footer .score > .row {
+  display: contents;
+}
+
+.footer p {
+  flex: 0 0 100%;
   margin: 0;
 }
 
 .footer button {
+  order: 1;
   white-space: nowrap;
 }
 
-.footer .score p {
-  margin: 0 0 6px;
+/* The buttons of the footer are the small ones, also the two that answer the question before a test. */
+.footer button:not(.icon) {
+  min-height: 24px;
+  padding: 0 8px;
 }
 
-/* While the score box asks or answers, it takes the whole width and the switch moves below it. */
-.footer .score:has(p) {
-  flex-basis: 100%;
-}
-
-/* While protection waits for the scan, the switch says so above its button and takes a row of its own. */
-.footer .switch.waiting {
-  flex-basis: 100%;
-}
-
-.footer .switch > p {
-  margin: 0 0 6px;
+.footer .switch > button {
+  margin-inline-start: auto;
 }
 
 /* High contrast (forced colors): the colors of the dots are gone, the difference between filled and hollow stays. */

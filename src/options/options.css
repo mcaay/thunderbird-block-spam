@@ -89,13 +89,15 @@ body:dir(rtl) {
   border-radius: 4px;
 }
 
-/* Under the pointer: Thunderbird's own fill in the light theme. In the dark theme its fill (#71717a) would leave the label at 4.4 to 1, so the quieter one stays. */
+/* Under the pointer: Thunderbird's own fill in both themes. On the dark one the label is white, so that it keeps 4.5 to 1. */
 .category:hover {
-  background-color: light-dark(#f4f4f5, var(--hover));
+  color: light-dark(#15141a, #ffffff);
+  background-color: light-dark(#f4f4f5, #71717a);
 }
 
 .category[aria-current="page"] {
   font-weight: 500;
+  color: inherit;
   background-color: var(--selected);
 }
 
@@ -480,8 +482,12 @@ h2 > .state {
 /* One grid for all accounts, so that the folder menus line up under each other. */
 .screening {
   display: grid;
-  /* Both columns have one width whatever the accounts and their folders are called. The first takes an account name that is an email address of forty characters in one line; a longer one wraps, as an address does. */
-  grid-template-columns: 280px 220px auto minmax(0, 1fr);
+  /*
+   * The first column is as wide as the longest account name, so that a name stands next to its menu, and never wider
+   * than 280px, which takes an email address of forty characters in one line: a longer one wraps, as an address does.
+   * The menus have one width whatever the folders are called.
+   */
+  grid-template-columns: fit-content(280px) 220px auto minmax(0, 1fr);
   gap: 6px 8px;
   /* The first line of the account name and the menu share one center line, also when a long name wraps. */
   align-items: start;
@@ -540,23 +546,6 @@ h2 > .state {
   min-width: 200px;
 }
 
-/*
- * A status next to buttons has its place kept free: the buttons after it stand where they stand, whether the
- * status says something or not. The slot is as wide as the longest thing it says.
- */
-.status-slot {
-  display: inline-grid;
-  align-items: center;
-}
-
-.status-slot > * {
-  grid-area: 1 / 1;
-}
-
-.status-slot > .sizer {
-  visibility: hidden;
-}
-
 /* The line that stands where an editor was left with changes. */
 .option-note.draft {
   align-items: center;
@@ -601,11 +590,13 @@ h2 > .state {
   width: 160px;
 }
 
-/* Wide enough for its placeholder in both languages. */
+/*
+ * The search field takes the rest of the row of filters, never less than its placeholder needs in both languages.
+ * Where it has to move to a line of its own, it fills that line.
+ */
 .filters input[type="search"] {
-  flex: 1;
+  flex: 1 1 200px;
   min-width: 200px;
-  max-width: 320px;
 }
 
 /* A menu of the filters shows a long name cut, with all of it as its tooltip, so that the row keeps its shape. */
@@ -615,20 +606,6 @@ h2 > .state {
 
 .filters select#log-account {
   width: 160px;
-}
-
-/* The search field and the button after it move to the next line together. */
-.filters .search-group {
-  display: flex;
-  flex: 1 1 320px;
-  gap: 8px;
-  align-items: center;
-  min-width: 0;
-}
-
-.filters .search-group > button {
-  flex: none;
-  margin-inline-start: auto;
 }
 
 /* A second label in the row of filters keeps a little more distance from the menu before it. */
@@ -675,6 +652,26 @@ textarea {
 .count-line {
   margin: 2px 0 0;
   font-variant-numeric: tabular-nums;
+}
+
+/* The count line of the log: the count at its start, and at its end the button that clears the log. */
+.count-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+  margin: 2px 0 0;
+}
+
+.count-row > .count-line {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+.count-row > button {
+  flex: none;
+  margin-inline-start: auto;
 }
 
 .count-line:empty {
@@ -905,13 +902,17 @@ table.log .when .clock {
   white-space: nowrap;
 }
 
-/* Wide enough for the decision with its badges, and for what was done about the message, each in one line in both languages. */
+/*
+ * "Sender and subject" identifies the message and is the widest column: it takes what the others leave. The decision is
+ * wide enough for its word with its badges and for what was done about the message, each in one line in both languages.
+ */
 table.log .col-outcome {
-  width: 280px;
+  width: 244px;
 }
 
+/* The number alone: who gave it is said in the reason of the decision, so the column never depends on the name of a service. */
 table.log .col-score {
-  width: 72px;
+  width: 56px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -939,15 +940,6 @@ table.log .show-message-line:empty {
 
 table.log .col-action button.small + .show-message-line {
   margin-top: 2px;
-}
-
-/* Who scored: under the number, on up to two lines. */
-table.log .scorer {
-  display: -webkit-box;
-  overflow: hidden;
-  overflow-wrap: anywhere;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
 }
 
 /* As wide as the widest button of both languages and its padding. */

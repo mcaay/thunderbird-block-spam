@@ -127,18 +127,21 @@ export function logSection(): Section {
   /** How many entries are shown, or how many match the filter and the search, out of how many. */
   const summary = h("p", { class: "description count-line", attrs: { role: "status" } });
   // Nothing to clear in an empty log: the button is unavailable until there is.
-  const clear = button(t("logClear"), () =>
-    void dialog({
-      title: t("logClearTitle"),
-      body: [t("logClearText")],
-      confirmLabel: t("logClearConfirm"),
-      danger: true,
-      onConfirm: async () => {
-        await send("clearLog", {});
-        results.clear();
-        gone.clear();
-      },
-    }),
+  const clear = button(
+    t("logClear"),
+    () =>
+      void dialog({
+        title: t("logClearTitle"),
+        body: [t("logClearText")],
+        confirmLabel: t("logClearConfirm"),
+        danger: true,
+        onConfirm: async () => {
+          await send("clearLog", {});
+          results.clear();
+          gone.clear();
+        },
+      }),
+    "small",
   );
   // Unavailable, not disabled: the dialog gives the focus back to this button after the log was cleared.
   setUnavailable(clear, true);
@@ -156,10 +159,10 @@ export function logSection(): Section {
       filter,
       period,
       account,
-      // The search field and the button move to the next line together when the row is too narrow for both.
-      h("div", { class: "search-group" }, search, clear),
+      search,
     ),
-    summary,
+    // The count at the start of its line, and at its end the button that clears the log: not among the filters.
+    h("div", { class: "count-row" }, summary, clear),
     h(
       "table",
       { class: "log", attrs: { role: "table" } },
@@ -188,7 +191,9 @@ export function logSection(): Section {
    * limited to one account. Who scored stands under the score.
    */
   function detailLines(entry: LogEntry): string[] {
-    const reason = tCode("reason", entry.reason);
+    // A score names the service that gave it, in the sentence that says why: no column depends on the length of that name.
+    const scored = entry.accessPoint !== "" && (entry.reason === "ai-above" || entry.reason === "ai-below");
+    const reason = scored ? t(entry.reason === "ai-above" ? "logScoredAbove" : "logScoredNotAbove", entry.accessPoint) : tCode("reason", entry.reason);
     const listed = parseEntryDetail(entry.detail);
     if (listed === null) {
       return entry.detail === "" ? [reason] : [reason, ...attemptsLines(entry.detail)];
@@ -407,19 +412,15 @@ export function logSection(): Section {
           ...outcomeParts,
           entry.score === null
             ? null
-            : h("span", { class: "score-inline", text: entry.accessPoint === "" ? score : `${score} (${entry.accessPoint})`, title: t("logScoreTitle", score) }),
+            : h("span", { class: "score-inline", text: score, title: t("logScoreTitle", score) }),
           actionText === "" ? null : h("div", { class: "outcome-done", text: actionText }),
         ),
         // An entry of a list is named by its address or domain, which breaks like one.
         ...detailLines(entry).map((line) => h("div", { class: "detail description" }, ...addressed(line))),
         controls.feedback,
       ),
-      cell(
-        "col-score",
-        entry.score === null ? null : h("span", { text: score, title: t("logScoreTitle", score) }),
-        // Who scored, under the number. A long name wraps, and the tooltip has all of it.
-        entry.score === null || entry.accessPoint === "" ? null : h("div", { class: "scorer description", title: t("logScoredBy", entry.accessPoint) }, ...addressed(entry.accessPoint)),
-      ),
+      // The number alone. Who gave it is said in the reason of the decision.
+      cell("col-score", entry.score === null ? null : h("span", { text: score, title: t("logScoreTitle", score) })),
       // What can be done with the row: the action that undoes the decision, and under it the way to the message itself.
       cell("col-action", controls.control, h("div", { class: "show-message-line" }, messageLink(entry, key))),
     );

@@ -138,6 +138,11 @@ export function overviewSection(shell: Shell): Section {
     body,
     h("h2", {}, t("protectionTitle"), " ", state),
     statusLine,
+    // What needs attention follows the state directly, before the switch and its options: the outcome of something that waited, then the warnings.
+    wishOutcome,
+    servicesOutcome,
+    repaired.element,
+    warnings,
     protection.row,
     description(
       t("protectionHint"),
@@ -153,10 +158,6 @@ export function overviewSection(shell: Shell): Section {
       h("div", { class: "description indent", id: "observation-hint", text: t("observationHint") }),
       observationNote,
     ),
-    repaired.element,
-    wishOutcome,
-    servicesOutcome,
-    warnings,
     h("h2", { text: t("setupTitle") }),
     setup,
     h("h2", { text: t("byHandTitle") }),

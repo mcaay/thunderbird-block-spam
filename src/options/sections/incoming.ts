@@ -6,7 +6,7 @@ import type { SettingsPatch } from "../../core/edit";
 import { folderCandidates, mayJoin, screeningFolderPaths } from "../../core/folders";
 import { folderKey } from "../../core/ports";
 import type { Settings } from "../../core/types";
-import { t, tCode } from "../../tb/i18n";
+import { t } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
 import { addressed, button, byId, description, errorText, guard, h, inlineStatus, notice, option, reconcile, replace, setUnavailable } from "../dom";
 import { icon } from "../icons";
@@ -63,17 +63,18 @@ export function incomingSection(shell: Shell): Section {
     root,
     h("h1", { text: t("catIncoming"), tabIndex: -1 }),
     h("p", { class: "lead", text: t("incomingHint") }),
-    h("h2", { text: t("monitoredTitle") }),
-    description(t("monitoredHint")),
-    changed.element,
-    noAccounts,
-    monitored,
+    // The choice every user makes stands first. The list that grows with the accounts follows it.
     h("h2", { text: t("noVerdictTitle") }),
     // First which mail this is, then the question, then what the chosen answer needs.
     h("div", { class: "description", id: "no-verdict-hint", text: t("noVerdictScope") }),
     h("div", { class: "row" }, h("label", { for: "no-verdict", text: t("noVerdictLabel") }), noVerdict),
     // Directly under the menu, and only while the option that uses them is chosen.
     dependent,
+    h("h2", { text: t("monitoredTitle") }),
+    description(t("monitoredHint")),
+    changed.element,
+    noAccounts,
+    monitored,
   );
 
   function createFolder(accountId: string): void {
@@ -102,6 +103,10 @@ export function incomingSection(shell: Shell): Section {
       if (model !== null) {
         drawScreening(model);
       }
+      // The button is gone with the folder it made: the keyboard goes on with the menu of the account, where the folder is chosen now.
+      if (document.activeElement === null || document.activeElement === document.body) {
+        document.getElementById(`screening-${accountId}`)?.focus();
+      }
     })();
   }
 
@@ -125,12 +130,10 @@ export function incomingSection(shell: Shell): Section {
         // The folder the button makes: it may exist already, at the top of the account or inside its Inbox.
         const places = screeningFolderPaths(folderName, account.inboxes, account.id);
         const existing = account.folders.find((folder) => places.includes(folder.path)) ?? null;
-        const isChosen = chosen !== null && places.includes(chosen.path);
-        const usable = existing === null || isChosen || mayJoin("screening", existing, roles);
         const note = created.get(account.id);
         return {
           key: account.id,
-          signature: JSON.stringify([account.name, offered, candidates.length, chosen, note ?? null, existing?.path ?? null, isChosen, usable, creating.has(account.id)]),
+          signature: JSON.stringify([account.name, offered, candidates.length, chosen, note ?? null, existing?.path ?? null, creating.has(account.id)]),
           build: () => {
             const id = `screening-${account.id}`;
             const select = h(
@@ -155,17 +158,13 @@ export function incomingSection(shell: Shell): Section {
             if (note !== undefined) {
               status.set(note.text, note.ok ? "ok" : "error");
             }
-            const existsElsewhere = existing !== null && !isChosen;
-            const create = button(t(existsElsewhere ? "screeningUse" : "screeningCreate", folderName), () => createFolder(account.id));
-            create.dataset.focus = "create";
-            create.setAttribute("aria-label", t(existsElsewhere ? "screeningUseFor" : "screeningCreateFor", folderName, account.name));
-            // The button is unavailable when its folder is the screening folder already, or cannot be one.
-            if (isChosen) {
-              setUnavailable(create, true, t("screeningIsChosen", folderName));
-            } else if (!usable) {
-              setUnavailable(create, true, tCode("invalid", "folder-role"));
-            } else if (creating.has(account.id)) {
-              setUnavailable(create, true);
+            // The button is there only while the account has no folder of that name: a folder that exists is chosen in the menu.
+            let create: HTMLButtonElement | null = null;
+            if (existing === null) {
+              create = button(t("screeningCreate", folderName), () => createFolder(account.id));
+              create.dataset.focus = "create";
+              create.setAttribute("aria-label", t("screeningCreateFor", folderName, account.name));
+              setUnavailable(create, creating.has(account.id));
             }
             return h(
               "div",

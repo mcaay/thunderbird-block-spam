@@ -1231,6 +1231,21 @@ describe("ChatGPT sign-in", () => {
     expect(chatgptPoints(fake)[0]).toMatchObject({ enabled: true, model: "gpt-6-luna", auth: { refreshToken: "refresh-new" } });
   });
 
+  it("names a new service by what it is, and adds the address only to a second one", async () => {
+    const { fake, openai, background } = await setup();
+    const signInOnce = async (): Promise<void> => {
+      const callback = await startSignIn(background, openai.session);
+      const finishing = background.send("finishSignIn", { url: callback });
+      await settle();
+      openai.release();
+      expect(await finishing).toEqual({ ok: true, result: null });
+    };
+    await signInOnce();
+    expect(chatgptPoints(fake).map((point) => point.name)).toEqual(["chatgptDefaultName"]);
+    await signInOnce();
+    expect(chatgptPoints(fake).map((point) => point.name)).toEqual(["chatgptDefaultName", "chatgptNamedAccount(user@example.com)"]);
+  });
+
   it("lets a new service wait for the scan while protection is on and nobody was learned, unless the user said to use it anyway", async () => {
     const protectedSetup = async () => {
       const fake = new FakeBrowser({ [KEY_SETTINGS]: { ...defaultSettings(Date.now()), protection: true, protectionOnAt: 1 } });
