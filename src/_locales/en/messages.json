@@ -195,7 +195,7 @@
     "message": "New mail in monitored folders is checked against the lists, and mail from blocked senders goes to Junk. Mail that arrived before protection was switched on is never touched."
   },
   "protectionMore": {
-    "message": "Mail from senders on neither list is scored by an AI service if you added one. Otherwise it follows the setting under Incoming mail. Learning from sent mail, the shortcuts and the Block Spam button in the toolbar work whether protection is on or off."
+    "message": "Mail from senders on neither list is scored by an AI service when one is switched on. Otherwise it follows the setting under Incoming mail. Learning from sent mail, the shortcuts and the Block Spam button in the toolbar work whether protection is on or off."
   },
   "protectionSwitchOn": {
     "message": "Switch protection on"
@@ -1746,7 +1746,7 @@
     "message": "Thunderbird lets an add-on capture keys without a modifier only if the add-on is given full access to Thunderbird and your computer. Block Spam never asks for that."
   },
   "bareKeysSteps": {
-    "message": "If you accept that permission, install the separate add-on Block Spam Keys:"
+    "message": "If you accept that, install the separate add-on Block Spam Keys, which asks for it:"
   },
   "bareKeysStepSave": {
     "message": "Save its file to your computer:"

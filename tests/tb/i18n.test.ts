@@ -77,7 +77,8 @@ describe("one-letter words in Polish", () => {
       start: "W przypadku firmy cała domena (z adresem lub bez).",
       keys: "Klawisze $1 w oknach poczty i w kartach.",
     });
-    expect(t("lead")).toBe("Nigdy nie rusza poczty od osób, a\u00a0o\u00a0wszystkich pozostałych może zapytać AI w\u00a0razie potrzeby.");
+    // The last word of a long sentence is tied to the one before it as well, in every language.
+    expect(t("lead")).toBe("Nigdy nie rusza poczty od osób, a\u00a0o\u00a0wszystkich pozostałych może zapytać AI w\u00a0razie\u00a0potrzeby.");
     expect(t("start")).toBe("W\u00a0przypadku firmy cała domena (z\u00a0adresem lub bez).");
     // A letter before a comma is not followed by a space and stays as it is. The name of a key is tied like a word, which does no harm.
     expect(t("keys", "B, W")).toBe("Klawisze B, W\u00a0w\u00a0oknach poczty i\u00a0w\u00a0kartach.");
@@ -94,5 +95,20 @@ describe("messages", () => {
     const { t, tCode } = await withLocale("en", { outcome_no_verdict: "No verdict" });
     expect(t("missingKey")).toBe("missingKey");
     expect(tCode("outcome", "no-verdict")).toBe("No verdict");
+  });
+});
+
+describe("the last word of a sentence", () => {
+  it("stays with the word before it, so that no line holds a single short word", async () => {
+    const { t } = await withLocale("en", {
+      hint: "Both dates are optional. An empty field sets no limit on that side.",
+      short: "Scan sent mail",
+      ends: "Mail without an AI verdict goes to a screening folder, but these accounts have none: $1",
+    });
+    expect(t("hint")).toBe("Both dates are optional. An empty field sets no limit on that\u00a0side.");
+    // Labels and buttons are short and are left alone.
+    expect(t("short")).toBe("Scan sent mail");
+    // A text that ends with an address is left alone: an address breaks by its own rule.
+    expect(t("ends", "anna@biuro-rachunek.test")).toBe("Mail without an AI verdict goes to a screening folder, but these accounts have none: anna@biuro-rachunek.test");
   });
 });

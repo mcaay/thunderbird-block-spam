@@ -179,8 +179,9 @@ export function iconButton(name: IconName, label: string, onclick: (event: Mouse
  * character after it, so that a line never ends with a hyphen that belongs to the address.
  * Nothing is added to the text: copied, it is the plain address.
  */
-export function address(value: string, cls = "address"): HTMLElement {
-  const span = h("span", { class: cls });
+export function address(value: string, tail = ""): HTMLElement {
+  const span = h("span", { class: "address" });
+  let last: HTMLElement | null = null;
   breakableParts(value).forEach((part, index) => {
     if (index > 0) {
       span.appendChild(document.createElement("wbr"));
@@ -192,7 +193,12 @@ export function address(value: string, cls = "address"): HTMLElement {
       }
     });
     span.appendChild(box);
+    last = box;
   });
+  // The punctuation of the sentence that follows the address stays with its last part: it never starts a line.
+  if (tail !== "") {
+    (last ?? span).appendChild(document.createTextNode(tail));
+  }
   return span;
 }
 
@@ -201,7 +207,29 @@ export function address(value: string, cls = "address"): HTMLElement {
  * built with address(), so that it breaks like one wherever it is shown.
  */
 export function addressed(text: string): Child[] {
-  return addressPieces(text).map((piece) => (piece.address ? address(piece.text) : piece.text));
+  const pieces = addressPieces(text);
+  const nodes: Child[] = [];
+  pieces.forEach((piece, index) => {
+    if (!piece.address) {
+      return;
+    }
+    const before = pieces[index - 1];
+    const after = pieces[index + 1];
+    if (before !== undefined && !before.address) {
+      nodes.push(before.text);
+    }
+    // What closes the sentence or the bracket right after the address goes with it.
+    const tail = after !== undefined && !after.address ? (/^[.,;:!?)\u201d\u2019"]+/.exec(after.text)?.[0] ?? "") : "";
+    if (after !== undefined && tail !== "") {
+      after.text = after.text.slice(tail.length);
+    }
+    nodes.push(address(piece.text, tail));
+  });
+  const end = pieces.at(-1);
+  if (end !== undefined && !end.address) {
+    nodes.push(end.text);
+  }
+  return nodes.filter((node) => node !== "");
 }
 
 /** A link to a page outside Thunderbird. It opens in the default browser. */

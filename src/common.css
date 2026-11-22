@@ -621,10 +621,12 @@ details[open] > summary::before {
 }
 
 /*
- * An address or a domain breaks only after the "@" and before a dot: each part between two such points is a box
- * that moves to the next line whole. A part that alone is longer than the line breaks inside, but never right
- * after one of its hyphens: a hyphen and the character after it stay together.
+ * An address or a domain breaks only after the "@" and before a dot. The address is a box that moves to the next
+ * line whole when it fits on a line of its own, so that no line holds only its ending. A longer one breaks between
+ * its parts, each of which is a box as well. A part that alone is longer than the line breaks inside, but never
+ * right after one of its hyphens: a hyphen and the character after it stay together.
  */
+.address,
 .address .part {
   display: inline-block;
   max-width: 100%;

@@ -86,7 +86,7 @@ Pending for every provider. One Test and one real message each:
 - [ ] OpenAI chat, `gpt-6-luna`
 - [ ] Gemini, `gemini-4-hydrogen`
 - [ ] OpenRouter chat, `openai/gpt-6-luna`
-- [ ] A wrong key gives "Needs attention. The key was rejected. Edit this service and enter a valid key." and the next service takes over. The Overview and the popup read "On, with problems".
+- [ ] A wrong key gives "Needs attention. The key was rejected. Edit this service and enter a valid key." and the next service takes over. The Overview, the state under the name in the category list and the popup read "On, 1 problem".
 - [ ] OpenRouter chat with a moderated model: a message the moderation flags (HTTP 403) gets no verdict from that service, the service does not need attention, and the next message is scored by it again.
 - [ ] A rate limit (HTTP 429) pauses the service ("Paused until ...") and the next one takes over.
 - [ ] The links under the menu of services ("Get a key", "Documentation") open the right pages in the default browser.
@@ -101,7 +101,7 @@ Pending for every provider. One Test and one real message each:
 - [ ] The toolbar button shows the popup: "Setup is not finished" with "Open setup", which opens the Overview.
 - [ ] Step 1 "Scan sent mail" starts the scan in place and shows its progress and Cancel there. Afterwards step 3 has the filled button.
 - [ ] Step 2 opens the AI pane with the menu of services focused.
-- [ ] With an AI service added before the scan: a warning appears under the switch, and switching protection on opens a dialog with "Scan first" (the default), "Switch on anyway" and Cancel.
+- [ ] With an AI service added before the scan: a warning appears under the switch, and switching protection on opens a dialog with "Scan first" (the default), "Switch on anyway" and Cancel. After "Scan first" the scan runs, a note under the switch says "Protection switches on when the scan has finished." with "Don’t switch on", and when the scan has ended protection is on and a bar says so. Close the settings page while the scan runs: protection is still switched on at its end.
 - [ ] After step 3 the setup folds to "Setup complete", and the line under the switch shows the time of the last check and today's figures.
 - [ ] No message from "Block Spam" in the Error Console.
 
@@ -163,7 +163,8 @@ Practical result: `messages.listInlineTextParts` returned exactly `[{"contentTyp
 
 ### B9. The screening flow
 
-- [ ] "Create the folder “Screening”" under Incoming mail asks for the folder permission and creates a "Screening" folder. Afterwards the button is unavailable, and its tooltip says that the folder is the screening folder already. Where a folder of that name exists but is not chosen, the button reads "Use the folder “Screening”". If Thunderbird reports that folder creation is not available yet, create the folder by hand, choose it in the list and record this.
+- [ ] Under Incoming mail the screening folder of each account is shown only while "Mail without an AI verdict" is set to "Move it to the screening folder", directly under that menu. Choose another option: the folders are gone. Choose it again: the folders that were chosen are back.
+- [ ] "Create the folder “Screening”" there asks for the folder permission and creates a "Screening" folder. Afterwards the button is unavailable, and its tooltip says that the folder is the screening folder already. Where a folder of that name exists but is not chosen, the button reads "Use the folder “Screening”". If Thunderbird reports that folder creation is not available yet, create the folder by hand, choose it in the list and record this.
 - [ ] With "no AI verdict" set to the screening folder and no AI: mail from unknown senders lands there.
 - [ ] Write to one of those senders, or press a trust shortcut: their messages move from the screening folder to the Inbox.
 
@@ -179,14 +180,15 @@ Shell:
 
 Overview:
 
-- [ ] The state next to "Protection" reads Off, On, "On, observing only" or "On, with problems", and every warning leads to its fix ("Edit" of a service, "Choose a folder"; the warning about AI before the first scan points to setup step 1).
+- [ ] The state next to "Protection" and under the name of the add-on in the category list reads Off, "Switches on after the scan", On, "On, observing only", "On, 2 problems" (the number of warnings), "No mail account" or "Data problem". The one in the category list is on every pane and opens the Overview. Every warning leads to its fix ("Edit" of a service, "Choose a folder"; the warning about AI before the first scan points to setup step 1).
+- [ ] One warning per cause: with two accounts that have no Junk folder there is one warning that names both, and two AI services with a rejected key share one warning whose button shows the AI services.
 - [ ] Observation mode stands under "Protect incoming mail". Ticked while protection is off, it says that nothing is observed yet.
 - [ ] Setup step 1 while a long scan runs: a spinner, a progress bar that fills, Cancel, and no filled button on step 3. After Cancel the step shows its number again and "Scan again" is filled. Only after the scan has ended does the step show its check mark.
 - [ ] A scan in an account whose Sent folders are empty says that no sent mail was found and links to the Sent folders.
-- [ ] With an AI service on, switch protection on while a scan is still running: a dialog asks whether to wait for the scan. "Wait for the scan" leaves protection off, "Switch on anyway" switches it on.
+- [ ] With an AI service on, switch protection on while a scan is still running: a dialog asks whether to wait for the scan. "Wait for the scan" leaves protection off for now and switches it on when the scan has finished; until then the note under the switch offers "Don’t switch on", and step 3 has no button. Cancel the scan instead: a bar says that protection was not switched on because the scan was cancelled. "Switch on anyway" switches it on at once. Quit Thunderbird while protection waits for the scan and start it again: the scan runs again and protection follows it.
 - [ ] Cancel a scan in the Learning pane with the keyboard: the focus goes on to "Scan sent mail".
 - [ ] "Block and trust by hand" names the two shortcuts as they are set and links to the pane "Block and trust".
-- [ ] With protection on and a problem (for example a rejected key): the Block Spam button in the toolbar has a badge, and its tooltip names the number of problems. Its label, when the toolbar shows labels, stays "Block Spam". The badge goes away when the problem is fixed or protection is switched off.
+- [ ] With protection on and a problem (for example a rejected key): the Block Spam button in the toolbar has a badge, and its tooltip names the number of problems and the problems ("Block Spam: 1 problem (AI service not used: OpenAI)"). Without a problem the tooltip says the state ("Block Spam: protection is on"). Its label, when the toolbar shows labels, stays "Block Spam". The badge goes away when the problem is fixed or protection is switched off.
 - [ ] When an AI service first answers 401 for incoming mail, one desktop notification names the service and the remedy. More mail does not repeat it. A click on it opens the Overview.
 
 Lists:
@@ -194,20 +196,21 @@ Lists:
 - [ ] Add an address and a domain without choosing a kind. A wrong value ("not an address") is refused with the reason under the field, and the field keeps the focus.
 - [ ] Search and filter the entries, with scope "All accounts" and with one account.
 - [ ] Remove an entry: a confirmation with "Undo (Ctrl+Z)" (Cmd+Z on macOS) appears above the table and stays until the next action. Undo puts the entry back with its source and date, and the shortcut does the same. With the keyboard, the focus moves to the remove button of the next row.
-- [ ] "Sharing between accounts" (shared or per account) is in this pane, above the table. Its hint says that an entry added with the form uses its own "Applies to".
+- [ ] "Sharing between accounts" (shared or per account) is in this pane, above the table. Its hint says that an entry added with the form uses its own "Applies to". With a single mail account a line says that it makes a difference only with two or more.
+- [ ] A click on a column header sorts the table by that column (all entries, not only the rows shown), a second click reverses the order, and the header shows an arrow. "Source:" narrows the table to what the AI, the scan, sent mail or you added.
 - [ ] "Add" is unavailable while the field is empty.
 - [ ] The line under the filter reads "Showing 200 of 4,001." without a filter, and "Matching: 12 of 4,001." with a filter or a search.
 - [ ] With more than 200 entries the button under the table reads like "Show 200 more (3,801 left)".
 
 Log:
 
-- [ ] Entries appear by themselves, the filter and the search by sender or subject work and say how many entries match ("Matching: 2 of 13."), "Clear log…" asks first and is unavailable while the log is empty.
+- [ ] Entries appear by themselves, the filters (by decision, by time, and with several accounts by account) and the search by sender or subject work and say how many entries match ("Matching: 2 of 13."), "Clear log…" asks first and is unavailable while the log is empty.
 - [ ] An entry from another day shows its date above the time, an entry from another year the date with the year. Nothing paints over the sender, also with a 12-hour clock.
 - [ ] In a window narrower than 900 pixels the rows are stacked and every row starts its outcome at the same place, whatever the account is called.
 - [ ] The line above the filter names the two shortcuts: one trusts the sender of the selected message, the other blocks it.
 - [ ] "Trust domain" (or "Trust address" for a sender at a public provider) on a Spam or Blocked row puts the sender on the white list, moves the message from Junk back to the Inbox and says so in the row. Undo appears where the button was and takes both back.
 - [ ] "Block domain" on a Passed row blocks the domain ("Block address" at a public provider) and moves the message to Junk. On a Trusted row the button reads "Block address".
-- [ ] "Show message" opens the message of the row in a tab. For a message that was deleted, the row says that it was not found.
+- [ ] "Show message" opens the message of the row in a tab. For a message that was deleted, the row says under its decision that it was not found, and the link is gone.
 - [ ] A row of a test has no button. A row of an observed decision changes the lists and moves nothing.
 - [ ] After the message was deleted, the button still changes the list and the row says that the message was not found.
 - [ ] An observed decision reads "would go to Junk", a detail line reads like "Added to the black list: example.com", and the name of the AI service stands under the score.
@@ -217,7 +220,8 @@ Learning and Incoming mail:
 
 - [ ] The folder lists are plain rows with a trash can. "Add folder" is unavailable until a folder is chosen.
 - [ ] The folder menus offer only folders that can be right: no Inbox, Junk, Trash, Drafts, Templates or Outbox as a Sent folder, no Sent, Junk, Trash, Drafts, Templates or Outbox as a monitored folder, neither of these as the screening folder, and no folder that is on one of the other two lists. A folder that was stored before stays listed and can be removed. An account with nothing left to offer says so in one line.
-- [ ] "Mail without an AI verdict" set to the screening folder while an account has none: a line under the menu names the account.
+- [ ] "Mail without an AI verdict" set to the screening folder while an account has none: a line above the folders names the account.
+- [ ] With an AI service switched on and protection off, the AI pane says under the services that no new mail is sent to an AI service yet, and "Show setup" leads to the step that is left. With no AI service switched on, the cutoff and the prompt each say that they are not used yet.
 - [ ] Without any mail account in Thunderbird, both panes say so in one line and "Scan sent mail" is unavailable.
 - [ ] Remove a folder: a confirmation with Undo appears in the group, and Undo puts the folder back.
 - [ ] The date fields of the scan: the line under them says that both are optional and what an empty field means.
@@ -268,7 +272,9 @@ Block and trust:
 - [ ] The panel and the popup inside it have the same background and text color, in the light and in the dark theme: no seam, no lighter rectangle inside the rounded panel.
 - [ ] With several messages selected: their number, and the same buttons for all of them.
 - [ ] The last ten decisions. Tests and observed decisions say so and have a hollow dot. A click on a row opens the Log pane with that entry in view, marked and focused.
-- [ ] With a problem (for example a rejected key) the state reads "On, with problems" and a line with "Show in settings" opens the Overview.
+- [ ] With a problem (for example a rejected key) the state reads "On, 1 problem" and a line that counts and names the problems, with "Show in settings", opens the Overview.
+- [ ] Without a mail account the popup says "No mail account" and that one has to be added first, and does not point at setup.
+- [ ] While protection waits for a scan the state reads "Switches on after the scan", and the footer says so and offers "Don’t switch on".
 - [ ] "Switch protection off" and "Switch protection on".
 - [ ] "Test AI on selected messages…" asks for confirmation, writes test entries to the log, moves nothing and creates no entry.
 - [ ] The confirmation names the number of selected messages. With no message selected, or with more than 50, the button is unavailable and its tooltip says why.

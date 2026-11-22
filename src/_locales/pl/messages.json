@@ -195,7 +195,7 @@
     "message": "Nowa poczta w monitorowanych folderach jest porównywana z listami, a poczta od zablokowanych nadawców trafia do Niechcianych. Poczta odebrana przed włączeniem ochrony nigdy nie jest ruszana."
   },
   "protectionMore": {
-    "message": "Pocztę od nadawców spoza obu list ocenia usługa AI, o ile została dodana. W przeciwnym razie obowiązuje ustawienie z kategorii Poczta przychodząca. Uczenie z wysłanej poczty, skróty klawiszowe i przycisk Block Spam na pasku narzędzi działają niezależnie od tego, czy ochrona jest włączona."
+    "message": "Pocztę od nadawców spoza obu list ocenia usługa AI, o ile jakaś jest włączona. W przeciwnym razie obowiązuje ustawienie z kategorii Poczta przychodząca. Uczenie z wysłanej poczty, skróty klawiszowe i przycisk Block Spam na pasku narzędzi działają niezależnie od tego, czy ochrona jest włączona."
   },
   "protectionSwitchOn": {
     "message": "Włącz ochronę"
@@ -1746,7 +1746,7 @@
     "message": "Thunderbird pozwala dodatkom przechwytywać klawisze bez modyfikatora tylko wtedy, gdy dodatek otrzyma pełny dostęp do programu Thunderbird i do komputera. Block Spam nigdy o to nie prosi."
   },
   "bareKeysSteps": {
-    "message": "Jeśli akceptujesz to uprawnienie, zainstaluj osobny dodatek Block Spam Keys:"
+    "message": "Jeśli to akceptujesz, zainstaluj osobny dodatek Block Spam Keys, który o to prosi:"
   },
   "bareKeysStepSave": {
     "message": "Zapisz jego plik na komputerze:"

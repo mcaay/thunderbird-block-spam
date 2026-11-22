@@ -292,7 +292,11 @@ h2 > .state {
 
 /* Setup steps. */
 
+/* One grid for all steps, so that their buttons share a column and are of one width. */
 .steps {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  column-gap: 10px;
   margin: 6px 0 0;
   padding: 0;
   list-style: none;
@@ -301,11 +305,17 @@ h2 > .state {
 
 .step {
   display: grid;
-  grid-template-columns: 24px minmax(0, 1fr) auto;
-  gap: 0 10px;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   align-items: center;
   padding: 8px 0;
   counter-increment: step;
+}
+
+/* Wide enough for the longest label of both languages, so that the buttons keep their width from state to state. */
+.step-action > button {
+  width: 100%;
+  min-width: 152px;
 }
 
 .step + .step {
@@ -809,8 +819,9 @@ table.log .col-action {
   text-align: end;
 }
 
-table.log .col-action button {
-  max-width: 100%;
+/* The buttons of the column are of one width, so that their edges line up from row to row. */
+table.log .col-action button.small {
+  width: 100%;
 }
 
 table.log .show-message {
@@ -819,7 +830,7 @@ table.log .show-message {
 }
 
 table.log td.col-action {
-  padding-block: 3px;
+  padding: 3px 4px;
 }
 
 table.log .subject,
@@ -1226,13 +1237,18 @@ dialog.modal p {
     margin-top: 6px;
   }
 
-  .step {
+  .steps {
     grid-template-columns: 24px minmax(0, 1fr);
   }
 
   .step-action {
     grid-column: 2;
     margin-top: 6px;
+  }
+
+  .step-action > button {
+    width: auto;
+    min-width: 152px;
   }
 
   .step-action:empty {
@@ -1260,13 +1276,13 @@ dialog.modal p {
   /* The first column has the content width of the time column of the wide layout, so every row starts its outcome at the same place, whatever the account is called. */
   table.log tr {
     display: grid;
-    grid-template-columns: 72px minmax(0, 1fr) auto;
+    grid-template-columns: 72px minmax(0, 1fr) 116px;
     grid-template-areas:
       "time outcome action"
       "message message action"
       "reason reason reason";
     gap: 1px 10px;
-    padding: 6px 4px;
+    padding: 6px 8px;
     border-bottom: 1px solid var(--separator);
   }
 
@@ -1337,10 +1353,12 @@ dialog.modal p {
     display: inline;
   }
 
-  table.log .col-action {
+  table.log td.col-action {
     grid-area: action;
     width: auto;
+    padding: 0;
   }
+
 
   table.log tr.empty-row {
     display: block;

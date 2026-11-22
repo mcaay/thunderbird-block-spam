@@ -128,11 +128,12 @@ export function aiSection(shell: Shell): Section {
       { class: "option-note plain", hidden: true },
       icon("info"),
       h("span", { text }),
+      // The way to what is missing: the first service that can be switched on, or else the control that adds one.
       button(t("openAi"), () => {
         const target = list.querySelector<HTMLElement>('[data-focus="enabled"]') ?? presetSelect;
         target.scrollIntoView({ block: "center" });
         target.focus();
-      }, "link"),
+      }, "link to-services"),
     );
   const cutoffUnused = unused(t("cutoffUnused"));
   cutoffUnused.id = "cutoff-unused";
@@ -204,6 +205,7 @@ export function aiSection(shell: Shell): Section {
     description(t("servicesHint")),
     empty,
     list,
+    notProtecting,
     h(
       "div",
       { class: "row add-service" },
@@ -221,7 +223,6 @@ export function aiSection(shell: Shell): Section {
     ),
     presetHint,
     signInFailed,
-    notProtecting,
     h("h2", { text: t("cutoffTitle") }),
     cutoffUnused,
     h("div", { class: "row" }, h("label", { for: "cutoff", text: t("cutoffLabel") }), cutoff, cutoffStatus.element),
@@ -970,7 +971,8 @@ export function aiSection(shell: Shell): Section {
     );
 
     const chatgpt: Child[] = [];
-    if (point.type === "chatgpt" && editing === null) {
+    // The sign-in buttons stay while the row is edited: the line above them points at them.
+    if (point.type === "chatgpt") {
       chatgpt.push(
         h(
           "div",
@@ -1083,6 +1085,13 @@ export function aiSection(shell: Shell): Section {
     }
     cutoffUnused.hidden = inUse;
     promptUnused.hidden = inUse;
+    // With no service at all the link says what it leads to: the control that adds one.
+    const lead = model.accessPoints.length === 0 ? t("step2Add") : t("openAi");
+    for (const link of root.querySelectorAll<HTMLElement>("button.to-services")) {
+      if (link.textContent !== lead) {
+        link.textContent = lead;
+      }
+    }
     // A hidden note would still be read as part of the description, so it is named only while it shows.
     // A field that shows an error is described by the error until it is corrected.
     if (!cutoff.hasAttribute("aria-invalid")) {

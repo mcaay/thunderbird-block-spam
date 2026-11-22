@@ -78,7 +78,7 @@ Nothing is ever deleted. Every failure leaves mail where it is.
 - if no AI service is set up, or all of them failed or ran out, and the sender is not on the white list and not on the black list, where to put the email?
     - default: leave it in the `inbox`
     - `spam`
-    - the screening folder
+    - the screening folder (the folder of each account is chosen right under this option, and only while it is chosen)
 - cutoff point - probability score above which the email will be classified as spam by AI
 - whether new entries are shared by all accounts or kept per account
 - public domains: the list of mail providers where each address is a different person. A list is built in, and you can add or remove domains.
@@ -99,11 +99,11 @@ The Overview of the settings page lists three steps, each with its button. Until
 
 1. **Scan your sent mail.** The button starts the scan in place and shows its progress. This puts the people you already write to on the white list. The step is done when the scan has ended.
 2. **Optional: add an AI service.** The button opens the AI pane on the list of services to choose from.
-3. **Switch protection on.** Mail that arrived before protection was switched on is never touched. If an AI service is on before the scan was run, Block Spam asks first and offers the scan.
+3. **Switch protection on.** Mail that arrived before protection was switched on is never touched. If an AI service is on before the scan was run, or while a scan is still running, Block Spam asks first and offers to scan or to wait. Choose that and you can leave: protection switches on by itself when the scan has finished, also when the settings page is closed by then, and a note under the switch lets you call it off. If the scan is cancelled or fails, the page says that protection was not switched on and why.
 
 Consider ticking **observation mode**, the option right under the protection switch, first and watching the log for a few days. It can be ticked before protection is on.
 
-Once protection is on, the Overview and the popup show its state, the time of the last check, today's figures and whether the AI services work. When something needs you (a rejected key, an account without a Junk folder), the state reads "On, with problems" and a warning leads to the fix. You do not have to open anything to notice: the Block Spam button in the toolbar gets a badge and its tooltip says how many problems there are (its label stays "Block Spam"), and a desktop notification tells you once when an AI service first needs attention.
+The state of protection is shown in the same words everywhere: under the name of the add-on on every pane of the settings page (a click on it opens the Overview), in the popup, and as the tooltip of the Block Spam button in the toolbar. It is one of: Off, "Switches on after the scan", On, "On, observing only", "On, 2 problems", "No mail account", "Data problem". Once protection is on, the Overview also shows the time of the last check, today's figures and whether the AI services work. When something needs you (a rejected key, accounts without a Junk folder), there is one warning per cause, each with a button that leads to the fix; accounts or services that share a cause are named together. You do not have to open anything to notice: the Block Spam button in the toolbar gets a badge and its tooltip counts and names the problems (its label stays "Block Spam"), and a desktop notification tells you once when an AI service first needs attention.
 
 The settings page opens from the toolbar popup (Settings), or from Add-ons and Themes.
 

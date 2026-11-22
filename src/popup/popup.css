@@ -12,6 +12,8 @@
   --description: color-mix(in srgb, var(--text) 69%, transparent);
   /* On the dark panel Thunderbird's dark button border (#71717a) falls below 3 to 1: the border of fields is used in both themes. */
   --button-border: var(--border);
+  /* On the light panel Thunderbird's link color (#1373d9) gives 4.4 to 1: its color for a link under the pointer is the nearest token that reaches 4.5. */
+  --link: light-dark(#175fb6, #4cb1f9);
 }
 
 /*

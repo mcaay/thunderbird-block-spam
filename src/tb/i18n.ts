@@ -9,6 +9,15 @@ function tieShortWords(message: string): string {
 }
 
 /**
+ * Ties the last word of a sentence to the word before it with a no-break space, so that the last line of a
+ * paragraph never holds a single short word, whatever the width of the window. Short texts (labels, buttons)
+ * and texts that end with something other than a word (an address, a number in brackets) are left as they are.
+ */
+function tieLastWord(message: string): string {
+  return message.length < 60 ? message : message.replace(/ (?=[\p{L}\p{N}\u2019'-]{1,12}[.!?\u2026]?$)/u, "\u00a0");
+}
+
+/**
  * Returns the localized message, with $1, $2... replaced by the substitutions.
  * Numbers are written the way the language of the strings writes them: 12,000 in
  * English, 12 000 in Polish.
@@ -26,7 +35,7 @@ export function t(key: string, ...substitutions: (string | number)[]): string {
   if (message === "") {
     return key;
   }
-  return TIES_SHORT_WORDS.has(locale) ? tieShortWords(message) : message;
+  return tieLastWord(TIES_SHORT_WORDS.has(locale) ? tieShortWords(message) : message);
 }
 
 /**
