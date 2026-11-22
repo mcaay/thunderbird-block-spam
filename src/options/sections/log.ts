@@ -14,7 +14,7 @@ import { BUNDLED_PUBLIC_DOMAINS } from "../../data/publicDomains";
 import { stringsLocale, t, tCode } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
 import { attemptsLines } from "../diagnostic";
-import { address, addressed, button, byId, dialog, errorText, guard, h, named, option, reconcile, replace, setUnavailable, tNodes } from "../dom";
+import { address, addressed, button, byId, dialog, errorText, guard, h, named, oneTabStop, option, reconcile, replace, setUnavailable, tNodes } from "../dom";
 import type { Child } from "../dom";
 import { formatFullTime, formatScore, logTimeParts, matchesSearch, parseEntryDetail } from "../format";
 import { logReader } from "../logData";
@@ -125,6 +125,8 @@ export function logSection(): Section {
     },
   });
   const rows = h("tbody", { attrs: { role: "rowgroup" } });
+  /** The table body is one tab stop: the arrow keys move between its rows and between the controls of a row, and Tab leaves it for what follows. */
+  const tabStop = oneTabStop(rows);
   const more = h("div", { class: "row" });
   /** How many entries are shown, or how many match the filter and the search, out of how many. */
   const summary = h("p", { class: "description count-line", attrs: { role: "status" } });
@@ -511,6 +513,8 @@ export function logSection(): Section {
             };
           }),
     );
+    // Rows that were drawn anew or added join the one tab stop.
+    tabStop.sync();
     replace(
       more,
       matching.length > limit

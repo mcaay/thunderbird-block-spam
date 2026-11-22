@@ -20,6 +20,7 @@ import {
   inlineStatus,
   learnMore,
   notice,
+  oneTabStop,
   option,
   reconcile,
   removeButton,
@@ -44,7 +45,8 @@ export function listsSection(): Section {
   /** The column the table is sorted by, and its direction. Newest first until a header is pressed. */
   let sort: { key: SortKey; descending: boolean } = { key: "date", descending: true };
   /** What the last removal did, with Undo. It stands between the filter and the table. */
-  const removed = notice();
+  // Closed, the keyboard goes on with the table it stands above: the row that was focused last.
+  const removed = notice(() => tabStop.stop());
 
   const counts = h("p", { class: "counts" });
   const filter = h(
@@ -69,6 +71,8 @@ export function listsSection(): Section {
     attrs: { "aria-label": t("listsSearchLabel") },
   });
   const rows = h("tbody");
+  /** The table body is one tab stop: the arrow keys move between its rows, and Tab leaves it for what follows. */
+  const tabStop = oneTabStop(rows);
   const more = h("div", { class: "row" });
   /** How many entries are shown, or how many match the filter and the search, out of how many. */
   const summary = h("p", { class: "description count-line", attrs: { role: "status" } });
@@ -364,6 +368,8 @@ export function listsSection(): Section {
             build: () => row(entry),
           })),
     );
+    // Rows that were drawn anew or added join the one tab stop.
+    tabStop.sync();
     replace(
       more,
       matching.length > limit
