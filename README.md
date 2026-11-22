@@ -124,7 +124,7 @@ All of these do the same two things: put the sender on a list and move the messa
 	- The bare keys `B` and `W` need the optional companion add-on, see [Bare keys B and W](#bare-keys-b-and-w).
 - **Log.** Settings, Log lists every decision. The button in a row undoes that decision, and the row offers Undo for the button itself. A click on one of the last decisions in the popup opens that entry in the log.
 
-**Undo.** Every block or trust made by hand can be taken back: the popup shows the last command at its top with Undo, also when the command was made with a shortcut or from the context menu, until it is undone, dismissed or replaced by the next one. Undo restores the lists exactly and moves the messages back.
+**Undo.** Every block or trust made by hand can be taken back: the popup shows the last command at its top with Undo, also when the command was made with a shortcut or from the context menu, until it is undone, dismissed or replaced by the next one. Undo restores the lists exactly and moves the messages back, and the popup then says which list the sender is on again and where the message is.
 
 The pane Settings, Block and trust lists all of these ways with the current shortcuts.
 

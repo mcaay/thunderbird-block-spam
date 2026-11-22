@@ -48,6 +48,11 @@ export interface CommandEffect {
   change: "added" | "moved" | "none";
   /** Entries of the other list that still decide the sender once the target is on its list: the command removes them. */
   lifted: Entry[];
+  /**
+   * The entry of the other list that decides the sender now and that the command leaves where it is, because the
+   * target beats it for this sender (an address entry beats a domain entry). Null when there is none.
+   */
+  kept: Entry | null;
 }
 
 /**
@@ -77,7 +82,9 @@ export function commandEffect(
     lifted.push(deciding);
     after.delete(keyOf(deciding));
   }
-  return { target, scope, change: existing === undefined ? "added" : existing.list === list ? "none" : "moved", lifted };
+  const deciding = matchSender(state.entries, sender, accountId);
+  const kept = deciding !== null && deciding.list !== list && after.get(keyOf(deciding)) === deciding ? deciding : null;
+  return { target, scope, change: existing === undefined ? "added" : existing.list === list ? "none" : "moved", lifted, kept };
 }
 
 /** The entry a command adds for a sender, and whether the command works on the domain. */
@@ -183,4 +190,29 @@ export function applyCommand(
     }
   }
   return plan;
+}
+
+/** What is true about one entry again once a command is taken back: the list it is on again, or null when it is on neither. */
+export interface UndoneEntry {
+  value: string;
+  list: ListName | null;
+}
+
+/**
+ * What taking a command back changes on the lists, read before it is taken back: an entry the command added is on
+ * neither list again, an entry it moved or removed is back on its list. An entry of which only the source goes back
+ * stays on its list and is not named.
+ */
+export function undoneEntries(undo: Pick<CommandPlan["undo"], "remove" | "restore">, entries: EntryMap): UndoneEntry[] {
+  const undone: UndoneEntry[] = [];
+  for (const key of undo.remove) {
+    // A key is the kind, the scope and the value, and neither of the first two holds a space.
+    undone.push({ value: entries.get(key)?.value ?? key.split(" ").slice(2).join(" "), list: null });
+  }
+  for (const entry of undo.restore) {
+    if (entries.get(keyOf(entry))?.list !== entry.list) {
+      undone.push({ value: entry.value, list: entry.list });
+    }
+  }
+  return undone;
 }

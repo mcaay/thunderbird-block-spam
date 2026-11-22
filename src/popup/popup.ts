@@ -335,7 +335,11 @@ async function drawSelection(tabId: number | null, quiet = false): Promise<void>
       parts.push(h("p", { class: "description", text: t("popupUnknownSender") }));
     } else if (sender.domainTarget?.kind === "domain") {
       const domain = sender.domainTarget.value;
-      domainLine = h("div", { class: "description domain-line" }, t("popupDomain"), " ", address(domain), ":");
+      // When the entry of the domain is the one that decides this sender, the line says so: the buttons under it change that entry.
+      domainLine =
+        sender.deciding?.kind === "domain" && sender.deciding.value === domain
+          ? h("div", { class: "description domain-line" }, ...tNodes("popupDomainDeciding", address(domain)))
+          : h("div", { class: "description domain-line" }, t("popupDomain"), " ", address(domain), ":");
       domainButtons = [
         commandButton(t("popupBlockShort"), t("popupBlockDomainNamed", domain), "block-domain", tabId, title("block-domain"), unchanged("block-domain")),
         commandButton(t("popupTrustShort"), t("popupTrustDomainNamed", domain), "trust-domain", tabId, title("trust-domain"), unchanged("trust-domain")),
@@ -409,13 +413,15 @@ function drawRecent(): void {
 // ---------------------------------------------------------------------------
 // "Test AI on selected messages": sends the selection to the AI and only logs the scores.
 
-function showScoreMessage(message: string, isError = false): void {
+function showScoreMessage(message: string, isError = false, withLog = false): void {
   // What the test said stays until it is closed or the next test is asked for: it has the close button of every result.
   const close = iconButton("close", t("dismiss"), () => {
     replace(scoreBox, scoreButton());
     restoreFocus("score");
   });
-  replace(scoreBox, resultBox([message], isError, "", [close]), scoreButton());
+  // A result that sends the reader to the log for the reasons leads there.
+  const openLog = withLog ? button(t("otherWaysLogLink"), () => void openSettings({ pane: "log", logKey: null }).catch(() => undefined), "link") : null;
+  replace(scoreBox, resultBox([message], isError, "", [openLog, close]), scoreButton());
   // The buttons of the question are gone: the keyboard goes back to the button that asks again.
   restoreFocus("score");
 }
@@ -428,9 +434,11 @@ function confirmScoring(tabId: number, count: number): void {
       try {
         const summary = await send("scoreSelected", { tabId });
         // How many got no score is said only when some did not: "Without a score: 0." would be noise.
-        const done = summary.failed > 0 ? t("popupScoreDoneFailed", summary.scored, summary.failed) : t("popupScoreDone", summary.scored);
-        // A run in which a message got no score is not a success: its result has the warning form.
-        showScoreMessage(summary.selected === 0 ? t("popupNothingSelected") : done, summary.selected === 0 || summary.failed > 0);
+        // When none got one there are no scores to point at: the line says that no service answered, and that the log holds the reason.
+        const done =
+          summary.failed === 0 ? t("popupScoreDone", summary.scored) : summary.scored === 0 ? tn("popupScoreNone", summary.failed) : t("popupScoreDoneFailed", summary.scored, summary.failed);
+        // A run in which a message got no score is not a success: its result has the warning form, and leads to the log.
+        showScoreMessage(summary.selected === 0 ? t("popupNothingSelected") : done, summary.selected === 0 || summary.failed > 0, summary.selected > 0 && summary.failed > 0);
         log = (await logReader.load()).entries;
         drawRecent();
         await drawSelection(tabId);

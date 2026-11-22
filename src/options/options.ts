@@ -76,6 +76,9 @@ function showPane(wanted: PaneId, focusTitle: boolean): PaneId {
     } else {
       link?.removeAttribute("aria-current");
     }
+    // The category list is one tab stop, as the list of Thunderbird's Settings is: Tab lands on the current category
+    // and the next Tab reaches the pane. The arrow keys change the pane, so the stop moves with the focus.
+    link?.setAttribute("tabindex", id === pane ? "0" : "-1");
   }
   if (focusTitle) {
     window.scrollTo(0, 0);
@@ -123,7 +126,8 @@ function openPane(): void {
 window.addEventListener("hashchange", openPane);
 
 // Up and Down walk the category list like the list of Thunderbird's Settings: the pane
-// follows and the focus stays in the list. Tab and Enter work as for any link.
+// follows and the focus stays in the list. Left and Right do the same, for the narrow window where the
+// categories are a row. Tab leaves the list (it is one tab stop, see showPane), Enter works as for any link.
 nav.addEventListener("keydown", (event) => {
   const current = event.target instanceof HTMLAnchorElement ? event.target : null;
   if (current === null || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {

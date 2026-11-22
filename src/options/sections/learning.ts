@@ -52,12 +52,13 @@ export function learningSection(shell: Shell): Section {
       section.render(shown);
     }
   });
-  // The field itself is Thunderbird's own date control. What it expects and what an empty field means is said under it.
-  const from = h("input", { type: "date", id: "scan-from", oninput: () => rangeError.set(null), attrs: { "aria-describedby": "scan-dates-hint" } });
-  const to = h("input", { type: "date", id: "scan-to", oninput: () => rangeError.set(null), attrs: { "aria-describedby": "scan-dates-hint" } });
+  // The field itself is Thunderbird's own date control. What it expects and what an empty field means is said under it,
+  // and belongs to the group of their row: each field is several stops of the keyboard, and the hint is read once.
+  const from = h("input", { type: "date", id: "scan-from", oninput: () => rangeError.set(null) });
+  const to = h("input", { type: "date", id: "scan-to", oninput: () => rangeError.set(null) });
   const rangeError = fieldError(to, "scan-range-error");
   const status = scanStatusView();
-  /** What the scan means for protection that waits for it, or waited: said here too, where the scan is started and cancelled. */
+  /** What the scan means for protection that waits for it, or waited: said here too, directly under the scan, where it is started and cancelled. */
   const wishLine = h("p", { class: "wish-line", hidden: true, attrs: { role: "status" } });
   let accountCount = 0;
   let scanRunning = false;
@@ -109,11 +110,12 @@ export function learningSection(shell: Shell): Section {
     h("h1", { text: t("catLearning"), tabIndex: -1 }),
     h("p", { class: "lead" }, ...withMore(t("learningHint"), learnMore(t("catLearning"), t("learningMore")))),
     // What every user does here stands first. The folders, a list that grows with the accounts, follow.
-    h("h2", { text: t("scanTitle") }),
+    h("h2", { text: t("scanTitle"), id: "scan-title" }),
     description(t("scanHint")),
     h(
       "div",
-      { class: "row" },
+      // The row of the scan is a group named by its heading and described by the hint under it.
+      { class: "row", attrs: { role: "group", "aria-labelledby": "scan-title", "aria-describedby": "scan-dates-hint" } },
       h("label", { for: "scan-from", text: t("scanFrom") }),
       from,
       h("label", { for: "scan-to", text: t("scanTo") }),
@@ -124,11 +126,11 @@ export function learningSection(shell: Shell): Section {
     h("div", { class: "description", id: "scan-dates-hint", text: t("scanDatesHint") }),
     rangeError.element,
     status.element,
+    wishLine,
     h("h2", { text: t("sentFoldersTitle") }),
     description(t("sentFoldersHint")),
     noAccounts,
     folders,
-    wishLine,
   );
 
   const section: Section = {
@@ -180,7 +182,8 @@ export function learningSection(shell: Shell): Section {
       cancel.hidden = !running;
       status.update(model);
       const { waiting, outcome } = model.status.wish;
-      const said = waiting ? t("wishWaiting") : outcome === null ? "" : wishOutcomeText(outcome);
+      // While it waits, the line also says what Cancel next to it would do to protection.
+      const said = waiting ? `${t("wishWaiting")} ${t("wishWaitingCancel")}` : outcome === null ? "" : wishOutcomeText(outcome);
       if (wishLine.textContent !== said) {
         wishLine.textContent = said;
       }

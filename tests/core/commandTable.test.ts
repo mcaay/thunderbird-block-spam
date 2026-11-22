@@ -12,7 +12,7 @@ import { COMMANDS, commandEffect } from "../../src/core/commands";
 import type { CommandName } from "../../src/core/commands";
 import { manualEntry } from "../../src/core/edit";
 import { applyImport, buildExport } from "../../src/core/exportImport";
-import { entryKey, keyOf } from "../../src/core/lists";
+import { entryKey, keyOf, matchSender } from "../../src/core/lists";
 import { expectsMove, fittingAction, logOffer } from "../../src/core/logAction";
 import type { Entry, LogEntry } from "../../src/core/types";
 import { checkImportedDefinition } from "../../src/ai/presets";
@@ -176,10 +176,15 @@ describe("the four commands (buttons of the panel, shortcuts, context menu)", ()
             // The command takes effect.
             expect(commandEffect(h.state, command, sender, "account1")).toMatchObject({ change: "none", lifted: [] });
             // The tooltip of the button says the same beforehand.
-            const tip = commandTitle(command, { target: preview.target, change: preview.change, lifted: preview.lifted, moves: true });
+            const tip = commandTitle(command, { target: preview.target, change: preview.change, lifted: preview.lifted, moves: true, kept: preview.kept });
             if (preview.change !== "none") {
               expect(tip).toContain(preview.target.value);
             }
+            // An entry of the other list that decided the sender and is still there afterwards is named as staying, and no other entry is.
+            const decidedBefore = matchSender(before, sender, "account1");
+            const stays = decidedBefore !== null && decidedBefore.list !== (block ? "black" : "white") && h.state.entries.get(keyOf(decidedBefore))?.list === decidedBefore.list;
+            expect(preview.kept === null ? null : keyOf(preview.kept), `${command} / ${state}`).toBe(stays ? keyOf(decidedBefore) : null);
+            expect(tip.endsWith(`The entry ${decidedBefore?.value ?? ""} stays on the ${decidedBefore?.list ?? ""} list.`), `${command} / ${state}`).toBe(stays);
             for (const lifted of preview.lifted) {
               expect(tip).toContain(lifted.value);
             }
@@ -191,7 +196,7 @@ describe("the four commands (buttons of the panel, shortcuts, context menu)", ()
             const domainRow = command.endsWith("domain");
             const label = domainRow
               ? preview.target.kind === "domain"
-                ? `"${message(POPUP_LABEL[command])}" under "${message("popupDomain")} ${preview.target.value}:"`
+                ? `"${message(POPUP_LABEL[command])}" under "${decidedBefore?.kind === "domain" && decidedBefore.value === preview.target.value ? message("popupDomainDeciding", [preview.target.value]) : `${message("popupDomain")} ${preview.target.value}:`}"`
                 : `(the panel shows no domain row for a public provider: "${message("popupPublicNote")}")`
               : `"${message(POPUP_LABEL[command])}"`;
             lines.push(

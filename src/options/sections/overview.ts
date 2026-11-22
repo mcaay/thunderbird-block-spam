@@ -471,7 +471,8 @@ export function overviewSection(shell: Shell): Section {
     }
     const text = noVerdictOutcomeText(outcome, outcome.action);
     const box = bar(outcome.kind === "on" ? "success" : "warning", [text], [
-      button(t("catIncoming"), () => shell.go("incoming", { kind: "no-verdict" })),
+      // The button says what it shows: the menu of this choice, on the pane it is set on.
+      button(t("showSetting"), () => shell.go("incoming", { kind: "no-verdict" })),
       closeButton(() =>
         void guard(async () => {
           // The bar goes away: the keyboard goes back to the switch of the group.

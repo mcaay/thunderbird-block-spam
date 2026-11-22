@@ -17,7 +17,7 @@ import {
 import type { PendingSignIn } from "./ai/chatgptAuth";
 import { isLoopbackHost, validateEndpoint } from "./ai/http";
 import { checkDefinition, checkImportedDefinition, KEY_REQUIRED_TYPES, newAccessPoint, normalizeDefinition, requiredOrigins } from "./ai/presets";
-import { COMMANDS, isCommandName } from "./core/commands";
+import { COMMANDS, isCommandName, undoneEntries } from "./core/commands";
 import type { CommandName } from "./core/commands";
 import { errorText } from "./core/decision";
 import { applySettingsPatch, manualEntry } from "./core/edit";
@@ -27,7 +27,7 @@ import { Engine } from "./core/engine";
 import type { CommandOutcome, CommandUndo, LogActionUndo, ScanProgress } from "./core/engine";
 import { applyImport, buildExport } from "./core/exportImport";
 import { KEY_ACCESS_POINTS, KEY_ATTENTION_NOTIFIED, KEY_LAST_COMMAND, KEY_LAST_IMPORT, KEY_PROTECTION_WISH, KEY_SETTINGS } from "./core/keys";
-import { whiteListIsOnlyIdentities } from "./core/lists";
+import { keyOf, whiteListIsOnlyIdentities } from "./core/lists";
 import { validateLogEntry } from "./core/log";
 import { isLogAction } from "./core/logAction";
 import { folderKey } from "./core/ports";
@@ -43,7 +43,7 @@ import { BUNDLED_PUBLIC_DOMAINS } from "./data/publicDomains";
 import { t, tCode, tn } from "./tb/i18n";
 import { hold, withKeepAlive } from "./tb/keepAlive";
 import { collect, messagePages, messagesOfTab, ThunderbirdMail } from "./tb/mail";
-import { commandLines } from "./tb/commandText";
+import { commandLines, undoneLines } from "./tb/commandText";
 import { noVerdictOutcomeText, problemNames, servicesOutcomeText, wishOutcomeText } from "./tb/stateText";
 import { COMPANION_ID, KEY_PENDING_SIGN_IN } from "./tb/protocol";
 import type {
@@ -1151,11 +1151,15 @@ const handlers: Handlers = {
       args,
       accounts.map((account) => account.id),
     );
+    const key = keyOf(entry);
+    const previous = state.entries.get(key);
     const result = state.addEntry(entry, Date.now());
     await state.saveEntries();
     mail.resetCache();
     await withKeepAlive(() => engine.sweepIfNeeded());
-    return { value: entry.value, kind: entry.kind, list: entry.list, result };
+    // How the page takes the add back exactly: a new entry is removed, one that was moved or marked as made by hand is put back as it was.
+    const undo = { remove: result === "added" ? [key] : [], restore: previous !== undefined && (result === "moved" || result === "source-updated") ? [previous] : [] };
+    return { value: entry.value, kind: entry.kind, list: entry.list, result, undo };
   },
 
   async removeEntries({ keys }) {
@@ -1589,7 +1593,7 @@ const handlers: Handlers = {
   },
 
   async undoCommand({ id }) {
-    const { engine } = need();
+    const { state, engine } = need();
     const stored = await storedCommand();
     if (stored === null || stored.id !== id) {
       // Another command was made since, or this one was taken back already.
@@ -1597,19 +1601,10 @@ const handlers: Handlers = {
     }
     await store.remove([KEY_LAST_COMMAND]);
     mail.resetCache();
+    // Read before the lists change: which entries come back, and which go.
+    const entries = undoneEntries(stored.undo, state.entries);
     const outcome = await withKeepAlive(() => engine.undoCommand(stored.undo));
-    const lines = [t("commandUndone")];
-    if (outcome.moved > 0) {
-      lines.push(t("commandUndoMoved", outcome.moved));
-    }
-    if (outcome.notFound > 0) {
-      lines.push(t("commandUndoNotFound", outcome.notFound));
-    }
-    const failure = outcome.failures[0];
-    if (failure !== undefined) {
-      lines.push(t("notifyMoveFailed", failure));
-    }
-    return { lines, failed: failure !== undefined };
+    return { lines: undoneLines(entries, outcome), failed: outcome.failures.length > 0 };
   },
 
   async dismissCommand({ id }) {

@@ -13,8 +13,8 @@ import {
   errorText,
   fieldError,
   h,
-  inlineStatus,
   learnMore,
+  notice,
   oneTabStop,
   option,
   paneLink,
@@ -80,16 +80,28 @@ export function listsSection(): Section {
     placeholder: t("listsValuePlaceholder"),
     oninput: () => {
       valueError.set(null);
-      addStatus.clear();
+      untouched = false;
       // Nothing can be added before something is typed: the button says so by being unavailable.
       addButton.disabled = addValue.value.trim() === "";
     },
+    onkeydown: (event) => {
+      // After an add the keyboard is back in this field, where the shortcut of Undo belongs to the typed text. Until
+      // something is typed there is no text to take back, so the shortcut takes back the add, as the button says.
+      const undo = addStatus.element.querySelector<HTMLElement>('button[data-focus="undo"]');
+      if (untouched && undo !== null && (event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === "z") {
+        event.preventDefault();
+        undo.click();
+      }
+    },
     attrs: { autocomplete: "off", spellcheck: "false" },
   });
+  /** True from an add until something is typed into the field again. */
+  let untouched = false;
   const valueError = fieldError(addValue, "entry-value-error");
   const addList = h("select", { id: "entry-list" }, option("white", t("listWhite")), option("black", t("listBlack")));
   const addScope = h("select", { id: "entry-scope" });
-  const addStatus = inlineStatus();
+  /** What the last add did, with Undo. It stands under the form. Closed, the keyboard goes back to the field for the next entry. */
+  const addStatus = notice(() => addValue);
   const addButton = h("button", { type: "submit", text: t("add"), disabled: true, attrs: { "aria-label": t("listsAddName") } });
   /** The "Applies to" menu of the form. With fewer than two accounts it could change nothing, and is not shown. */
   const scopeField = h("div", { class: "field" }, h("label", { for: "entry-scope", text: t("listsScopeLabel") }), addScope);
@@ -117,9 +129,10 @@ export function listsSection(): Section {
             const reply = await send("addEntry", { list: addList.value, value: addValue.value, scope: scopeField.hidden ? SCOPE_ALL : addScope.value });
             valueError.set(null);
             addValue.value = "";
+            untouched = true;
             addButton.disabled = true;
             const white = reply.list === "white";
-            addStatus.set(
+            const said =
               reply.result === "added"
                 ? t(white ? "listsAddedWhite" : "listsAddedBlack", reply.value)
                 : reply.result === "moved"
@@ -127,8 +140,31 @@ export function listsSection(): Section {
                   : reply.result === "source-updated"
                     ? // The entry was there, made by learning or by an AI score: it is now one made by hand, and the line says so.
                       t("listsNowManual", reply.value)
-                    : t("listsAlreadyThere", reply.value),
-              "ok",
+                    : t("listsAlreadyThere", reply.value);
+            // What is true again once the add is taken back: the entry is on neither list, on the list it was moved from, or has the source it had.
+            const [was] = reply.undo.restore;
+            const back =
+              reply.result === "added"
+                ? tCode("logUndone", "neither-again", reply.value)
+                : was === undefined
+                  ? undefined
+                  : reply.result === "moved"
+                    ? tCode("logUndone", was.list === "black" ? "black-again" : "white-again", reply.value)
+                    : t("listsSourceBack", reply.value, tCode("source", was.source));
+            // Undo takes the add back exactly: a new entry is removed, a moved or changed one is put back with its list, source and date.
+            addStatus.show(
+              said,
+              back === undefined
+                ? undefined
+                : async () => {
+                    if (reply.undo.remove.length > 0) {
+                      await send("removeEntries", { keys: reply.undo.remove });
+                    }
+                    if (reply.undo.restore.length > 0) {
+                      await send("restoreEntries", { entries: reply.undo.restore });
+                    }
+                  },
+              back,
             );
           } catch (error) {
             // The error stays under the field, and the focus in it.
@@ -423,6 +459,7 @@ export function listsSection(): Section {
       return addValue.value.trim() !== "";
     },
     leave() {
+      addStatus.clear();
       removed.clear();
     },
   };
