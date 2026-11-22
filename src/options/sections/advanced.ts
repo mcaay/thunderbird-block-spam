@@ -1,12 +1,14 @@
-// Advanced: the public mail providers, and the forwarding mailboxes with the labels
-// their forwarded header blocks use.
+// Advanced: whether the entries the add-on makes by itself are shared between accounts,
+// the public mail providers, and the forwarding mailboxes with the labels their forwarded
+// header blocks use.
 
 import { normalizeAddress, normalizeDomain } from "../../core/address";
 import type { SettingsPatch } from "../../core/edit";
+import type { Settings } from "../../core/types";
 import { BUNDLED_PUBLIC_DOMAINS } from "../../data/publicDomains";
 import { stringsLocale, t, tCode } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
-import { address, addressed, button, byId, description, fieldError, focusNeighbor, guard, h, inlineStatus, learnMore, named, notice, reconcile, removeButton, replace } from "../dom";
+import { address, addressed, button, byId, description, fieldError, focusNeighbor, guard, h, inlineStatus, learnMore, named, notice, option, paneLink, reconcile, removeButton, replace, tNodes } from "../dom";
 import { icon } from "../icons";
 import type { Keyed } from "../dom";
 import { mayRedraw, sameLabels } from "../fields";
@@ -66,6 +68,30 @@ function plainList(label: { labelledBy: string } | { label: string }, fallback: 
 export function advancedSection(): Section {
   const root = byId("advanced");
   let model: Model | null = null;
+
+  // Sharing between accounts: whether the entries the add-on makes by itself (by learning, by an AI score, by blocking
+  // or trusting) are shared by all accounts. A setting made once, so it lives here and not among the entries. It means
+  // something only with two or more mail accounts, and is not shown with fewer.
+  const lead = h("p", { class: "lead", text: t("advancedLead") });
+  const newScope = h(
+    "select",
+    {
+      id: "new-scope",
+      onchange: () => void guard(() => update({ newEntryScope: newScope.value as Settings["newEntryScope"] })),
+    },
+    option("shared", t("scopeShared")),
+    option("account", t("scopePerAccount")),
+  );
+  const sharing = h(
+    "div",
+    { class: "group", hidden: true },
+    h("h2", { text: t("newEntriesTitle") }),
+    h("div", { class: "row" }, h("label", { for: "new-scope", text: t("newEntriesLabel") }), newScope),
+    // The form the sentence names is on another pane: its name leads there.
+    h("div", { class: "description" }, ...tNodes("newEntriesHint", paneLink("lists", t("catLists"), () => {
+      location.hash = "lists";
+    }))),
+  );
 
   // Public mail providers.
   // The label next to it says "Domain:". The name says of what.
@@ -230,7 +256,8 @@ export function advancedSection(): Section {
   replace(
     root,
     h("h1", { text: t("catAdvanced"), tabIndex: -1 }),
-    h("p", { class: "lead", text: t("advancedLead") }),
+    lead,
+    sharing,
     h("h2", { text: t("publicTitle") }),
     description(t("publicHint"), learnMore(t("publicTitle"), t("publicMore", BUNDLED.size.toLocaleString(stringsLocale())))),
     h("div", { class: "row" }, h("label", { for: "public-domain", text: t("publicDomainLabel") }), domain, makePublic, makeCustom),
@@ -275,6 +302,14 @@ export function advancedSection(): Section {
       if (settings === null) {
         return;
       }
+      // With fewer than two mail accounts sharing could change nothing: the group is not shown, and the lead does not name it.
+      const several = next.accounts.length > 1;
+      sharing.hidden = !several;
+      const leadText = t(several ? "advancedLeadSharing" : "advancedLead");
+      if (lead.textContent !== leadText) {
+        lead.textContent = leadText;
+      }
+      newScope.value = settings.newEntryScope;
       // Removing gives a confirmation with Undo. Undo applies to the list as it is then, not as it was.
       const removable = (name: "publicDomainsAdded" | "publicDomainsRemoved" | "forwardingMailboxes", where: typeof domainNotice) => (item: string) =>
         void guard(async () => {

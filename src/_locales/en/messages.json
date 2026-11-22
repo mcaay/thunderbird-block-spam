@@ -182,6 +182,9 @@
   "advancedLead": {
     "message": "Settings that rarely need a change: which domains count as public mail providers, and which mailboxes forward mail in their own name."
   },
+  "advancedLeadSharing": {
+    "message": "Settings that rarely need a change: whether new entries are shared by all accounts, which domains count as public mail providers, and which mailboxes forward mail in their own name."
+  },
   "catBackup": {
     "message": "Export and import"
   },
@@ -276,7 +279,7 @@
     "message": "Today: $1, $2, $3."
   },
   "statusTodayNone": {
-    "message": "No mail was checked today yet."
+    "message": "No new mail today yet."
   },
   "statusChecked_one": {
     "message": "$1 message checked"
@@ -357,7 +360,7 @@
     "message": "Its key is missing. Edit this service and enter the key."
   },
   "remedy_permission": {
-    "message": "This computer has not allowed its host yet. Edit this service and press “Save”."
+    "message": "Thunderbird may not connect to this service yet. Edit this service and press “Save” to allow it."
   },
   "remedy_sign_in": {
     "message": "You are not signed in. Use “Continue with ChatGPT” in its row."
@@ -375,7 +378,7 @@
     "message": "Their keys are missing. Edit each of them and enter its key."
   },
   "remedyMany_permission": {
-    "message": "This computer has not allowed their hosts yet. Edit each of them and press “Save”."
+    "message": "Thunderbird may not connect to these services yet. Edit each of them and press “Save” to allow it."
   },
   "remedyMany_sign_in": {
     "message": "You are not signed in. Use “Continue with ChatGPT” in the row of each of them."
@@ -606,7 +609,7 @@
     "message": "Download the raw data…"
   },
   "fatalDownloadHint": {
-    "message": "The raw data contains your API keys and sign-in tokens. Keep the file private."
+    "message": "The raw data contains your API keys and sign\u2011in tokens. Keep the file private."
   },
   "fatalReset": {
     "message": "Reset everything…"
@@ -615,7 +618,7 @@
     "message": "Reset all Block Spam data?"
   },
   "fatalResetText": {
-    "message": "This deletes the lists, the settings, the AI services with their keys and the log, and ends ChatGPT sign-ins. It cannot be undone. Download the raw data first if you may need it."
+    "message": "This deletes the lists, the settings, the AI services with their keys and the log, and ends ChatGPT sign\u2011ins. It cannot be undone. Download the raw data first if you may need it."
   },
   "fatalResetConfirm": {
     "message": "Reset"
@@ -679,6 +682,9 @@
   },
   "listsMore": {
     "message": "A blocked address stays blocked inside a trusted domain, and a trusted person passes inside a blocked domain. The white list is learned from your sent mail and also holds senders you trusted by hand. The black list holds senders you blocked and senders an AI service scored as spam."
+  },
+  "listsMoreSharing": {
+    "message": "Whether entries made by learning, by AI and by blocking or trusting are shared by all accounts is set under $1."
   },
   "listsWhiteCount_one": {
     "message": "White list: $1 entry."
@@ -840,7 +846,7 @@
     "message": "Kept per account"
   },
   "newEntriesHint": {
-    "message": "Changing this affects future entries only. An entry you add with the form above uses its own “Applies to”."
+    "message": "Changing this affects future entries only. An entry you add with the form under $1 uses its own “Applies to”."
   },
   "logHint": {
     "message": "The last 5,000 decisions and test scores of Block Spam, without the text of any message."
@@ -1212,7 +1218,7 @@
     "message": "Monitored folders"
   },
   "monitoredHint": {
-    "message": "The Inbox of every account is always monitored. Add folders that receive new mail directly, for example through a server-side rule."
+    "message": "The Inbox of every account is always monitored. Add folders that receive new mail directly, for example through a server\u2011side rule."
   },
   "monitoredAlways": {
     "message": "always"
@@ -1281,10 +1287,10 @@
     "message": "what is sent"
   },
   "aiHint": {
-    "message": "An AI service receives the sender, the Reply-To address if there is one, the recipients, the subject, the date and the first 20,000 characters of the text, and can answer with nothing but a probability from 0.00 to 1.00."
+    "message": "An AI service receives the sender, the Reply\u2011To address if there is one, the recipients, the subject, the date and the first 20,000 characters of the text, and can answer with nothing but a probability from 0.00 to 1.00."
   },
   "aiSecretsHint": {
-    "message": "API keys and sign-in tokens are stored unencrypted in your Thunderbird profile. They are never written to the log and never exported."
+    "message": "API keys and sign\u2011in tokens are stored unencrypted in your Thunderbird profile. They are never written to the log and never exported."
   },
   "privacyText": {
     "message": "Nothing else leaves this computer, apart from messages you score yourself as a test. There is no telemetry and no other network request."
@@ -1377,7 +1383,7 @@
     "message": "A decision model that basal serves on this computer, for example Bielik-One. No mail leaves the computer."
   },
   "presetHint_openai_decisions": {
-    "message": "The Decisions endpoint of OpenAI with gpt-6-luna. It uses an OpenAI API key."
+    "message": "The Decisions service of OpenAI with gpt-6-luna. It uses an OpenAI API key."
   },
   "presetHint_openai": {
     "message": "The chat models of OpenAI, with an API key."
@@ -1464,10 +1470,10 @@
     "message": "The usage limit of the plan is reached."
   },
   "diag_renew_failed": {
-    "message": "The sign-in could not be renewed."
+    "message": "The sign\u2011in could not be renewed."
   },
   "diag_no_permission": {
-    "message": "This computer has not allowed the host $1 yet. Edit the service and press “Save”."
+    "message": "Thunderbird may not connect to $1 yet. Edit the service and press “Save” to allow it."
   },
   "diag_service": {
     "message": "The service refused the request."
@@ -1491,7 +1497,7 @@
     "message": "No model is set."
   },
   "diag_not_signed_in": {
-    "message": "There is no sign-in."
+    "message": "There is no sign\u2011in."
   },
   "diag_endpoint_invalid": {
     "message": "The address of the service is not valid."
@@ -1506,7 +1512,7 @@
     "message": "Remove $1?"
   },
   "apRemoveText": {
-    "message": "The service and its key or sign-in are deleted from this computer."
+    "message": "The service and its key or sign\u2011in are deleted from this computer."
   },
   "moveUpNamed": {
     "message": "Move $1 up"
@@ -1545,10 +1551,10 @@
     "message": "API key"
   },
   "endpointFixed": {
-    "message": "Set by the provider."
+    "message": "Fixed for this service."
   },
   "endpointHint_systemone": {
-    "message": "The full address of the decision endpoint."
+    "message": "The full address of the service, with its whole path."
   },
   "endpointHint_openai_chat": {
     "message": "The base address, without /chat/completions. Only addresses on this computer may use http."
@@ -1557,13 +1563,13 @@
     "message": "Replace the part in angle brackets with your own value, for Cloudflare with your account id."
   },
   "modelHint_systemone": {
-    "message": "The name of the model. Leave empty for a local server that serves a single model."
+    "message": "The name of the model. Leave empty for a service on this computer that offers a single model."
   },
   "modelHint_openai_decisions": {
     "message": "The decision model, for example gpt-6-luna."
   },
   "modelHint_openai_chat": {
-    "message": "The model name as the provider spells it. “Load models” lists what the server offers."
+    "message": "The model name as the service spells it. “Load models” lists the models it offers."
   },
   "modelHint_anthropic": {
     "message": "A Claude model id, for example claude-opus-5-5, or claude-haiku-5-5 for lower cost."
@@ -1581,7 +1587,7 @@
     "message": "Stored unencrypted in your Thunderbird profile."
   },
   "keyHintLocal": {
-    "message": "Servers on this computer usually need no key."
+    "message": "Services on this computer usually need no key."
   },
   "loadModels": {
     "message": "Load models"
@@ -1596,7 +1602,7 @@
     "message": "Models loaded: $1. The model that is set is not among them."
   },
   "loadModelsNone": {
-    "message": "The server listed no models."
+    "message": "The service listed no models."
   },
   "modelChoose": {
     "message": "Choose a model"
@@ -1647,7 +1653,7 @@
     "message": "Block Spam will send mail from unknown senders, those on neither list, to $1, in the background, to get a spam probability."
   },
   "consentWhat": {
-    "message": "What is sent: the sender, the Reply-To address if there is one, the recipients, the subject, the date and the first 20,000 characters of the text. Attachments, remote content and other headers are never sent."
+    "message": "What is sent: the sender, the Reply\u2011To address if there is one, the recipients, the subject, the date and the first 20,000 characters of the text. Attachments, remote content and other headers are never sent."
   },
   "consentNever": {
     "message": "Mail from senders on your white list is never sent anywhere."
@@ -1659,7 +1665,7 @@
     "message": "Agree and load models"
   },
   "localServerHint": {
-    "message": "A server on this computer rejects requests from add-ons unless it is told to allow the origin of this add-on:"
+    "message": "A service on this computer rejects requests from add\u2011ons unless it is told to allow the origin of this add\u2011on:"
   },
   "localServerHow": {
     "message": "For Ollama set OLLAMA_ORIGINS to this value. For basal pass it to --cors-origins."
@@ -1746,7 +1752,7 @@
     "message": "The session may still be open"
   },
   "chatgptRevocationUnconfirmed": {
-    "message": "The sign-in was removed from this computer, but OpenAI did not confirm that the session ended. You can disconnect the app in ChatGPT settings."
+    "message": "The sign\u2011in was removed from this computer, but OpenAI did not confirm that the session ended. You can disconnect the app in ChatGPT settings."
   },
   "chatgptWelcomeTitle": {
     "message": "You’re using your ChatGPT plan"
@@ -1761,40 +1767,40 @@
     "message": "Signing in with ChatGPT"
   },
   "signInWaiting": {
-    "message": "Sign in in the tab that opened. This page updates by itself when the sign-in is complete."
+    "message": "Sign in on the tab that opened. This page updates by itself when the sign\u2011in is complete."
   },
   "signInManual": {
-    "message": "Sign in in the tab that opened, or in your browser. At the end the browser shows an error page for an address that starts with http://127.0.0.1:1455. That is expected: copy that address from the address bar, paste it into the field below, then press “Finish sign-in” next to it."
+    "message": "Sign in on the tab that opened, or in your browser. At the end the browser shows an error page for an address that starts with http://127.0.0.1:1455. That is expected: copy that address from the address bar, paste it into the field below, then press “Finish sign\u2011in” next to it."
   },
   "signInOpenBrowser": {
     "message": "Open in my browser instead"
   },
   "signInCopy": {
-    "message": "Copy the sign-in address"
+    "message": "Copy the sign\u2011in address"
   },
   "signInPasteHint": {
-    "message": "If this page does not update by itself: at the end of the sign-in the browser shows an error page for an address that starts with http://127.0.0.1:1455. That is expected. Copy that address from the address bar, paste it into the field below, then press “Finish sign-in” next to it."
+    "message": "If this page does not update by itself: at the end of the sign\u2011in the browser shows an error page for an address that starts with http://127.0.0.1:1455. That is expected. Copy that address from the address bar, paste it into the field below, then press “Finish sign\u2011in” next to it."
   },
   "signInAddressLabel": {
     "message": "Address of the error page"
   },
   "signInFinish": {
-    "message": "Finish sign-in"
+    "message": "Finish sign\u2011in"
   },
   "signInFailed": {
-    "message": "Sign-in failed: $1"
+    "message": "Sign\u2011in failed: $1"
   },
   "signInNoneInProgress": {
-    "message": "No sign-in is in progress. Start again."
+    "message": "No sign\u2011in is in progress. Start again."
   },
   "signInTimedOut": {
-    "message": "The sign-in took too long and was cancelled."
+    "message": "The sign\u2011in took too long and was cancelled."
   },
   "signInError_state_mismatch": {
-    "message": "The address belongs to a different sign-in attempt."
+    "message": "The address belongs to a different sign\u2011in attempt."
   },
   "signInError_wrong_address": {
-    "message": "This is not the address the sign-in redirects to. It starts with http://127.0.0.1:1455/auth/callback."
+    "message": "This is not the address the sign\u2011in redirects to. It starts with http://127.0.0.1:1455/auth/callback."
   },
   "signInError_denied": {
     "message": "Access was declined on the OpenAI page."
@@ -1806,10 +1812,10 @@
     "message": "The address contains no authorization code."
   },
   "signInError_registration_incomplete": {
-    "message": "The registration did not return a client id. Start the sign-in again."
+    "message": "The registration did not return a client id. Start the sign\u2011in again."
   },
   "signInError_client_mismatch": {
-    "message": "The sign-in returned a different client id. Start the sign-in again."
+    "message": "The sign\u2011in returned a different client id. Start the sign\u2011in again."
   },
   "signInError_exchange_failed": {
     "message": "The authorization code could not be exchanged: $1"
@@ -1821,7 +1827,7 @@
     "message": "A different ChatGPT account signed in. Sign in with the account of this service, or add a new service."
   },
   "signInError_plan_not_enabled": {
-    "message": "Permission to use your ChatGPT plan was not granted, so the service cannot be used. Start the sign-in again and allow plan use."
+    "message": "Permission to use your ChatGPT plan was not granted, so the service cannot be used. Start the sign\u2011in again and allow plan use."
   },
   "shortcutsHint": {
     "message": "The shortcuts act on the selected messages, or on the message shown in a tab or window. Block moves the messages to the Spam folder. Trust moves them back to the Inbox from the Spam folder or from a screening folder."
@@ -1857,10 +1863,10 @@
     "message": "Change shortcuts…"
   },
   "shortcutsRebindHint": {
-    "message": "Opens Thunderbird’s own list of shortcuts. You also find it under Add-ons and Themes, in the gear menu, as “Manage Extension Shortcuts”."
+    "message": "Opens Thunderbird’s own list of shortcuts. You also find it under Add\u2011ons and Themes, in the gear menu, as “Manage Extension Shortcuts”."
   },
   "smartTitle": {
-    "message": "Whole-domain commands"
+    "message": "Whole\u2011domain commands"
   },
   "smartLabel": {
     "message": "Smart: use the address for senders at public mail providers"
@@ -1881,7 +1887,7 @@
     "message": "Context menu."
   },
   "otherWaysMenu": {
-    "message": "Right-click a message in the message list and choose Block Spam."
+    "message": "Right\u2011click a message in the message list and choose Block Spam."
   },
   "otherWaysLogName": {
     "message": "Log."
@@ -1896,19 +1902,19 @@
     "message": "The keys B and W on their own"
   },
   "bareKeysHint": {
-    "message": "Thunderbird lets an add-on capture keys without a modifier only if the add-on is given full access to Thunderbird and your computer. Block Spam never asks for that."
+    "message": "Thunderbird lets an add\u2011on capture keys without a modifier only if the add\u2011on is given full access to Thunderbird and your computer. Block Spam never asks for that."
   },
   "bareKeysSteps": {
-    "message": "If you accept that, install the separate add-on Block Spam Keys, which asks for it:"
+    "message": "If you accept that, install the separate add\u2011on Block Spam Keys, which asks for it:"
   },
   "bareKeysStepSave": {
     "message": "Save its file to your computer:"
   },
   "bareKeysSave": {
-    "message": "Save the companion add-on file…"
+    "message": "Save the companion add\u2011on file…"
   },
   "bareKeysStepInstall": {
-    "message": "Open Add-ons and Themes, click the gear menu, choose “Install Add-on From File” and pick the saved file."
+    "message": "Open Add\u2011ons and Themes, click the gear menu, choose “Install Add\u2011on From File” and pick the saved file."
   },
   "bareKeysCaptures": {
     "message": "From then on it captures $1 in mail windows and passes them on to Block Spam."
@@ -1920,7 +1926,7 @@
     "message": "At a public provider such as gmail.com every address is a different person, so the lists hold single addresses there. For any other domain the whole company is trusted or blocked as one domain."
   },
   "publicMore": {
-    "message": "The built-in list has $1 providers. Changing it affects future entries only."
+    "message": "The built\u2011in list has $1 providers. Changing it affects future entries only."
   },
   "publicDomainLabel": {
     "message": "Domain:"
@@ -1983,7 +1989,7 @@
     "message": "Export"
   },
   "exportHint": {
-    "message": "One file with the lists, the settings and the AI services, without their keys and sign-ins. Entries and folders of an account are saved with the account’s email address."
+    "message": "One file with the lists, the settings and the AI services, without their keys and sign\u2011ins. Entries and folders of an account are saved with the account’s email address."
   },
   "exportButton": {
     "message": "Export to a file…"
@@ -2001,7 +2007,7 @@
     "message": "“Merge lists” adds the entries of the file to your lists. An entry that is on the other list here moves to the list the file names. Settings and AI services stay untouched. “Replace everything” overwrites lists, settings and AI services."
   },
   "importMore": {
-    "message": "After “Replace everything”, keys must be entered again and the ChatGPT sign-in repeated. Importing never switches protection on. Items that belong to an account follow the account with the same email address here. The others are skipped and reported."
+    "message": "After “Replace everything”, keys must be entered again and the ChatGPT sign\u2011in repeated. Importing never switches protection on. Items that belong to an account follow the account with the same email address here. The others are skipped and reported."
   },
   "importChoose": {
     "message": "Choose file…"
@@ -2031,7 +2037,7 @@
     "message": "Replace lists, settings and AI services?"
   },
   "importReplaceText": {
-    "message": "Your current lists, settings and AI services are replaced by the file. Keys and sign-ins are removed from this computer. This cannot be undone."
+    "message": "Your current lists, settings and AI services are replaced by the file. Keys and sign\u2011ins are removed from this computer. This cannot be undone."
   },
   "importReplaceConfirm": {
     "message": "Replace"
@@ -2202,6 +2208,9 @@
     "message": "Scoring…"
   },
   "popupScoreDone": {
+    "message": "Scored: $1. The scores are in the log."
+  },
+  "popupScoreDoneFailed": {
     "message": "Scored: $1. Without a score: $2. The scores are in the log."
   },
   "popupNothingSelected": {

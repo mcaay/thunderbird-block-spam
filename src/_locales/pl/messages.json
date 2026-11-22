@@ -123,10 +123,10 @@
     "message": "Rodzaju usługi AI nie można zmienić. Usuń ją i dodaj nową."
   },
   "invalid_entry_invalid": {
-    "message": "Wpisz adres e-mail, na przykład jan@example.com, albo domenę, na przykład example.com."
+    "message": "Wpisz adres e\u2011mail, na przykład jan@example.com, albo domenę, na przykład example.com."
   },
   "invalid_address_invalid": {
-    "message": "Wpisz adres e-mail, na przykład jan@example.com."
+    "message": "Wpisz adres e\u2011mail, na przykład jan@example.com."
   },
   "invalid_account_unknown": {
     "message": "To konto już nie istnieje."
@@ -181,6 +181,9 @@
   },
   "advancedLead": {
     "message": "Ustawienia, które rzadko wymagają zmiany: które domeny są publicznymi dostawcami poczty i które skrzynki przekazują pocztę we własnym imieniu."
+  },
+  "advancedLeadSharing": {
+    "message": "Ustawienia, które rzadko wymagają zmiany: czy nowe wpisy są wspólne dla wszystkich kont, które domeny są publicznymi dostawcami poczty i które skrzynki przekazują pocztę we własnym imieniu."
   },
   "catBackup": {
     "message": "Eksport i import"
@@ -276,7 +279,7 @@
     "message": "Dzisiaj: $1, $2, $3."
   },
   "statusTodayNone": {
-    "message": "Dzisiaj nie sprawdzono jeszcze żadnej wiadomości."
+    "message": "Dzisiaj nie było jeszcze nowej poczty."
   },
   "statusChecked_one": {
     "message": "$1 sprawdzona wiadomość"
@@ -357,7 +360,7 @@
     "message": "Brakuje jej klucza. Edytuj tę usługę i wpisz klucz."
   },
   "remedy_permission": {
-    "message": "Ten komputer nie zezwolił jeszcze na połączenia z jej serwerem. Edytuj tę usługę i naciśnij „Zapisz”."
+    "message": "Thunderbird nie ma jeszcze zgody na połączenia z tą usługą. Edytuj tę usługę i naciśnij „Zapisz”, aby na nie zezwolić."
   },
   "remedy_sign_in": {
     "message": "Brak zalogowania. Użyj przycisku „Kontynuuj z ChatGPT” w jej wierszu."
@@ -375,7 +378,7 @@
     "message": "Brakuje ich kluczy. Edytuj każdą z nich i wpisz jej klucz."
   },
   "remedyMany_permission": {
-    "message": "Ten komputer nie zezwolił jeszcze na połączenia z ich serwerami. Edytuj każdą z nich i naciśnij „Zapisz”."
+    "message": "Thunderbird nie ma jeszcze zgody na połączenia z tymi usługami. Edytuj każdą z nich i naciśnij „Zapisz”, aby na nie zezwolić."
   },
   "remedyMany_sign_in": {
     "message": "Brak zalogowania. Użyj przycisku „Kontynuuj z ChatGPT” w wierszu każdej z nich."
@@ -680,6 +683,9 @@
   "listsMore": {
     "message": "Zablokowany adres pozostaje zablokowany w zaufanej domenie, a zaufana osoba przechodzi mimo zablokowanej domeny. Biała lista powstaje na podstawie wysłanej poczty i zawiera także nadawców, którym ręcznie zaufano. Czarna lista zawiera nadawców zablokowanych ręcznie oraz tych, których usługa AI oceniła jako spam."
   },
+  "listsMoreSharing": {
+    "message": "To, czy wpisy tworzone przez uczenie, przez AI oraz przez blokowanie i ufanie są wspólne dla wszystkich kont, ustawia się w kategorii $1."
+  },
   "listsWhiteCount_one": {
     "message": "Biała lista: $1 wpis."
   },
@@ -840,7 +846,7 @@
     "message": "osobne dla każdego konta"
   },
   "newEntriesHint": {
-    "message": "Zmiana dotyczy tylko przyszłych wpisów. Wpis dodawany w formularzu powyżej korzysta z własnego pola „Dotyczy”."
+    "message": "Zmiana dotyczy tylko przyszłych wpisów. Wpis dodawany w formularzu w kategorii $1 korzysta z własnego pola „Dotyczy”."
   },
   "logHint": {
     "message": "Ostatnie 5000 decyzji i ocen testowych Block Spam, bez treści wiadomości."
@@ -1281,7 +1287,7 @@
     "message": "wysyłane dane"
   },
   "aiHint": {
-    "message": "Usługa AI otrzymuje nadawcę, adres Reply-To, jeśli występuje, odbiorców, temat, datę i pierwsze 20 000 znaków treści, a odpowiedzieć może wyłącznie prawdopodobieństwem od 0,00 do 1,00."
+    "message": "Usługa AI otrzymuje nadawcę, adres Reply\u2011To, jeśli występuje, odbiorców, temat, datę i pierwsze 20 000 znaków treści, a odpowiedzieć może wyłącznie prawdopodobieństwem od 0,00 do 1,00."
   },
   "aiSecretsHint": {
     "message": "Klucze API i tokeny logowania są przechowywane w profilu programu Thunderbird bez szyfrowania. Nigdy nie trafiają do dziennika ani do eksportu."
@@ -1377,7 +1383,7 @@
     "message": "Model decyzyjny udostępniany na tym komputerze przez basal, na przykład Bielik-One. Poczta nie opuszcza komputera."
   },
   "presetHint_openai_decisions": {
-    "message": "Punkt końcowy Decisions firmy OpenAI z modelem gpt-6-luna. Używa klucza API OpenAI."
+    "message": "Usługa Decisions firmy OpenAI z modelem gpt-6-luna. Używa klucza API OpenAI."
   },
   "presetHint_openai": {
     "message": "Modele czatu firmy OpenAI, z kluczem API."
@@ -1467,7 +1473,7 @@
     "message": "Nie udało się odnowić logowania."
   },
   "diag_no_permission": {
-    "message": "Ten komputer nie zezwolił jeszcze na połączenia z serwerem $1. Edytuj usługę i naciśnij „Zapisz”."
+    "message": "Thunderbird nie ma jeszcze zgody na połączenia z serwerem $1. Edytuj usługę i naciśnij „Zapisz”, aby na nie zezwolić."
   },
   "diag_service": {
     "message": "Usługa odrzuciła żądanie."
@@ -1545,10 +1551,10 @@
     "message": "Klucz API"
   },
   "endpointFixed": {
-    "message": "Ustalony przez dostawcę."
+    "message": "Stały dla tej usługi."
   },
   "endpointHint_systemone": {
-    "message": "Pełny adres punktu końcowego decyzji."
+    "message": "Pełny adres usługi, z całą ścieżką."
   },
   "endpointHint_openai_chat": {
     "message": "Adres podstawowy, bez /chat/completions. Tylko adresy na tym komputerze mogą używać http."
@@ -1557,13 +1563,13 @@
     "message": "Zastąp część w nawiasach ostrych własną wartością, w przypadku Cloudflare identyfikatorem swojego konta."
   },
   "modelHint_systemone": {
-    "message": "Nazwa modelu. Pozostaw puste w przypadku lokalnego serwera, który udostępnia jeden model."
+    "message": "Nazwa modelu. Pozostaw puste w przypadku usługi na tym komputerze, która oferuje jeden model."
   },
   "modelHint_openai_decisions": {
     "message": "Model decyzyjny, na przykład gpt-6-luna."
   },
   "modelHint_openai_chat": {
-    "message": "Nazwa modelu w zapisie dostawcy. Przycisk „Wczytaj modele” pokazuje, co oferuje serwer."
+    "message": "Nazwa modelu w zapisie usługi. Przycisk „Wczytaj modele” pokazuje modele, które usługa oferuje."
   },
   "modelHint_anthropic": {
     "message": "Identyfikator modelu Claude, na przykład claude-opus-5-5, albo tańszy claude-haiku-5-5."
@@ -1581,7 +1587,7 @@
     "message": "Przechowywany w profilu programu Thunderbird bez szyfrowania."
   },
   "keyHintLocal": {
-    "message": "Serwery na tym komputerze zwykle nie wymagają klucza."
+    "message": "Usługi na tym komputerze zwykle nie wymagają klucza."
   },
   "loadModels": {
     "message": "Wczytaj modele"
@@ -1596,7 +1602,7 @@
     "message": "Wczytane modele: $1. Ustawionego modelu nie ma wśród nich."
   },
   "loadModelsNone": {
-    "message": "Serwer nie podał żadnych modeli."
+    "message": "Usługa nie podała żadnych modeli."
   },
   "modelChoose": {
     "message": "Wybierz model"
@@ -1647,7 +1653,7 @@
     "message": "Block Spam będzie w tle wysyłać pocztę od nieznanych nadawców, czyli tych spoza obu list, do $1, aby uzyskać prawdopodobieństwo spamu."
   },
   "consentWhat": {
-    "message": "Wysyłane są: nadawca, adres Reply-To, jeśli występuje, odbiorcy, temat, data i pierwsze 20 000 znaków treści. Załączniki, treści zdalne i pozostałe nagłówki nigdy nie są wysyłane."
+    "message": "Wysyłane są: nadawca, adres Reply\u2011To, jeśli występuje, odbiorcy, temat, data i pierwsze 20 000 znaków treści. Załączniki, treści zdalne i pozostałe nagłówki nigdy nie są wysyłane."
   },
   "consentNever": {
     "message": "Poczta od nadawców z białej listy nigdy nie jest nigdzie wysyłana."
@@ -1659,7 +1665,7 @@
     "message": "Zgadzam się, wczytaj modele"
   },
   "localServerHint": {
-    "message": "Serwer na tym komputerze odrzuca żądania dodatków, dopóki nie zezwoli mu się na źródło tego dodatku:"
+    "message": "Usługa na tym komputerze odrzuca żądania dodatków, dopóki nie zezwoli się jej na źródło tego dodatku:"
   },
   "localServerHow": {
     "message": "W przypadku Ollama ustaw tę wartość w OLLAMA_ORIGINS. W przypadku basal przekaż ją w --cors-origins."
@@ -1983,7 +1989,7 @@
     "message": "Eksport"
   },
   "exportHint": {
-    "message": "Jeden plik z listami, ustawieniami i usługami AI, bez ich kluczy i logowań. Wpisy i foldery konta są zapisywane z adresem e-mail tego konta."
+    "message": "Jeden plik z listami, ustawieniami i usługami AI, bez ich kluczy i logowań. Wpisy i foldery konta są zapisywane z adresem e\u2011mail tego konta."
   },
   "exportButton": {
     "message": "Eksportuj do pliku…"
@@ -2001,7 +2007,7 @@
     "message": "„Scal listy” dodaje wpisy z pliku do list. Wpis, który tutaj jest na drugiej liście, przechodzi na listę podaną w pliku. Ustawienia i usługi AI pozostają bez zmian. „Zastąp wszystko” nadpisuje listy, ustawienia i usługi AI."
   },
   "importMore": {
-    "message": "Po użyciu trybu „Zastąp wszystko” musisz ponownie wpisać klucze i powtórzyć logowanie do ChatGPT. Import nigdy nie włącza ochrony. Pozycje należące do konta trafiają do konta o tym samym adresie e-mail. Pozostałe są pomijane i wymieniane w raporcie."
+    "message": "Po użyciu trybu „Zastąp wszystko” musisz ponownie wpisać klucze i powtórzyć logowanie do ChatGPT. Import nigdy nie włącza ochrony. Pozycje należące do konta trafiają do konta o tym samym adresie e\u2011mail. Pozostałe są pomijane i wymieniane w raporcie."
   },
   "importChoose": {
     "message": "Wybierz plik…"
@@ -2202,6 +2208,9 @@
     "message": "Ocenianie…"
   },
   "popupScoreDone": {
+    "message": "Ocenione wiadomości: $1. Oceny są w dzienniku."
+  },
+  "popupScoreDoneFailed": {
     "message": "Ocenione wiadomości: $1. Bez oceny: $2. Oceny są w dzienniku."
   },
   "popupNothingSelected": {
