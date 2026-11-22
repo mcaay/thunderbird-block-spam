@@ -48,7 +48,7 @@ export function learningSection(shell: Shell): Section {
   /** What the last change of the Sent folders did, with Undo. */
   const changed = notice();
   // The field itself is Thunderbird's own date control. What it expects and what an empty field means is said under it,
-  // and belongs to the group of the two fields: each field is several stops of the keyboard, and the hint is read once.
+  // and belongs to the group of their row: each field is several stops of the keyboard, and the hint is read once.
   const from = h("input", { type: "date", id: "scan-from", oninput: () => rangeError.set(null) });
   const to = h("input", { type: "date", id: "scan-to", oninput: () => rangeError.set(null) });
   const rangeError = fieldError(to, "scan-range-error");
