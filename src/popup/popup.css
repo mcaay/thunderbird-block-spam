@@ -327,9 +327,9 @@ p.result {
   display: grid;
   /*
    * The sender identifies the row: its address stays whole while it fits, and the outcome gives way first. An outcome
-   * that is cut keeps room for the start of its word, and the dot, the tooltip and the name of the row still say all of it.
+   * that is cut keeps the room that "Spam 0.97" needs, and the dot, the tooltip and the name of the row still say all of it.
    */
-  grid-template-columns: 8px minmax(0, max-content) minmax(4em, 1fr) auto;
+  grid-template-columns: 8px minmax(0, max-content) minmax(4.6em, 1fr) auto;
   gap: 0 7px;
   align-items: center;
   width: 100%;
