@@ -203,7 +203,7 @@ Lists:
 
 Log:
 
-- [ ] Entries appear by themselves, the filters (by decision, by time, and with several accounts by account) and the search by sender or subject work and say how many entries match ("Matching: 2 of 13."), "Clear log…" stands at the end of the line that counts the entries, asks first and is unavailable while the log is empty.
+- [ ] Entries appear by themselves, the filters (by decision, by time, and with several accounts by account) and the search by sender or subject work and say how many entries match ("Matching: 2 of 13."), "Clear log…" stands at the end of the line that counts the entries and asks first. An empty log shows neither the line nor the button.
 - [ ] An entry from another day shows its date above the time, an entry from another year the date with the year. Nothing paints over the sender, also with a 12-hour clock.
 - [ ] In a window narrower than 900 pixels the rows are stacked and every row starts its outcome at the same place, whatever the account is called.
 - [ ] The line above the filter names the two shortcuts: one trusts the sender of the selected message, the other blocks it.
@@ -217,6 +217,7 @@ Log:
 
 Learning and Incoming mail:
 
+- [ ] Learning: "Scan of sent mail" stands first, the Sent folders of the accounts second.
 - [ ] The folder lists are plain rows with a trash can. "Add folder" is unavailable until a folder is chosen.
 - [ ] The folder menus offer only folders that can be right: no Inbox, Spam, Trash, Drafts, Templates or Outbox as a Sent folder, no Sent, Spam, Trash, Drafts, Templates or Outbox as a monitored folder, neither of these as the screening folder, and no folder that is on one of the other two lists. A folder that was stored before stays listed and can be removed. An account with nothing left to offer says so in one line.
 - [ ] "Mail without an AI verdict" set to the screening folder while an account has none: a line above the folders names the account.

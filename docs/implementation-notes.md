@@ -361,6 +361,18 @@ Two reviewers, 29 findings, fixed in three packages at the same time. One paragr
 - **Plain words:** "collects no usage data" for telemetry, "keys pressed without Alt, Ctrl or a similar key" for keys without a modifier, "the part of the address in angle brackets" for the placeholder, and a paused service says that its limit of requests was reached.
 - **Polish read again:** "żądanie" for a request everywhere, "Twój adres" as the source of an entry, "za pośrednictwem" for a forwarding mailbox (it agrees with one message and with several), the consent buttons in the imperative ("Zaakceptuj i zapisz"), "Pokaż kolejne: N (pozostało: M)", which is right for every number. An empty search of the log says "No decision matches." instead of "No entry matches.": an entry is a line of a list.
 
+**Integration** (the three packages together, seen in the test Thunderbird):
+
+- **Learning starts with the scan.** "Scan of sent mail" stands first and the Sent folders, which grow with the accounts, second, for the same reason as on Incoming mail. The hint of the scan says "below".
+- **An empty log has no "Clear log…".** The count line with its button is not shown while there is nothing to count or to clear. After the log was cleared the button goes before the dialog closes, so the focus goes to the title of the pane.
+- **The popup's result of an AI test is a result box** like the result of a command, with the close button; a failure of the test has the warning form of the same box.
+- **A note with a button has the button at the end of its line** (`.option-note > button.small`), like a message bar. The note of a choice that waits names the option, so the button would otherwise stand in another place for each option.
+- **Sentences that name a pane link to it:** the two lines of the import report about what was kept back (AI, Incoming mail), the hint of observation mode and the sentence about trying a prompt on real mail (Log).
+- **Thunderbird's own labels were read from the running Thunderbird 153** in both languages (Fluent messages `appmenu-addons-and-themes`, `addon-page-options-button`, `addon-manage-extensions-shortcuts`, `addon-install-from-file`, `appmenu-add-account-panel`, `appmenu-new-email-account`): the gear button is named by its tooltip "Tools for all add-ons", "Install Add-on From File…" ends with an ellipsis, and the sentence about a missing mail account names the path through Thunderbird's menu ("Add Account", then "Email").
+- **English:** "Thunderbird is not allowed to connect to this service yet" ("may not" can be read as "might not"). **Polish:** the Undo line of a log row says "wpis" before the entry, like the lines around it.
+- **Kept:** the Polish labels "Do Odebranych" and "Do Niechcianych" of the log actions. "Przenieś do Niechcianych" needs 147px of text; with the padding of the button and the cell the action column would have to grow from 128px to about 173px, all of it taken from "Sender and subject".
+- **Removed:** `statusSlot` in `options/dom.ts` and the CSS of the draft line, which nothing uses any more.
+
 ## Known limits
 
 - Moments are compared by whole seconds, the precision of mail Date and Received headers. A message from the very second protection was switched on is handled, which can include one that arrived a fraction of a second before the switch. The practical test had shown that with millisecond precision such a message was skipped by both the event and the tick.
