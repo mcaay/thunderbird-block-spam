@@ -311,6 +311,15 @@
   "statusAiOff": {
     "message": "Wszystkie usługi AI są wyłączone."
   },
+  "statusAiOffThen_junk": {
+    "message": "Wszystkie usługi AI są wyłączone: poczta od nieznanych nadawców trafia do Niechcianych."
+  },
+  "statusAiOffThen_screening": {
+    "message": "Wszystkie usługi AI są wyłączone: poczta od nieznanych nadawców trafia do folderu do sprawdzenia."
+  },
+  "statusAiOffThen_leave": {
+    "message": "Wszystkie usługi AI są wyłączone: poczta od nieznanych nadawców zostaje na miejscu."
+  },
   "statusAiWaiting_one": {
     "message": "$1 usługa AI włączy się po skanowaniu."
   },
@@ -326,8 +335,23 @@
   "warnAiBeforeScanOn": {
     "message": "Usługa AI jest włączona, ale biała lista zawiera tylko Twoje adresy. Poczta od osób, z którymi już korespondujesz, jest do niej wysyłana."
   },
-  "warnAiBeforeScanFix": {
-    "message": "Najpierw przeskanuj wysłaną pocztę: krok 1 konfiguracji poniżej."
+  "warnBeforeScanMoved": {
+    "message": "Wysłana poczta nie jest jeszcze przeskanowana, więc poczta od osób, z którymi już korespondujesz, trafiałaby $1."
+  },
+  "warnBeforeScanMovedOn": {
+    "message": "Wysłana poczta nie jest jeszcze przeskanowana, więc poczta od osób, z którymi już korespondujesz, trafia $1."
+  },
+  "warnBeforeScanAlsoMoved": {
+    "message": "Bez oceny AI trafiałaby $1."
+  },
+  "warnBeforeScanAlsoMovedOn": {
+    "message": "Bez oceny AI trafia $1."
+  },
+  "whereJunk": {
+    "message": "do Niechcianych"
+  },
+  "whereScreening": {
+    "message": "do folderu do sprawdzenia"
   },
   "warnNoJunk": {
     "message": "Konto $1 nie ma folderu Niechciane, więc spam na tym koncie zostaje na miejscu. W programie Thunderbird otwórz Konfigurację kont, wybierz dla tego konta „Niechciana poczta”, zaznacz „Przenoś otrzymane wiadomości, które zostały oznaczone jako niechciane, do:” i pozostaw wybrany folder „Niechciane” tego konta."
@@ -347,8 +371,14 @@
   "warnNoScreeningMany": {
     "message": "Poczta bez oceny AI ma trafiać do folderu do sprawdzenia, ale te konta go nie mają: $1. Ich poczta zostaje na miejscu."
   },
-  "warnAiDown": {
-    "message": "Żadna usługa AI nie jest w tej chwili dostępna, więc poczta od nieznanych nadawców, czyli tych spoza obu list, nie otrzymuje oceny AI."
+  "warnAiDown_leave": {
+    "message": "Żadna usługa AI nie jest w tej chwili dostępna, więc poczta od nieznanych nadawców, czyli tych spoza obu list, nie otrzymuje oceny AI i zostaje na miejscu."
+  },
+  "warnAiDown_junk": {
+    "message": "Żadna usługa AI nie jest w tej chwili dostępna, więc poczta od nieznanych nadawców, czyli tych spoza obu list, nie otrzymuje oceny AI i trafia do Niechcianych."
+  },
+  "warnAiDown_screening": {
+    "message": "Żadna usługa AI nie jest w tej chwili dostępna, więc poczta od nieznanych nadawców, czyli tych spoza obu list, nie otrzymuje oceny AI i trafia do folderu do sprawdzenia."
   },
   "remedy_key_rejected": {
     "message": "Klucz został odrzucony. Edytuj tę usługę i wpisz prawidłowy klucz."
@@ -383,7 +413,7 @@
   "remedyMany_plan_refused": {
     "message": "OpenAI odmówiło użycia tych planów. Zaloguj się ponownie albo sprawdź plany w ustawieniach ChatGPT."
   },
-  "cause_ai_before_scan": {
+  "cause_before_scan": {
     "message": "wysłana poczta nie jest jeszcze przeskanowana"
   },
   "cause_no_junk": {
@@ -423,7 +453,7 @@
     "message": "Przeskanuj wysłaną pocztę"
   },
   "step1Text": {
-    "message": "Wszyscy, do których piszesz, trafiają na białą listę, więc ich poczta nigdy nie jest wysyłana do usługi AI."
+    "message": "Wszyscy, do których piszesz, trafiają na białą listę, więc ich poczta nigdy nie jest przenoszona ani wysyłana do usługi AI."
   },
   "step2Title": {
     "message": "Dodaj usługę AI (opcjonalnie)"
@@ -443,11 +473,20 @@
   "scanFirstText": {
     "message": "Skanowanie umieszcza na białej liście wszystkich, do których piszesz. Odczytuje tylko odbiorców wysłanej poczty i nie używa AI. Po jego zakończeniu ochrona włączy się sama."
   },
+  "scanFirstMoved": {
+    "message": "Biała lista zawiera tylko Twoje adresy. Dopóki wysłana poczta nie zostanie przeskanowana, poczta od osób, z którymi już korespondujesz, jest traktowana jak poczta od nieznanych nadawców i trafiałaby $1."
+  },
+  "noVerdictScanFirstText": {
+    "message": "Skanowanie umieszcza na białej liście wszystkich, do których piszesz. Odczytuje tylko odbiorców wysłanej poczty i nie używa AI. Po jego zakończeniu Twój wybór zacznie obowiązywać sam."
+  },
   "scanFirst": {
     "message": "Najpierw skanuj"
   },
   "switchOnAnyway": {
     "message": "Włącz mimo to"
+  },
+  "noVerdictAnyway": {
+    "message": "Wybierz mimo to"
   },
   "useAnyway": {
     "message": "Używaj mimo to"
@@ -466,6 +505,15 @@
   },
   "scanWaitText": {
     "message": "Skanowanie wysłanej poczty jeszcze trwa. Dopóki się nie zakończy, poczta od osób, z którymi już korespondujesz, mogłaby zostać wysłana do usługi AI. Jeśli zaczekasz, ochrona włączy się sama po zakończeniu skanowania."
+  },
+  "scanWaitMovedText": {
+    "message": "Skanowanie wysłanej poczty jeszcze trwa. Dopóki się nie zakończy, poczta od osób, z którymi już korespondujesz, mogłaby trafić $1. Jeśli zaczekasz, ochrona włączy się sama po zakończeniu skanowania."
+  },
+  "scanWaitBothText": {
+    "message": "Skanowanie wysłanej poczty jeszcze trwa. Dopóki się nie zakończy, poczta od osób, z którymi już korespondujesz, mogłaby zostać wysłana do usługi AI albo, bez oceny AI, trafić $1. Jeśli zaczekasz, ochrona włączy się sama po zakończeniu skanowania."
+  },
+  "noVerdictScanWaitText": {
+    "message": "Skanowanie wysłanej poczty jeszcze trwa. Dopóki się nie zakończy, poczta od osób, z którymi już korespondujesz, mogłaby trafić $1. Jeśli zaczekasz, Twój wybór zacznie obowiązywać sam po zakończeniu skanowania."
   },
   "scanWait": {
     "message": "Zaczekaj na skanowanie"
@@ -523,6 +571,24 @@
   },
   "servicesAlsoNotOnMany": {
     "message": "Te usługi AI nie zostały włączone: $1."
+  },
+  "noVerdictWishOn": {
+    "message": "Skanowanie zakończone. Poczta bez oceny AI trafia teraz $1."
+  },
+  "noVerdictWishOnEmpty": {
+    "message": "Skanowanie zakończone, nie znaleziono żadnej wysłanej poczty. Poczta bez oceny AI trafia teraz $1."
+  },
+  "noVerdictWishCancelled": {
+    "message": "Skanowanie anulowano, więc ustawienie dla poczty bez oceny AI nie zostało zmienione."
+  },
+  "noVerdictWishErrors": {
+    "message": "Skanowanie zakończyło się z problemami, więc ustawienie dla poczty bez oceny AI nie zostało zmienione."
+  },
+  "noVerdictAlsoOn": {
+    "message": "Poczta bez oceny AI trafia teraz $1."
+  },
+  "noVerdictAlsoNotOn": {
+    "message": "Ustawienie dla poczty bez oceny AI nie zostało zmienione."
   },
   "serviceRowOn": {
     "message": "Skanowanie zakończone, ta usługa jest włączona."
@@ -1237,6 +1303,27 @@
   },
   "noVerdictNoFolder": {
     "message": "Bez folderu do sprawdzenia: $1. Poczta takiego konta zostaje na miejscu, dopóki nie wybierzesz folderu poniżej."
+  },
+  "noVerdictWaiting": {
+    "message": "Opcja „$1” zacznie obowiązywać po zakończeniu skanowania."
+  },
+  "noVerdictWishCancel": {
+    "message": "Nie zmieniaj"
+  },
+  "noVerdictNow_junk": {
+    "message": "Żadna usługa AI nie jest teraz dostępna, więc każda wiadomość od nieznanego nadawcy trafia do Niechcianych."
+  },
+  "noVerdictNow_screening": {
+    "message": "Żadna usługa AI nie jest teraz dostępna, więc każda wiadomość od nieznanego nadawcy trafia do folderu do sprawdzenia swojego konta."
+  },
+  "noVerdictNow_leave": {
+    "message": "Żadna usługa AI nie jest teraz dostępna, więc każda wiadomość od nieznanego nadawcy zostaje na miejscu."
+  },
+  "noVerdictNowOff_junk": {
+    "message": "Żadna usługa AI nie jest teraz dostępna, więc po włączeniu ochrony każda wiadomość od nieznanego nadawcy trafi do Niechcianych."
+  },
+  "noVerdictNowOff_screening": {
+    "message": "Żadna usługa AI nie jest teraz dostępna, więc po włączeniu ochrony każda wiadomość od nieznanego nadawcy trafi do folderu do sprawdzenia swojego konta."
   },
   "screeningTitle": {
     "message": "Foldery do sprawdzenia"

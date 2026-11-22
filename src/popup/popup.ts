@@ -496,8 +496,9 @@ async function redraw(kind: string | null): Promise<void> {
 
 /**
  * The protection switch. While protection waits for the scan, the popup says so and offers to call it off.
- * Switching on while a scan runs and an AI service is on waits for that scan, as the settings page does by
- * default: mail from people the scan has not learned yet is not sent to the AI.
+ * Switching on while a scan runs and something acts on unknown senders (an AI service is on, or mail without a
+ * verdict is moved) waits for that scan, as the settings page does by default: mail from people the scan has not
+ * learned yet is neither sent to the AI nor moved.
  */
 function switchBox(settings: Settings, status: Status, hasAi: boolean): HTMLElement {
   if (status.wish.waiting) {
@@ -513,7 +514,8 @@ function switchBox(settings: Settings, status: Status, hasAi: boolean): HTMLElem
     cancel.setAttribute("aria-describedby", "wish-waiting");
     return h("div", { class: "switch waiting" }, h("p", { class: "description", id: "wish-waiting", text: t("wishWaiting"), attrs: { role: "status" } }), cancel);
   }
-  const afterScan = !settings.protection && status.scan?.running === true && hasAi;
+  // The same holds while mail without a verdict is moved: until the scan has ended, people it has not learned yet count as unknown senders.
+  const afterScan = !settings.protection && status.scan?.running === true && (hasAi || settings.noVerdictAction !== "leave");
   const toggle = button(t(settings.protection ? "protectionSwitchOff" : "protectionSwitchOn"), () => {
     setUnavailable(toggle, true);
     void (afterScan ? send("protectAfterScan", {}) : send("setProtection", { on: !settings.protection }))

@@ -1,19 +1,24 @@
 // Incoming mail: monitored folders, and what happens to mail without an AI verdict. The
 // screening folder of each account is the dependent part of the option that moves such
-// mail there: it stands under the menu, and only while that option is chosen.
+// mail there: it stands under the menu, and only while that option is chosen. Under the
+// menu the pane says what the choice does right now, and guards it with "scan first".
 
 import type { SettingsPatch } from "../../core/edit";
 import { folderCandidates, mayJoin, screeningFolderPaths } from "../../core/folders";
 import { folderKey } from "../../core/ports";
+import { aiHealth } from "../../core/stats";
 import type { Settings } from "../../core/types";
 import { t, tCode } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
-import { addressed, button, byId, description, errorText, guard, h, inlineStatus, notice, option, reconcile, replace, setUnavailable } from "../dom";
+import { beforeScanText, noVerdictOutcomeText, whereText } from "../../tb/stateText";
+import { addressed, bar, button, byId, description, dialog, errorText, guard, h, iconButton, inlineStatus, notice, option, reconcile, replace, setUnavailable, whileBusy } from "../dom";
 import { icon } from "../icons";
 import { chosenIn, folderRef, folderView, forgetAccounts, hasFolder, monitoredFolders, withoutFolder } from "../model";
 import type { Model } from "../model";
+import { beforeScan, nothingLearned } from "../problems";
 import type { Intent, Section, Shell } from "../section";
 import { folderEditors } from "./folderEditor";
+import { scanStatusView } from "./scanStatus";
 
 function update(patch: SettingsPatch): Promise<unknown> {
   return send("updateSettings", { patch });
@@ -33,7 +38,7 @@ export function incomingSection(shell: Shell): Section {
     {
       id: "no-verdict",
       attrs: { "aria-describedby": "no-verdict-hint" },
-      onchange: () => void guard(() => update({ noVerdictAction: noVerdict.value as Settings["noVerdictAction"] })),
+      onchange: () => void guard(chooseNoVerdict),
     },
     option("leave", t("noVerdictLeave")),
     option("junk", t("noVerdictJunk")),
@@ -54,6 +59,29 @@ export function incomingSection(shell: Shell): Section {
     noVerdictNote,
     screening,
   );
+  /** What the stored choice does right now. Shown while no AI service is available: then it decides about every message from an unknown sender. */
+  const nowLine = h("div", { class: "description", id: "no-verdict-now", hidden: true });
+  /** Said while a choice waits for the scan: which one, that it takes effect by itself, and the way to call it off. */
+  const choiceText = h("span", { id: "no-verdict-wish-text" });
+  const choiceCancel = button(
+    t("noVerdictWishCancel"),
+    () =>
+      void guard(async () => {
+        // The note goes away with the wish: the keyboard goes back to the menu it belongs to.
+        noVerdict.focus();
+        await send("clearNoVerdictWish", {});
+        await shell.refresh();
+      }),
+    "small",
+  );
+  choiceCancel.setAttribute("aria-describedby", "no-verdict-wish-text");
+  const choiceNote = h("div", { class: "option-note plain", id: "no-verdict-wish", hidden: true, attrs: { role: "status" } }, icon("clock"), choiceText, choiceCancel);
+  /** What became of a choice that waited for the scan. It stays until it is dismissed, the choice is made by hand or the pane is left. */
+  const choiceOutcome = h("div", { class: "notice", tabIndex: -1, attrs: { role: "group" } });
+  /** While the sent mail is not scanned and the choice moves mail: what happens to mail from people the user writes to, with the button that starts the scan. */
+  const unscanned = h("div", { class: "notice", attrs: { role: "status" } });
+  /** The scan as it runs, under the warning that offers it. */
+  const scanStatus = scanStatusView();
   /** Said in place of the lists while Thunderbird has no mail account. */
   const noAccounts = description(t("noAccounts"));
   /** The accounts whose folder is being created right now. */
@@ -182,13 +210,150 @@ export function incomingSection(shell: Shell): Section {
     );
   }
 
+  /**
+   * The menu was changed. Leaving mail where it is saves at once, like every menu. A choice that starts moving mail
+   * without a verdict while protection is on and the sent mail was not scanned asks first: until the scan, mail from
+   * people the user already writes to would be moved. "Scan first" keeps the choice with the background: the stored
+   * setting stays what it was and changes by itself when the scan has finished. While protection is off nothing is
+   * asked here: it is asked when protection is switched on. While mail is moved already (the user said "choose
+   * anyway"), the other folder is chosen without a second question.
+   */
+  async function chooseNoVerdict(): Promise<void> {
+    const chosen = noVerdict.value as Settings["noVerdictAction"];
+    const current = model;
+    const settings = current?.settings;
+    if (current === null || settings === null || settings === undefined) {
+      return;
+    }
+    if (chosen === "leave" || !settings.protection || settings.noVerdictAction !== "leave") {
+      await update({ noVerdictAction: chosen });
+      return;
+    }
+    // Asked of the background at this moment: a scan can have started or ended since the page last heard of it.
+    const status = await send("getStatus", {}).catch(() => current.status);
+    const scanning = status.scan?.running === true;
+    if (!scanning && !nothingLearned({ ...current, status })) {
+      await update({ noVerdictAction: chosen });
+      return;
+    }
+    // Nothing changes before the answer, and the menu says so while the question is open.
+    noVerdict.value = settings.noVerdictAction;
+    const where = whereText(chosen);
+    const choice = await dialog(
+      scanning
+        ? { title: t("scanWaitTitle"), body: [t("noVerdictScanWaitText", where)], confirmLabel: t("scanWait"), extraLabel: t("noVerdictAnyway"), focus: "confirm" }
+        : { title: t("scanFirstTitle"), body: [t("scanFirstMoved", where), t("noVerdictScanFirstText")], confirmLabel: t("scanFirst"), extraLabel: t("noVerdictAnyway"), focus: "confirm" },
+    );
+    if (choice === "confirm") {
+      // The menu keeps showing the stored value, and the note under it says which choice waits.
+      await send("noVerdictAfterScan", { action: chosen });
+      shell.startPolling();
+      await shell.refresh();
+    } else if (choice === "extra") {
+      noVerdict.value = chosen;
+      await update({ noVerdictAction: chosen });
+    }
+  }
+
+  /** The label of an option of the menu, for the sentence that names it. */
+  function optionLabel(action: Settings["noVerdictAction"]): string {
+    return t(action === "junk" ? "noVerdictJunk" : action === "screening" ? "noVerdictScreening" : "noVerdictLeave");
+  }
+
+  /** Everything under the menu that follows from the state: what the choice does now, a choice that waits, what became of it, and the warning before the scan. */
+  function drawChoice(current: Model): void {
+    const settings = current.settings;
+    if (settings === null) {
+      return;
+    }
+    const action = settings.noVerdictAction;
+    const wish = current.status.wish;
+    // While a service is available the choice is only the fallback, and the sentence above the menu says when it applies.
+    const now =
+      aiHealth(current.accessPoints, Date.now()).working > 0
+        ? ""
+        : settings.protection || action === "leave"
+          ? tCode("noVerdictNow", action)
+          : tCode("noVerdictNowOff", action);
+    if (nowLine.textContent !== now) {
+      nowLine.textContent = now;
+    }
+    nowLine.hidden = now === "";
+    // A hidden line would still be read as part of the description, so it is named only while it shows.
+    noVerdict.setAttribute("aria-describedby", now === "" ? "no-verdict-hint" : "no-verdict-hint no-verdict-now");
+
+    const waiting = wish.noVerdict === null ? "" : t("noVerdictWaiting", optionLabel(wish.noVerdict));
+    if (choiceText.textContent !== waiting) {
+      choiceText.textContent = waiting;
+    }
+    if (waiting === "" && choiceNote.contains(document.activeElement)) {
+      // The note goes away with the wish (the scan has ended): the keyboard goes back to the menu.
+      noVerdict.focus();
+    }
+    choiceNote.hidden = waiting === "";
+
+    const outcome = wish.noVerdictOutcome;
+    const outcomeSignature = outcome === null ? "" : JSON.stringify(outcome);
+    if (choiceOutcome.dataset.signature !== outcomeSignature) {
+      choiceOutcome.dataset.signature = outcomeSignature;
+      if (outcome === null) {
+        choiceOutcome.removeAttribute("aria-label");
+        replace(choiceOutcome);
+      } else {
+        const text = noVerdictOutcomeText(outcome, outcome.action);
+        const box = bar(outcome.kind === "on" ? "success" : "warning", [text], [
+          iconButton("close", t("dismiss"), () =>
+            void guard(async () => {
+              // The bar goes away: the keyboard goes back to the menu it was about.
+              noVerdict.focus();
+              await send("clearNoVerdictWish", {});
+              await shell.refresh();
+            }),
+          ),
+        ]);
+        box.setAttribute("role", "status");
+        choiceOutcome.setAttribute("aria-label", text);
+        replace(choiceOutcome, box);
+      }
+    }
+
+    // The warning of the Overview stands here too while the choice moves mail: one cause, the same sentence.
+    const effects = beforeScan(current);
+    const scanning = current.status.scan?.running === true;
+    const warning = effects === null || effects.moved === null ? "" : beforeScanText(effects, settings.protection);
+    const warningSignature = warning === "" ? "" : JSON.stringify([warning, scanning]);
+    scanStatus.update(current);
+    if (unscanned.dataset.signature !== warningSignature) {
+      const held = unscanned.contains(document.activeElement);
+      unscanned.dataset.signature = warningSignature;
+      const scanButton: HTMLButtonElement = button(t("scanStart"), () =>
+        void whileBusy(scanButton, () =>
+          guard(async () => {
+            await send("startScan", { from: null, to: null });
+            shell.startPolling();
+            await shell.refresh();
+          }),
+        ),
+      );
+      if (scanning) {
+        // The scan is running: its progress stands under the warning, and the button has nothing to start.
+        setUnavailable(scanButton, true, t("errorScanRunning"));
+      }
+      replace(unscanned, warning === "" ? null : bar("warning", [warning], [scanButton]), warning === "" ? null : scanStatus.element);
+      if (held && !unscanned.contains(document.activeElement)) {
+        // The warning went away with the scan, or its button was drawn anew: the keyboard stays here, or goes back to the menu.
+        (unscanned.querySelector<HTMLElement>("button") ?? noVerdict).focus();
+      }
+    }
+  }
+
   function drawNoVerdictNote(current: Model): void {
     const settings = current.settings;
     if (settings === null) {
       return;
     }
     const without = current.accounts.filter((account) => !settings.screeningFolders.some((folder) => folder.accountId === account.id)).map((account) => account.name);
-    const show = settings.noVerdictAction === "screening" && without.length > 0;
+    const show = (settings.noVerdictAction === "screening" || current.status.wish.noVerdict === "screening") && without.length > 0;
     const signature = show ? without.join("\n") : "";
     if (noVerdictNote.dataset.signature !== signature) {
       noVerdictNote.dataset.signature = signature;
@@ -196,6 +361,10 @@ export function incomingSection(shell: Shell): Section {
     }
     noVerdictNote.hidden = !show;
   }
+
+  // What follows from the choice stands directly under its menu, before the part that depends on one option:
+  // what it does right now, a choice that waits for the scan, what became of it, and the warning before the scan.
+  noVerdict.parentElement?.after(nowLine, choiceNote, choiceOutcome, unscanned);
 
   return {
     render(next: Model) {
@@ -205,9 +374,11 @@ export function incomingSection(shell: Shell): Section {
         return;
       }
       noVerdict.value = settings.noVerdictAction;
+      drawChoice(next);
       noAccounts.hidden = next.accounts.length > 0;
       // The folders belong to the one option that uses them. Without a mail account there is no folder to choose either.
-      const uses = settings.noVerdictAction === "screening" && next.accounts.length > 0;
+      // A choice of that option that waits for the scan shows them as well, so that the folders can be chosen meanwhile.
+      const uses = (settings.noVerdictAction === "screening" || next.status.wish.noVerdict === "screening") && next.accounts.length > 0;
       if (!uses && dependent.contains(document.activeElement)) {
         // The part goes away with the option: the keyboard goes back to the menu it depends on.
         noVerdict.focus();
@@ -257,6 +428,13 @@ export function incomingSection(shell: Shell): Section {
     },
     leave() {
       changed.clear();
+      // What became of a choice that waited for the scan was said here and is history once the pane is left.
+      const wish = model?.status.wish;
+      if (wish !== undefined && wish.noVerdictOutcome !== null && wish.noVerdict === null) {
+        void send("clearNoVerdictWish", {})
+          .then(() => shell.refresh())
+          .catch(() => undefined);
+      }
     },
   };
 }

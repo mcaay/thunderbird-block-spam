@@ -10,6 +10,7 @@ import { DEFAULT_PROMPT } from "../../core/settings";
 import type { AccessPoint } from "../../core/types";
 import { stringsLocale, t, tCode } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
+import { beforeScanText } from "../../tb/stateText";
 import { hostGranted, refreshGrants, remedyOf, signedIn } from "../aiState";
 import { diagnosticSentence } from "../diagnostic";
 import {
@@ -46,7 +47,7 @@ import { formatLogTime, formatScore } from "../format";
 import { icon } from "../icons";
 import { LOOPBACK_ORIGIN, requestAccess } from "../permissions";
 import type { Model } from "../model";
-import { nothingLearned } from "../problems";
+import { effectsOf, nothingLearned } from "../problems";
 import type { Intent, Section, Shell } from "../section";
 import { scanStatusView } from "./scanStatus";
 
@@ -1379,9 +1380,12 @@ export function aiSection(shell: Shell): Section {
     // of the Overview stands here too, with the button that starts the scan.
     const kind = !inUse ? "" : !settings.protection ? (waiting ? "waiting" : "off") : nothingLearned(model) ? (scanning ? "scanning" : "before-scan") : "";
     scanStatus.update(model);
-    if (notProtecting.dataset.kind !== kind) {
+    // The warning names everything that happens to such mail: sent to the service, and moved when no service gives a verdict.
+    const effects = effectsOf(model);
+    const drawn = `${kind}:${effects.moved ?? ""}`;
+    if (notProtecting.dataset.kind !== drawn) {
       const held = notProtecting.contains(document.activeElement);
-      notProtecting.dataset.kind = kind;
+      notProtecting.dataset.kind = drawn;
       const scanButton: HTMLButtonElement = button(t("scanStart"), () =>
         void whileBusy(scanButton, () =>
           guard(async () => {
@@ -1401,7 +1405,7 @@ export function aiSection(shell: Shell): Section {
         kind === ""
           ? null
           : kind === "before-scan" || kind === "scanning"
-            ? bar("warning", [t("warnAiBeforeScanOn")], [scanButton])
+            ? bar("warning", [beforeScanText(effects, true)], [scanButton])
             : bar("information", [kind === "waiting" ? `${t("wishWaiting")} ${t("aiWaitingNoMail")}` : t("aiProtectionOff")], [
                 button(t("aiShowSetup"), () => shell.go("overview", { kind: "protect" })),
               ]),

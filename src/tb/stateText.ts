@@ -1,8 +1,8 @@
 // What the settings page, the popup and the toolbar button say about problems and about
 // protection that waited for a scan, in the same words everywhere.
 
-import type { Problem } from "../core/problems";
-import type { WishOutcome } from "../core/protectionWish";
+import type { Problem, UnknownSenderEffects } from "../core/problems";
+import type { MovingAction, WishOutcome } from "../core/protectionWish";
 import type { AccessPoint } from "../core/types";
 import { t, tCode } from "./i18n";
 
@@ -50,4 +50,49 @@ export function servicesOutcomeText(outcome: WishOutcome, names: readonly string
     return t(many ? "servicesAlsoNotOnMany" : "servicesAlsoNotOn", list);
   }
   return outcome.kind === "cancelled" ? t(many ? "servicesWishCancelledMany" : "servicesWishCancelled", list) : t(many ? "servicesWishErrorsMany" : "servicesWishErrors", list);
+}
+
+/** Where mail is moved, as the end of a sentence: "to the Spam folder", "to a screening folder". */
+export function whereText(moved: MovingAction): string {
+  return t(moved === "junk" ? "whereJunk" : "whereScreening");
+}
+
+/**
+ * What happens to mail from people the user already writes to while the sent mail is not scanned, by what acts on
+ * unknown senders: it is sent to the AI service, moved, or both. `on`: protection is on, so it happens now ("is");
+ * otherwise it would. Empty when nothing acts.
+ */
+export function beforeScanText(effects: UnknownSenderEffects, on: boolean): string {
+  if (effects.sent) {
+    const sent = t(on ? "warnAiBeforeScanOn" : "warnAiBeforeScan");
+    return effects.moved === null ? sent : `${sent} ${t(on ? "warnBeforeScanAlsoMovedOn" : "warnBeforeScanAlsoMoved", whereText(effects.moved))}`;
+  }
+  return effects.moved === null ? "" : t(on ? "warnBeforeScanMovedOn" : "warnBeforeScanMoved", whereText(effects.moved));
+}
+
+/** The first paragraph of "Scan your sent mail first?": what would happen to mail from existing contacts without the scan. */
+export function scanFirstReason(effects: UnknownSenderEffects): string {
+  if (effects.sent) {
+    return beforeScanText(effects, false);
+  }
+  return effects.moved === null ? "" : t("scanFirstMoved", whereText(effects.moved));
+}
+
+/** The text of "Wait for the scan to finish?" before protection is switched on, by what acts on unknown senders. */
+export function scanWaitReason(effects: UnknownSenderEffects): string {
+  if (effects.moved === null) {
+    return t("scanWaitText");
+  }
+  return t(effects.sent ? "scanWaitBothText" : "scanWaitMovedText", whereText(effects.moved));
+}
+
+/**
+ * What became of the choice to move mail without an AI verdict after the scan it waited for. `afterOther`: the
+ * sentence follows one about protection or the services, which has already said how the scan ended.
+ */
+export function noVerdictOutcomeText(outcome: WishOutcome, action: MovingAction, afterOther = false): string {
+  if (outcome.kind === "on") {
+    return t(afterOther ? "noVerdictAlsoOn" : outcome.scanned === 0 ? "noVerdictWishOnEmpty" : "noVerdictWishOn", whereText(action));
+  }
+  return t(afterOther ? "noVerdictAlsoNotOn" : outcome.kind === "cancelled" ? "noVerdictWishCancelled" : "noVerdictWishErrors");
 }

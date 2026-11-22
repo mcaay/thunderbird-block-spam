@@ -11,7 +11,7 @@ import { aiHealth, summarizeDay } from "../../core/stats";
 import type { DaySummary } from "../../core/stats";
 import { stringsLocale, t, tCode, tn } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
-import { servicesOutcomeText, wishOutcomeText } from "../../tb/stateText";
+import { beforeScanText, noVerdictOutcomeText, scanFirstReason, scanWaitReason, servicesOutcomeText, wishOutcomeText } from "../../tb/stateText";
 import { refreshGrants } from "../aiState";
 import { announce, bar, button, byId, checkRow, description, dialog, download, guard, h, iconButton, learnMore, named, notice, paneLink, reconcile, replace, setUnavailable, tNodes, whileBusy } from "../dom";
 import type { Child, Keyed } from "../dom";
@@ -20,7 +20,8 @@ import { icon } from "../icons";
 import { logReader } from "../logData";
 import { accountName, forgetAccounts } from "../model";
 import type { Model } from "../model";
-import { aiBeforeScan, learned, problemsOf, stateOf } from "../problems";
+import { actsOnUnknownSenders } from "../../core/problems";
+import { beforeScan, effectsOf, learned, problemsOf, stateOf } from "../problems";
 import type { Section, Shell } from "../section";
 import { loadShortcutKeys } from "../shortcutKeys";
 import { drawState } from "../state";
@@ -116,6 +117,8 @@ export function overviewSection(shell: Shell): Section {
   wishNote.appendChild(wishCancel);
   /** What became of AI services that waited for the scan: switched on, or why not. It stays until it is dismissed or the pane is left. */
   const servicesOutcome = h("div", { class: "notice", tabIndex: -1, attrs: { role: "group" } });
+  /** What became of the choice to move mail without an AI verdict that waited for the scan. It stays until it is dismissed or the pane is left. */
+  const choiceOutcome = h("div", { class: "notice", tabIndex: -1, attrs: { role: "group" } });
   /** When "Check again" was last pressed and found the problem still there. Null before that, and once the problem is gone. */
   let junkCheckedAt: number | null = null;
   const junkCheckedText = (): string => (junkCheckedAt === null ? "" : t("checkAgainStill", formatLogTime(junkCheckedAt, Date.now())));
@@ -163,6 +166,8 @@ export function overviewSection(shell: Shell): Section {
     byHand,
   );
   replace(root, h("h1", { text: t("catOverview"), tabIndex: -1 }), h("p", { class: "lead", text: t("overviewLead") }), fatalBox, body);
+  // The third outcome of a scan that something waited for stands directly after the second, wherever that stands.
+  servicesOutcome.after(choiceOutcome);
 
   async function startFullScan(): Promise<void> {
     await send("startScan", { from: null, to: null });
@@ -178,8 +183,9 @@ export function overviewSection(shell: Shell): Section {
   }
 
   /**
-   * Switching protection on while the AI would get mail from existing contacts asks
-   * first. The answer that scans or waits keeps the wish: protection follows the scan.
+   * Switching protection on while mail from existing contacts would be sent to an AI service or moved (the sent
+   * mail is not scanned, and a service is on or mail without a verdict is moved) asks first, and the question names
+   * what would happen. The answer that scans or waits keeps the wish: protection follows the scan.
    */
   function requestProtection(on: boolean): void {
     repaired.clear();
@@ -187,15 +193,17 @@ export function overviewSection(shell: Shell): Section {
       // Asked of the background at this moment: a scan can have started or ended since the page last heard of it.
       const status = on && model !== null ? await send("getStatus", {}).catch(() => model?.status ?? null) : null;
       const current = model !== null && status !== null ? { ...model, status } : model;
-      const scanning = on && current !== null && current.status.scan?.running === true && current.accessPoints.some((point) => point.enabled);
-      if (scanning || (on && current !== null && aiBeforeScan(current))) {
+      const effects = current === null ? null : effectsOf(current);
+      const scanning = on && current !== null && effects !== null && current.status.scan?.running === true && actsOnUnknownSenders(effects);
+      const unscanned = on && current !== null && !scanning ? beforeScan(current) : null;
+      if (effects !== null && (scanning || unscanned !== null)) {
         // Nothing is switched on before the answer, and the box says so while the question is open.
         protection.input.checked = false;
         const choice = await dialog(
           scanning
             ? // A scan is running and has not learned everyone yet, also when it has learned some: the question is whether to wait for it.
-              { title: t("scanWaitTitle"), body: [t("scanWaitText")], confirmLabel: t("scanWait"), extraLabel: t("switchOnAnyway"), focus: "confirm" }
-            : { title: t("scanFirstTitle"), body: [t("warnAiBeforeScan"), t("scanFirstText")], confirmLabel: t("scanFirst"), extraLabel: t("switchOnAnyway"), focus: "confirm" },
+              { title: t("scanWaitTitle"), body: [scanWaitReason(effects)], confirmLabel: t("scanWait"), extraLabel: t("switchOnAnyway"), focus: "confirm" }
+            : { title: t("scanFirstTitle"), body: [scanFirstReason(effects), t("scanFirstText")], confirmLabel: t("scanFirst"), extraLabel: t("switchOnAnyway"), focus: "confirm" },
         );
         if (choice === "confirm") {
           await protectAfterScan();
@@ -290,11 +298,19 @@ export function overviewSection(shell: Shell): Section {
       bars.push(warning("no-accounts", "", [t("noAccounts")], null));
     }
     for (const problem of problemsOf(current)) {
-      if (problem.kind === "ai-before-scan") {
-        // The scan is offered once, by setup step 1 right below: the warning points there.
-        // While protection is on such mail is sent, while it is off it would be.
+      if (problem.kind === "before-scan") {
+        // One cause, one warning: it says what happens to mail from people the user already writes to (sent to the AI
+        // service, moved, or both). While protection is on it happens, while it is off it would. Its button starts the scan.
         const on = current.settings.protection;
-        bars.push(warning("ai-before-scan", String(on), [t(on ? "warnAiBeforeScanOn" : "warnAiBeforeScan"), " ", t("warnAiBeforeScanFix")], null));
+        const scanning = current.status.scan?.running === true;
+        const text = beforeScanText(problem, on);
+        const scanButton: HTMLButtonElement = button(t("scanStart"), () => void whileBusy(scanButton, () => guard(startFullScan)));
+        scanButton.dataset.focus = "scan-first";
+        if (scanning) {
+          // The scan is running and has not learned anyone yet: the button has nothing to start, and step 1 below shows its progress.
+          setUnavailable(scanButton, true, t("errorScanRunning"));
+        }
+        bars.push({ key: "before-scan", signature: JSON.stringify([text, scanning]), build: () => bar("warning", [text], [scanButton]) });
       } else if (problem.kind === "no-junk") {
         const names = problem.accountIds.map((id) => accountName(current, id)).join(", ");
         // The button checks the accounts again. When the folder is still missing, the bar says that it checked and what it found.
@@ -351,7 +367,9 @@ export function overviewSection(shell: Shell): Section {
               ),
         );
       } else if (problem.kind === "ai-down") {
-        bars.push(warning("ai-down", "", [t("warnAiDown")], fix(t("openAi"), "ai", () => shell.go("ai"))));
+        // The sentence also says what then happens to such mail: where the choice of Incoming mail sends it.
+        const action = current.settings.noVerdictAction;
+        bars.push(warning("ai-down", action, [tCode("warnAiDown", action)], fix(t("openAi"), "ai", () => shell.go("ai"))));
       } else {
         const [firstAccount] = problem.accountIds;
         const names = problem.accountIds.map((id) => accountName(current, id)).join(", ");
@@ -437,6 +455,36 @@ export function overviewSection(shell: Shell): Section {
     replace(servicesOutcome, box);
   }
 
+  /** The choice to move mail without an AI verdict that waited for the scan: what became of it, with the way to the menu. */
+  function renderChoiceOutcome(current: Model): void {
+    const outcome = current.status.wish.noVerdictOutcome;
+    const signature = outcome === null ? "" : JSON.stringify(outcome);
+    if (choiceOutcome.dataset.signature === signature) {
+      return;
+    }
+    choiceOutcome.dataset.signature = signature;
+    if (outcome === null) {
+      choiceOutcome.removeAttribute("aria-label");
+      replace(choiceOutcome);
+      return;
+    }
+    const text = noVerdictOutcomeText(outcome, outcome.action);
+    const box = bar(outcome.kind === "on" ? "success" : "warning", [text], [
+      button(t("catIncoming"), () => shell.go("incoming", { kind: "no-verdict" })),
+      iconButton("close", t("dismiss"), () =>
+        void guard(async () => {
+          // The bar goes away: the keyboard goes back to the switch of the group.
+          protection.input.focus();
+          await send("clearNoVerdictWish", {});
+          await shell.refresh();
+        }),
+      ),
+    ]);
+    box.setAttribute("role", "status");
+    choiceOutcome.setAttribute("aria-label", text);
+    replace(choiceOutcome, box);
+  }
+
   function renderStatusLine(current: Model): void {
     const settings = current.settings;
     if (settings === null) {
@@ -462,7 +510,8 @@ export function overviewSection(shell: Shell): Section {
     if (health.enabled > 0) {
       parts.push(t("statusAi", health.working, health.enabled));
     } else if (current.accessPoints.length > 0 && waitingServices === 0) {
-      parts.push(t("statusAiOff"));
+      // While protection is on, the sentence also says what then happens to mail from unknown senders.
+      parts.push(on ? tCode("statusAiOffThen", settings.noVerdictAction) : t("statusAiOff"));
     }
     if (waitingServices > 0) {
       parts.push(tn("statusAiWaiting", waitingServices));
@@ -621,6 +670,7 @@ export function overviewSection(shell: Shell): Section {
     observation.input.setAttribute("aria-describedby", waiting ? "observation-hint observation-note" : "observation-hint");
     renderWish(current);
     renderServicesOutcome(current);
+    renderChoiceOutcome(current);
     reconcile(warnings, warningBars(current));
     renderStatusLine(current);
     renderSetup(current);
@@ -669,8 +719,13 @@ export function overviewSection(shell: Shell): Section {
         checked.textContent = "";
       }
       const wish = model?.status.wish;
-      if (wish !== undefined && (wish.outcome !== null || wish.servicesOutcome !== null)) {
-        void Promise.all([wish.outcome === null ? null : send("clearProtectionWish", {}), wish.servicesOutcome === null ? null : send("clearServiceWish", { id: null })])
+      if (wish !== undefined && (wish.outcome !== null || wish.servicesOutcome !== null || wish.noVerdictOutcome !== null)) {
+        void Promise.all([
+          wish.outcome === null ? null : send("clearProtectionWish", {}),
+          wish.servicesOutcome === null ? null : send("clearServiceWish", { id: null }),
+          // Only what the last choice came to: a choice that still waits is not called off by leaving the pane.
+          wish.noVerdictOutcome === null || wish.noVerdict !== null ? null : send("clearNoVerdictWish", {}),
+        ])
           .then(() => shell.refresh())
           .catch(() => undefined);
       }

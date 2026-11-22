@@ -86,6 +86,13 @@ describe("strings", () => {
     logResult: LOG_RESULTS,
     // The short names of the problems.
     cause: PROBLEM_KINDS,
+    // What happens to mail from unknown senders while no AI service gives a verdict, by the choice of Incoming mail:
+    // under its menu (while protection is off only the two choices that move say "once protection is on"), in the
+    // status line of the Overview and in its warning.
+    noVerdictNow: ["leave", "junk", "screening"],
+    noVerdictNowOff: ["junk", "screening"],
+    statusAiOffThen: ["leave", "junk", "screening"],
+    warnAiDown: ["leave", "junk", "screening"],
     // The times the log is looked through by.
     period: ["all", "today", "yesterday", "week", "month", "older"],
     // What went wrong with a request to an AI service, see core/diagnostics.

@@ -15,8 +15,11 @@ export interface AccountFacts {
 }
 
 export type Problem =
-  /** An AI service is on while the white list holds only the user's own addresses. */
-  | { kind: "ai-before-scan" }
+  /**
+   * The sent mail was not scanned (the white list holds only the user's own addresses) while something acts on
+   * unknown senders: until the scan, the people the user writes to count as such. One cause, whatever acts.
+   */
+  | ({ kind: "before-scan" } & UnknownSenderEffects)
   /** Monitored accounts without a Junk folder, so nothing can be moved there. */
   | { kind: "no-junk"; accountIds: string[] }
   /** AI services that are switched on and need the user for the same reason: a rejected key, a missing sign-in. */
@@ -26,8 +29,27 @@ export type Problem =
   /** Mail without a verdict goes to a screening folder, but these monitored accounts have none. */
   | { kind: "no-screening"; accountIds: string[] };
 
+/**
+ * What acts on mail from unknown senders, the senders on neither list.
+ * - sent: an AI service is switched on, so their mail is sent to it.
+ * - moved: where their mail goes when no service gives a verdict, also with no AI service at all. Null: it stays.
+ */
+export interface UnknownSenderEffects {
+  sent: boolean;
+  moved: "junk" | "screening" | null;
+}
+
+export function unknownSenderEffects(settings: Pick<Settings, "noVerdictAction">, accessPoints: readonly Pick<AccessPoint, "enabled">[]): UnknownSenderEffects {
+  return { sent: accessPoints.some((point) => point.enabled), moved: settings.noVerdictAction === "leave" ? null : settings.noVerdictAction };
+}
+
+/** True when something acts on unknown senders: before the sent mail is scanned, that asks "scan first". */
+export function actsOnUnknownSenders(effects: UnknownSenderEffects): boolean {
+  return effects.sent || effects.moved !== null;
+}
+
 /** The kinds of problems, as the codes of their short names. */
-export const PROBLEM_KINDS = ["ai-before-scan", "no-junk", "attention", "ai-down", "no-screening"] as const;
+export const PROBLEM_KINDS = ["before-scan", "no-junk", "attention", "ai-down", "no-screening"] as const;
 
 export interface ProblemInput {
   settings: Settings;
@@ -106,8 +128,9 @@ export function remedyFor(point: Pick<AccessPoint, "type" | "auth" | "apiKey" | 
 export function findProblems(input: ProblemInput): Problem[] {
   const { settings, accessPoints, accounts, now } = input;
   const problems: Problem[] = [];
-  if (input.onlyOwnAddresses && accessPoints.some((point) => point.enabled)) {
-    problems.push({ kind: "ai-before-scan" });
+  const effects = unknownSenderEffects(settings, accessPoints);
+  if (input.onlyOwnAddresses && actsOnUnknownSenders(effects)) {
+    problems.push({ kind: "before-scan", ...effects });
   }
   const monitored = accounts.filter(
     (account) => resolveMonitoredFolders(account.inboxes, settings).some((folder) => folder.accountId === account.id),

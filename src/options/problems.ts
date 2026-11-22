@@ -2,8 +2,8 @@
 // pane and the category list read them from here, so that they cannot disagree.
 
 import { entriesFromArray, whiteListIsOnlyIdentities } from "../core/lists";
-import { findProblems, protectionState, scanIsComplete } from "../core/problems";
-import type { Problem, ProtectionState } from "../core/problems";
+import { actsOnUnknownSenders, findProblems, protectionState, scanIsComplete, unknownSenderEffects } from "../core/problems";
+import type { Problem, ProtectionState, UnknownSenderEffects } from "../core/problems";
 import { hostGranted } from "./aiState";
 import type { Model } from "./model";
 
@@ -17,9 +17,18 @@ export function nothingLearned(model: Model): boolean {
   return !learned(model) && !scanIsComplete(model.status.scan);
 }
 
-/** With AI switched on and nothing learned, mail from existing contacts would be scored. */
-export function aiBeforeScan(model: Model): boolean {
-  return model.accessPoints.some((point) => point.enabled) && nothingLearned(model);
+/** What acts on unknown senders as the page is set up: an AI service that is switched on, and where mail without a verdict is moved. */
+export function effectsOf(model: Model): UnknownSenderEffects {
+  return model.settings === null ? { sent: false, moved: null } : unknownSenderEffects(model.settings, model.accessPoints);
+}
+
+/**
+ * With nothing learned, mail from existing contacts would be sent to an AI service, moved, or both: what would
+ * happen to it. Null when nothing would, so that there is nothing to ask "scan first" about.
+ */
+export function beforeScan(model: Model): UnknownSenderEffects | null {
+  const effects = effectsOf(model);
+  return nothingLearned(model) && actsOnUnknownSenders(effects) ? effects : null;
 }
 
 /** The problems the Overview warns about, one per cause. None while stored data is invalid. */

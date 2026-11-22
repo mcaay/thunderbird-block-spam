@@ -499,7 +499,7 @@ describe("problems on the toolbar button", () => {
 });
 
 /** The wish as the status reports it while nothing waits and nothing is left to say. */
-const NOTHING_WAITS = { waiting: false, outcome: null, services: [], servicesOutcome: null };
+const NOTHING_WAITS = { waiting: false, outcome: null, services: [], servicesOutcome: null, noVerdict: null, noVerdictOutcome: null };
 
 describe("protection that waits for the scan of the sent mail", () => {
   type Settings = ReturnType<typeof defaultSettings>;
@@ -839,6 +839,178 @@ describe("an AI service that waits for the scan of the sent mail", () => {
     expect((fake.storage[KEY_SETTINGS] as Settings).protection).toBe(true);
     expect(enabled(fake)).toBe(true);
     expect(fake.notifications).toEqual(["wishOn servicesAlsoOn(Jev)"]);
+  });
+});
+
+describe("the choice to move mail without a verdict that waits for the scan of the sent mail", () => {
+  type Settings = ReturnType<typeof defaultSettings>;
+  const settingsOf = (fake: FakeBrowser): Settings => fake.storage[KEY_SETTINGS] as Settings;
+  const sent = (id: number): tb.MessageHeader => ({ ...FakeBrowser.header(id, "Me <me@mycompany.example>", "f-sent"), recipients: [`person${id}@customer${id}.example`] });
+  const on = (): Settings => ({ ...defaultSettings(Date.now()), protection: true, protectionOnAt: 1 });
+
+  /** Protection is on, nobody was learned, no AI service, and mail without a verdict stays where it is: the state in which the choice asks "scan first". */
+  async function setup(extra: Record<string, unknown> = {}, messages = 3) {
+    const fake = new FakeBrowser({ [KEY_SETTINGS]: on(), ...extra });
+    fake.folderMessages.set(
+      "f-sent",
+      Array.from({ length: messages }, (_, index) => sent(index + 1)),
+    );
+    const background = await loadBackground(fake, fakeFetch({}).fetch);
+    await settle();
+    return { fake, background };
+  }
+
+  const status = async (background: Background) => {
+    const reply = await background.send("getStatus", {});
+    if (!reply.ok) {
+      throw new Error(reply.error);
+    }
+    return reply.result;
+  };
+
+  it("counts mail that is moved before anyone was learned as a problem on the toolbar button, with no AI service at all", async () => {
+    const { fake, background } = await setup({ [KEY_SETTINGS]: { ...on(), noVerdictAction: "junk" } });
+    expect(fake.badge).toMatchObject({ text: "!", title: "badgeProblems_one(1, cause_before_scan)" });
+    // The scan ends the problem: everyone the sent mail names is on the white list.
+    await background.send("startScan", { from: null, to: null });
+    await settle();
+    expect(fake.badge).toMatchObject({ text: "", title: "tooltip_on" });
+  });
+
+  it("keeps the stored setting until the scan has ended, then makes the choice by itself and says so", async () => {
+    const { fake, background } = await setup();
+    expect(await background.send("noVerdictAfterScan", { action: "junk" })).toEqual({ ok: true, result: null });
+    // Stored at once, so the choice survives a closed settings page and a restart. Nothing is moved meanwhile.
+    expect(fake.storage[KEY_PROTECTION_WISH]).toMatchObject({ noVerdict: { action: "junk", from: null, to: null }, noVerdictOutcome: null });
+    expect((await status(background)).wish).toMatchObject({ noVerdict: "junk", noVerdictOutcome: null });
+    expect(settingsOf(fake).noVerdictAction).toBe("leave");
+    expect(fake.badge.title).toBe("tooltip_on");
+
+    await settle();
+    const after = await status(background);
+    expect(after.scan).toMatchObject({ running: false, scanned: 3 });
+    expect(after.wish).toMatchObject({ noVerdict: null, noVerdictOutcome: { kind: "on", scanned: 3, action: "junk" } });
+    expect(settingsOf(fake).noVerdictAction).toBe("junk");
+    // The settings page is not in front: a notification says what happened. No problem is left: the contacts are learned.
+    expect(fake.notifications).toEqual(["noVerdictWishOn(whereJunk)"]);
+    expect(fake.badge).toMatchObject({ text: "", title: "tooltip_on" });
+  });
+
+  it("waits for a scan that is already running, with its dates, and says when it found no sent mail", async () => {
+    const running = await setup();
+    const from = Date.UTC(2020, 0, 1);
+    await running.background.send("startScan", { from, to: null });
+    await running.background.send("noVerdictAfterScan", { action: "screening" });
+    expect(running.fake.storage[KEY_PROTECTION_WISH]).toMatchObject({ noVerdict: { action: "screening", from, to: null } });
+    await settle();
+    expect(settingsOf(running.fake).noVerdictAction).toBe("screening");
+
+    const empty = await setup({}, 0);
+    await empty.background.send("noVerdictAfterScan", { action: "screening" });
+    await settle();
+    expect(settingsOf(empty.fake).noVerdictAction).toBe("screening");
+    expect(empty.fake.notifications).toEqual(["noVerdictWishOnEmpty(whereScreening)"]);
+  });
+
+  it("drops the choice when the scan is cancelled or fails: the setting stays what it was and the reason is kept for the page", async () => {
+    const cancelled = await setup();
+    await cancelled.background.send("noVerdictAfterScan", { action: "junk" });
+    await cancelled.background.send("cancelScan", {});
+    await settle();
+    expect(settingsOf(cancelled.fake).noVerdictAction).toBe("leave");
+    expect((await status(cancelled.background)).wish).toMatchObject({ noVerdict: null, noVerdictOutcome: { kind: "cancelled", action: "junk" } });
+    // Cancel was pressed on the page, which says what follows: no notification.
+    expect(cancelled.fake.notifications).toEqual([]);
+
+    const failed = await setup();
+    (failed.fake.api.messages as unknown as { list: () => Promise<never> }).list = async () => {
+      throw new Error("the server went away");
+    };
+    await failed.background.send("noVerdictAfterScan", { action: "junk" });
+    await settle();
+    expect(settingsOf(failed.fake).noVerdictAction).toBe("leave");
+    expect((await status(failed.background)).wish.noVerdictOutcome).toMatchObject({ kind: "errors", action: "junk" });
+    expect(failed.fake.notifications).toEqual(["noVerdictWishErrors"]);
+    // The next scan makes what the last choice came to history.
+    await failed.background.send("startScan", { from: null, to: null });
+    expect((await status(failed.background)).wish.noVerdictOutcome).toBeNull();
+  });
+
+  it("lets the user call the choice off, and settles it when the menu is changed by hand", async () => {
+    const called = await setup();
+    await called.background.send("noVerdictAfterScan", { action: "junk" });
+    await called.background.send("clearNoVerdictWish", {});
+    await settle();
+    expect(settingsOf(called.fake).noVerdictAction).toBe("leave");
+    expect(called.fake.storage[KEY_PROTECTION_WISH]).toBeUndefined();
+    expect((await status(called.background)).wish).toEqual(NOTHING_WAITS);
+
+    // "Choose anyway", or another choice, while the first one waits: the menu's value is stored now, and the scan that ends later changes nothing.
+    const byHand = await setup();
+    await byHand.background.send("noVerdictAfterScan", { action: "junk" });
+    await byHand.background.send("updateSettings", { patch: { noVerdictAction: "screening" } });
+    expect((await status(byHand.background)).wish.noVerdict).toBeNull();
+    await settle();
+    expect(settingsOf(byHand.fake).noVerdictAction).toBe("screening");
+    expect((await status(byHand.background)).wish).toEqual(NOTHING_WAITS);
+    expect(byHand.fake.notifications).toEqual([]);
+
+    // Another setting that is changed meanwhile leaves the choice waiting.
+    const other = await setup();
+    await other.background.send("noVerdictAfterScan", { action: "junk" });
+    await other.background.send("updateSettings", { patch: { observation: true } });
+    expect((await status(other.background)).wish.noVerdict).toBe("junk");
+    await settle();
+    expect(settingsOf(other.fake).noVerdictAction).toBe("junk");
+  });
+
+  it("keeps the choice across a restart of Thunderbird: the scan starts again and the choice follows it", async () => {
+    const { fake, background } = await setup({ [KEY_PROTECTION_WISH]: { noVerdict: { since: 5, from: null, to: null, action: "junk" } } });
+    const after = await status(background);
+    expect(after.scan).toMatchObject({ running: false, scanned: 3 });
+    expect(after.wish).toMatchObject({ noVerdict: null, noVerdictOutcome: { kind: "on", action: "junk" } });
+    expect(settingsOf(fake).noVerdictAction).toBe("junk");
+
+    // A stored choice that was made some other way since has nothing left to wait for, and one that is not a choice is ignored.
+    const made = await setup({ [KEY_SETTINGS]: { ...on(), noVerdictAction: "junk" }, [KEY_PROTECTION_WISH]: { noVerdict: { since: 5, from: null, to: null, action: "junk" } } });
+    expect((await status(made.background)).scan).toBeNull();
+    expect(made.fake.storage[KEY_PROTECTION_WISH]).toBeUndefined();
+    const broken = await setup({ [KEY_PROTECTION_WISH]: { noVerdict: { since: 5, from: null, to: null, action: "leave" } } });
+    expect((await status(broken.background)).wish).toEqual(NOTHING_WAITS);
+    expect((await status(broken.background)).scan).toBeNull();
+  });
+
+  it("makes the choice at once when nothing is left to wait for, and refuses a choice that moves nothing", async () => {
+    const learned = { list: "white", kind: "domain", value: "customer.example", scope: "all", source: "sent", addedAt: 5 };
+    const { fake, background } = await setup({ [KEY_ENTRIES]: [learned] });
+    await background.send("noVerdictAfterScan", { action: "junk" });
+    expect(settingsOf(fake).noVerdictAction).toBe("junk");
+    expect((await status(background)).scan).toBeNull();
+    expect(fake.storage[KEY_PROTECTION_WISH]).toBeUndefined();
+    expect((await background.send("noVerdictAfterScan", { action: "leave" as "junk" })).ok).toBe(false);
+  });
+
+  it("says in one notification what became of protection, of the service and of the choice when all three waited", async () => {
+    const jev = accessPoint({ id: "jev", name: "Jev", enabled: false });
+    const { fake, background } = await setup({ [KEY_SETTINGS]: defaultSettings(Date.now()), [KEY_ACCESS_POINTS]: [jev] });
+    await background.send("startScan", { from: null, to: null });
+    await background.send("enableAfterScan", { id: "jev" });
+    await background.send("noVerdictAfterScan", { action: "junk" });
+    await background.send("protectAfterScan", {});
+    await settle();
+    expect(settingsOf(fake)).toMatchObject({ protection: true, noVerdictAction: "junk" });
+    expect(fake.notifications).toEqual(["wishOn servicesAlsoOn(Jev) noVerdictAlsoOn(whereJunk)"]);
+
+    // Protection and the choice without a service: the scan is announced once.
+    const two = await setup({ [KEY_SETTINGS]: defaultSettings(Date.now()) });
+    (two.fake.api.messages as unknown as { list: () => Promise<never> }).list = async () => {
+      throw new Error("the server went away");
+    };
+    await two.background.send("noVerdictAfterScan", { action: "junk" });
+    await two.background.send("protectAfterScan", {});
+    await settle();
+    expect(settingsOf(two.fake)).toMatchObject({ protection: false, noVerdictAction: "leave" });
+    expect(two.fake.notifications).toEqual(["wishErrors noVerdictAlsoNotOn"]);
   });
 });
 

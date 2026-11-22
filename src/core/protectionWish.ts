@@ -1,6 +1,6 @@
-// What waits for a scan of the sent mail: "switch protection on", and AI services that
-// are to be switched on. Whichever comes second, protection or the first AI service, asks
-// "scan first", and the thing that waits is switched on when the scan has finished
+// What waits for a scan of the sent mail: "switch protection on", AI services that are
+// to be switched on, and the choice to move mail without an AI verdict. Whichever comes
+// last asks "scan first", and the thing that waits takes effect when the scan has finished
 // without an error. The wish is kept in storage, so it survives a closed settings page
 // and a restart of Thunderbird. When the scan was cancelled or could not read a folder,
 // the wish is dropped and the page says why.
@@ -14,6 +14,14 @@ export interface WishOutcome {
   at: number;
   /** How many messages the scan read. */
   scanned: number;
+}
+
+/** Where mail without an AI verdict is moved by a choice that waits. */
+export type MovingAction = "junk" | "screening";
+
+/** What became of the choice for mail without a verdict that waited: the outcome, and the choice it was about. */
+export interface NoVerdictOutcome extends WishOutcome {
+  action: MovingAction;
 }
 
 /** What became of AI services that waited: the outcome, and the services it was about. */
@@ -36,13 +44,24 @@ export interface ProtectionWish {
   services: (ScanRange & { ids: string[] }) | null;
   /** What became of the services that waited. Kept until the user has seen it, switches one of them or starts the next scan. */
   servicesOutcome: ServicesOutcome | null;
+  /** Set while the choice to move mail without an AI verdict waits for a scan: which choice, since when, and the dates of the scan. */
+  noVerdict: (ScanRange & { action: MovingAction }) | null;
+  /** What became of the choice that waited. Kept until the user has seen it, makes the choice by hand or starts the next scan. */
+  noVerdictOutcome: NoVerdictOutcome | null;
 }
 
-export const NO_WISH: ProtectionWish = { waiting: null, outcome: null, services: null, servicesOutcome: null };
+export const NO_WISH: ProtectionWish = { waiting: null, outcome: null, services: null, servicesOutcome: null, noVerdict: null, noVerdictOutcome: null };
 
 /** True when nothing waits and nothing is left to say: the wish need not be stored. */
 export function isNoWish(wish: ProtectionWish): boolean {
-  return wish.waiting === null && wish.outcome === null && wish.services === null && wish.servicesOutcome === null;
+  return (
+    wish.waiting === null &&
+    wish.outcome === null &&
+    wish.services === null &&
+    wish.servicesOutcome === null &&
+    wish.noVerdict === null &&
+    wish.noVerdictOutcome === null
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -75,6 +94,10 @@ function readIds(value: unknown): string[] | null {
   return ids.length === 0 ? null : [...new Set(ids)];
 }
 
+function readAction(value: unknown): MovingAction | null {
+  return isRecord(value) && (value.action === "junk" || value.action === "screening") ? value.action : null;
+}
+
 /** The wish as stored. Anything that is not one counts as no wish: nothing is switched on because of data that cannot be read. */
 export function readWish(raw: unknown): ProtectionWish {
   if (!isRecord(raw)) {
@@ -84,11 +107,17 @@ export function readWish(raw: unknown): ProtectionWish {
   const servicesIds = readIds(raw.services);
   const servicesOutcome = readOutcome(raw.servicesOutcome);
   const outcomeIds = readIds(raw.servicesOutcome);
+  const noVerdictRange = readRange(raw.noVerdict);
+  const noVerdictAction = readAction(raw.noVerdict);
+  const noVerdictOutcome = readOutcome(raw.noVerdictOutcome);
+  const outcomeAction = readAction(raw.noVerdictOutcome);
   return {
     waiting: readRange(raw.waiting),
     outcome: readOutcome(raw.outcome),
     services: servicesRange !== null && servicesIds !== null ? { ...servicesRange, ids: servicesIds } : null,
     servicesOutcome: servicesOutcome !== null && outcomeIds !== null ? { ...servicesOutcome, ids: outcomeIds } : null,
+    noVerdict: noVerdictRange !== null && noVerdictAction !== null ? { ...noVerdictRange, action: noVerdictAction } : null,
+    noVerdictOutcome: noVerdictOutcome !== null && outcomeAction !== null ? { ...noVerdictOutcome, action: outcomeAction } : null,
   };
 }
 
