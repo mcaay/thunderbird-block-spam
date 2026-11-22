@@ -152,8 +152,8 @@ export function overviewSection(shell: Shell): Section {
   function requestProtection(on: boolean): void {
     repaired.clear();
     void guard(async () => {
-      if (on && model !== null && aiBeforeScan(model) && model.status.scan?.running === true) {
-        // The scan that prevents it is running already: the question is whether to wait for it.
+      if (on && model !== null && model.status.scan?.running === true && model.accessPoints.some((point) => point.enabled)) {
+        // A scan is running and has not learned everyone yet, also when it has learned some: the question is whether to wait for it.
         protection.input.checked = false;
         const choice = await dialog({
           title: t("scanWaitTitle"),
@@ -415,7 +415,14 @@ export function overviewSection(shell: Shell): Section {
     const steps = h(
       "ol",
       { class: "steps" },
-      step(scan === "done" ? "done" : scan === "running" ? "running" : "todo", t("step1Title"), t("step1Text"), scanStatus.element, scanButton),
+      step(
+        scan === "done" ? "done" : scan === "running" ? "running" : "todo",
+        t("step1Title"),
+        t("step1Text"),
+        // Without a mail account the step says in words why its button is unavailable.
+        noAccounts && scan !== "running" ? h("div", {}, h("p", { text: t("noAccounts") }), scanStatus.element) : scanStatus.element,
+        scanButton,
+      ),
       step(
         hasAi ? "done" : "todo",
         t("step2Title"),
