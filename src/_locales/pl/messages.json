@@ -2301,7 +2301,7 @@
     "message": "Przetestuj AI na zaznaczonych…"
   },
   "popupScoreSelectedTitle": {
-    "message": "Przetestuj AI na zaznaczonych wiadomościach: oceny trafią do dziennika i nic nie zostanie przeniesione."
+    "message": "Wysyła zaznaczone wiadomości do usług AI i zapisuje oceny w dzienniku. Nic nie zostaje przeniesione."
   },
   "popupScoreConfirm": {
     "message": "Zaznaczone wiadomości: $1. Ich treść zostanie wysłana do usług AI, także w przypadku nadawców z list. Nic nie zostanie przeniesione i żaden wpis nie powstanie. Oceny pojawią się w dzienniku."

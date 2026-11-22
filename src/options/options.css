@@ -1369,8 +1369,9 @@ dialog.modal p {
     padding: 16px 16px 40px;
   }
 
+  /* The name of the account stands above its menu. The menu keeps its width, with and without a button after it. */
   .screening {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 220px) auto minmax(0, 1fr);
   }
 
   .screening-row > label,

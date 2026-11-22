@@ -2301,7 +2301,7 @@
     "message": "Test AI on selected messages…"
   },
   "popupScoreSelectedTitle": {
-    "message": "Test AI on the selected messages: the scores go to the log and nothing is moved."
+    "message": "Sends the selected messages to your AI services and writes the scores to the log. Nothing is moved."
   },
   "popupScoreConfirm": {
     "message": "Selected messages: $1. Their content will be sent to your AI services, also for senders on your lists. Nothing is moved and no entry is created. The scores appear in the log."

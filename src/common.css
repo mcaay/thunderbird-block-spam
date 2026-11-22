@@ -667,6 +667,12 @@ details[open] > summary::before {
   outline-color: var(--focus-selected);
 }
 
+/* A link on the fill of a bar takes Thunderbird's color for a link under the pointer, which keeps 4.5 to 1 on every fill. */
+.bar a,
+.bar button.link {
+  color: var(--link-hover);
+}
+
 /* Feedback. */
 
 .field-error {
