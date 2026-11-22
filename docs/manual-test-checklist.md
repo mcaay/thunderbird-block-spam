@@ -195,7 +195,8 @@ Lists:
 
 - [ ] Add an address and a domain without choosing a kind. A wrong value ("not an address") is refused with the reason under the field, and the field keeps the focus.
 - [ ] Search and filter the entries, with scope "All accounts" and with one account.
-- [ ] Remove an entry: a confirmation with "Undo (Ctrl+Z)" (Cmd+Z on macOS) appears above the table and stays until the next action. Undo puts the entry back with its source and date, and the shortcut does the same. With the keyboard, the focus moves to the remove button of the next row.
+- [ ] Remove an entry: its row stays in its place as a quiet row that says "Removed ...", with "Undo (Ctrl+Z)" (Cmd+Z on macOS) where the remove button was and the close button after it. Nothing moves under the pointer. Undo puts the entry back in its place with its source and date, and the shortcut does the same. With the keyboard, the focus is on Undo, and the arrow keys still walk the table.
+- [ ] Remove several entries one after the other with the mouse: every removed row keeps its place, only the newest one offers Undo, and the pointer never lands on a row that was not aimed at. The rows below move up when a quiet row is closed, with the next other action in the table (a filter, a search, a sort, an added entry, "Show N more"), or when the pane is left.
 - [ ] A click on a column header sorts the table by that column (all entries, not only the rows shown), a second click reverses the order, and the header shows an arrow. "Source:" narrows the table to what the AI, the scan, sent mail or you added.
 - [ ] "Add" is unavailable while the field is empty.
 - [ ] The line under the filter reads "Showing 200 of 4,001." without a filter, and "Matching: 12 of 4,001." with a filter or a search.
@@ -205,7 +206,8 @@ Log:
 
 - [ ] Entries appear by themselves, the filters (by decision, by time, and with several accounts by account) and the search by sender or subject work and say how many entries match ("Matching: 2 of 13."), "Clear log…" stands at the end of the line that counts the entries and asks first. An empty log shows neither the line nor the button.
 - [ ] An entry from another day shows its date above the time, an entry from another year the date with the year. Nothing paints over the sender, also with a 12-hour clock.
-- [ ] In a window narrower than 900 pixels the rows are stacked and every row starts its outcome at the same place, whatever the account is called.
+- [ ] The table has no Score column: the score ends the first line of the decision, in one column from row to row, and the header says "Decision" at its start and "Score" at its end. After an action in a row, its result (the sentence that Undo belongs to, or "The message was not found.") is one line under the cells of the row, from the start of "Sender and subject" to the end of the row.
+- [ ] In a window narrower than 900 pixels the rows are stacked in the order of the wide table: the time, then sender, subject and account, then, after a small gap and at the same edge, the decision with what was done and its reasons. The action stays at the end of the first line.
 - [ ] The line above the filter names the two shortcuts: one trusts the sender of the selected message, the other blocks it.
 - [ ] "Trust domain" (or "Trust address" for a sender at a public provider) on a Spam or Blocked row puts the sender on the white list, moves the message from the Spam folder back to the Inbox and says so in the row. Undo appears where the button was and takes both back.
 - [ ] "Block domain" on a Passed row blocks the domain ("Block address" at a public provider) and moves the message to the Spam folder. On a Trusted row the button reads "Block address".
@@ -223,14 +225,14 @@ Learning and Incoming mail:
 - [ ] "Mail without an AI verdict" set to the screening folder while an account has none: a line above the folders names the account.
 - [ ] With an AI service switched on and protection off, the AI pane says under the services that no new mail is sent to an AI service yet, and "Show setup" leads to the step that is left. With no AI service switched on, the cutoff and the prompt each say that they are not used yet.
 - [ ] Without any mail account in Thunderbird, both panes say so in one line and "Scan sent mail" is unavailable.
-- [ ] Remove a folder: a confirmation with Undo appears in the group, and Undo puts the folder back.
+- [ ] Remove a folder: its row stays in its place as a quiet row with Undo and the close button, and the lists of the accounts below do not move. Undo puts the folder back in its place.
 - [ ] The date fields of the scan: the line under them says that both are optional and what an empty field means.
 
 Advanced:
 
 - [ ] With two or more mail accounts "Sharing between accounts" (shared or per account) is the first group, and the lead sentence of the pane names it. Its hint says that an entry added with the form under Lists uses its own "Applies to", and "Lists" in it opens the Lists pane. "Learn more" of the Lists pane says where sharing is set, with a link to Advanced.
 - [ ] Public mail providers: check a domain, treat a company domain as public and back.
-- [ ] Forwarding mailboxes and labels: add and remove a mailbox (removing offers Undo), change the labels and save. Save is filled only while the labels are changed.
+- [ ] Forwarding mailboxes and labels: add and remove a mailbox (the removed row stays in its place with Undo, and Undo puts it back where it was), change the labels and save. Save is filled only while the labels are changed.
 
 AI:
 
@@ -272,12 +274,12 @@ Block and trust:
 - [ ] After a click the result stands at the top with Undo and Dismiss. Undo takes the command back and the popup says so.
 - [ ] The panel and the popup inside it have the same background and text color, in the light and in the dark theme: no seam, no lighter rectangle inside the rounded panel.
 - [ ] With several messages selected: their number, and the same buttons for all of them.
-- [ ] The last ten decisions. Tests and observed decisions say so and have a hollow dot. A click on a row opens the Log pane with that entry in view, marked and focused.
+- [ ] The six newest decisions, each in two lines: the address and the time, and under them the outcome with its score and marks. Nothing is cut but an address that is longer than the panel, every row has the same height, and "Open the log" leads to the rest. Tests and observed decisions say so and have a hollow dot. A click on a row opens the Log pane with that entry in view, marked and focused.
 - [ ] With a problem (for example a rejected key) the state reads "On, 1 problem" and a line that names the problems ("Needs your attention: AI service not used: OpenAI."), with "Show in settings", opens the Overview.
 - [ ] Without a mail account the popup says "No mail account" and that one has to be added first, and does not point at setup.
 - [ ] While protection waits for a scan the state reads "Switches on after the scan", and the footer says so and offers "Don’t switch on".
 - [ ] "Switch protection off" and "Switch protection on".
-- [ ] "Test AI on selected messages…" asks for confirmation, writes test entries to the log, moves nothing and creates no entry.
+- [ ] "Test AI on selected messages…" asks for confirmation, writes test entries to the log, moves nothing and creates no entry. While it asks and while it scores, the answers stand on a line of their own and the switch of protection is not shown.
 - [ ] The confirmation names the number of selected messages. With no message selected, or with more than 50, the button is unavailable and its tooltip says why.
 - [ ] After a shortcut, the popup shows the command with its time, and with its date too when the command is not from today.
 - [ ] With the keyboard: after "Trust address", Undo, Cancel or the protection switch, the focus is on a control of the popup, never lost.

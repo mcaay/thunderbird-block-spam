@@ -1564,6 +1564,7 @@ dialog.modal p {
 
   table.log td.col-action {
     grid-area: action;
+    padding: 0;
   }
 
   table.log tr.empty-row {

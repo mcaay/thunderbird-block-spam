@@ -387,7 +387,8 @@ export function listsSection(): Section {
       }
       const white = next.entries.filter((entry) => entry.list === "white").length;
       const black = next.entries.length - white;
-      counts.textContent = `${tn("listsWhiteCount", white)} ${tn("listsBlackCount", black)}`;
+      // Two short sentences: where the line has to break, it breaks between them.
+      replace(counts, h("span", { class: "sentence", text: tn("listsWhiteCount", white) }), " ", h("span", { class: "sentence", text: tn("listsBlackCount", black) }));
       // With fewer than two mail accounts nothing here could make a difference: the menu of the form, the column and
       // the sentence about sharing are not shown. Entries then apply as they would have: to all accounts, or to the one account.
       const several = next.accounts.length > 1;
