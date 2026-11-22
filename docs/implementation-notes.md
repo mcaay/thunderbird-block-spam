@@ -372,6 +372,8 @@ Two reviewers, 29 findings, fixed in three packages at the same time. One paragr
 - **English:** "Thunderbird is not allowed to connect to this service yet" ("may not" can be read as "might not"). **Polish:** the Undo line of a log row says "wpis" before the entry, like the lines around it.
 - **Kept:** the Polish labels "Do Odebranych" and "Do Niechcianych" of the log actions. "Przenieś do Niechcianych" needs 147px of text; with the padding of the button and the cell the action column would have to grow from 128px to about 173px, all of it taken from "Sender and subject".
 - **Removed:** `statusSlot` in `options/dom.ts` and the CSS of the draft line, which nothing uses any more.
+- **Found by the audits on the merged build:** a link on a message bar (the import report names two panes as links) had 4.37 to 1 on the light success fill, and Thunderbird's hover color for links 4.48 on the dark one, so a link on a bar has the color of the bar's text and keeps its underline. The tooltip of the popup's test button repeated its name in Polish, so it is a statement of its own in both languages. In the narrow layout the screening menus took the width the "Create the folder" button left, so they have their 220px there too. The column of account names before the screening menus follows its content (up to 280px) on purpose; `design.md` and the audit say so.
+- **The popup shows a test in which a message got no score as a caution,** in the warning form of the result box, not as a success.
 
 ## Known limits
 
