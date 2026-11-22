@@ -568,7 +568,7 @@ details[open] > summary::before {
 
 /* The icon, the first line of the text and the label of the button share one center line. */
 .bar > .icon {
-  margin-top: 4.5px;
+  margin-top: 3.5px;
   color: var(--icon-information);
 }
 
