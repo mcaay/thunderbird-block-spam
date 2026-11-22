@@ -203,17 +203,35 @@
   "protectionSwitchOff": {
     "message": "Wyłącz ochronę"
   },
-  "stateOn": {
+  "state_on": {
     "message": "Włączona"
   },
-  "stateOff": {
+  "state_off": {
     "message": "Wyłączona"
   },
-  "stateObserving": {
+  "state_observing": {
     "message": "Włączona, tylko obserwacja"
   },
-  "stateProblems": {
-    "message": "Włączona, wymaga uwagi"
+  "state_waiting": {
+    "message": "Włączy się po skanowaniu"
+  },
+  "state_no_account": {
+    "message": "Brak konta pocztowego"
+  },
+  "state_invalid": {
+    "message": "Problem z danymi"
+  },
+  "stateProblems_one": {
+    "message": "Włączona, $1 problem"
+  },
+  "stateProblems_few": {
+    "message": "Włączona, $1 problemy"
+  },
+  "stateProblems_many": {
+    "message": "Włączona, $1 problemów"
+  },
+  "stateLinkLabel": {
+    "message": "$1: stan ochrony. Otwiera Przegląd."
   },
   "statusLastCheck": {
     "message": "Ostatnie sprawdzenie: $1."
@@ -269,11 +287,20 @@
   "warnNoJunk": {
     "message": "Konto $1 nie ma folderu Niechciane, więc spam na tym koncie zostaje na miejscu. Włącz obsługę niechcianej poczty dla tego konta w programie Thunderbird albo utwórz folder Niechciane."
   },
+  "warnNoJunkMany": {
+    "message": "Brak folderu Niechciane: $1. Spam na tych kontach zostaje na miejscu. Włącz dla nich obsługę niechcianej poczty w programie Thunderbird albo utwórz folder Niechciane."
+  },
   "warnNeedsAttention": {
     "message": "Usługa AI $1 nie jest używana."
   },
+  "warnNeedsAttentionMany": {
+    "message": "Te usługi AI nie są używane: $1."
+  },
   "warnNoScreening": {
     "message": "Poczta bez oceny AI ma trafiać do folderu do sprawdzenia, ale konto $1 go nie ma, więc jego poczta zostaje na miejscu."
+  },
+  "warnNoScreeningMany": {
+    "message": "Poczta bez oceny AI ma trafiać do folderu do sprawdzenia, ale te konta go nie mają: $1. Ich poczta zostaje na miejscu."
   },
   "warnAiDown": {
     "message": "Żadna usługa AI w tej chwili nie działa, więc poczta od nieznanych nadawców nie otrzymuje oceny AI."
@@ -293,8 +320,44 @@
   "remedy_plan_refused": {
     "message": "OpenAI odmówiło użycia tego planu. Zaloguj się ponownie albo sprawdź plan w ustawieniach ChatGPT."
   },
+  "remedySignInRow": {
+    "message": "Brak zalogowania. Naciśnij „Kontynuuj z ChatGPT” poniżej."
+  },
+  "remedyMany_key_rejected": {
+    "message": "Ich klucze zostały odrzucone. Edytuj każdą z nich i wpisz prawidłowy klucz."
+  },
+  "remedyMany_key_missing": {
+    "message": "Brakuje ich kluczy. Edytuj każdą z nich i wpisz jej klucz."
+  },
+  "remedyMany_permission": {
+    "message": "Ten komputer nie zezwolił jeszcze na połączenia z ich serwerami. Edytuj każdą z nich i naciśnij „Zapisz”."
+  },
+  "remedyMany_sign_in": {
+    "message": "Brak zalogowania. Użyj przycisku „Kontynuuj z ChatGPT” w wierszu każdej z nich."
+  },
+  "remedyMany_plan_refused": {
+    "message": "OpenAI odmówiło użycia tych planów. Zaloguj się ponownie albo sprawdź plany w ustawieniach ChatGPT."
+  },
+  "cause_ai_before_scan": {
+    "message": "wysłana poczta nie jest jeszcze przeskanowana"
+  },
+  "cause_no_junk": {
+    "message": "brak folderu Niechciane"
+  },
+  "cause_attention": {
+    "message": "nieużywana usługa AI: $1"
+  },
+  "cause_ai_down": {
+    "message": "żadna usługa AI nie działa"
+  },
+  "cause_no_screening": {
+    "message": "brak folderu do sprawdzenia"
+  },
   "chooseScreening": {
     "message": "Wybierz folder"
+  },
+  "chooseScreeningMany": {
+    "message": "Wybierz foldery"
   },
   "openAi": {
     "message": "Pokaż usługi AI"
@@ -327,13 +390,13 @@
     "message": "Dodaj usługę AI"
   },
   "step3Text": {
-    "message": "Od tej chwili nowa poczta jest sprawdzana. Poczta, która już znajduje się w folderach, nigdy nie jest ruszana."
+    "message": "Od tej chwili nowa poczta jest sprawdzana."
   },
   "scanFirstTitle": {
     "message": "Najpierw przeskanować wysłaną pocztę?"
   },
   "scanFirstText": {
-    "message": "Skanowanie umieszcza na białej liście wszystkich, do których piszesz. Odczytuje tylko odbiorców wysłanej poczty i nie używa AI."
+    "message": "Skanowanie umieszcza na białej liście wszystkich, do których piszesz. Odczytuje tylko odbiorców wysłanej poczty i nie używa AI. Po jego zakończeniu ochrona włączy się sama."
   },
   "scanFirst": {
     "message": "Najpierw skanuj"
@@ -345,10 +408,28 @@
     "message": "Zaczekać na koniec skanowania?"
   },
   "scanWaitText": {
-    "message": "Skanowanie wysłanej poczty jeszcze trwa. Dopóki się nie zakończy, poczta od osób, z którymi już korespondujesz, mogłaby zostać wysłana do AI."
+    "message": "Skanowanie wysłanej poczty jeszcze trwa. Dopóki się nie zakończy, poczta od osób, z którymi już korespondujesz, mogłaby zostać wysłana do AI. Jeśli zaczekasz, ochrona włączy się sama po zakończeniu skanowania."
   },
   "scanWait": {
     "message": "Zaczekaj na skanowanie"
+  },
+  "wishWaiting": {
+    "message": "Ochrona włączy się po zakończeniu skanowania."
+  },
+  "wishCancel": {
+    "message": "Nie włączaj"
+  },
+  "wishOn": {
+    "message": "Skanowanie zakończone, ochrona jest włączona."
+  },
+  "wishOnEmpty": {
+    "message": "Skanowanie zakończone, nie znaleziono żadnej wysłanej poczty. Ochrona jest włączona."
+  },
+  "wishCancelled": {
+    "message": "Skanowanie anulowano, więc ochrona nie została włączona."
+  },
+  "wishErrors": {
+    "message": "Skanowanie zakończyło się z problemami, więc ochrona nie została włączona."
   },
   "observationTitle": {
     "message": "Tryb obserwacji"
@@ -533,11 +614,17 @@
   "listsFilterLabel": {
     "message": "Pokaż:"
   },
+  "listsSourceLabel": {
+    "message": "Źródło:"
+  },
+  "listsAllSources": {
+    "message": "Wszystkie źródła"
+  },
   "listsSearch": {
-    "message": "Szukaj"
+    "message": "Szukaj adresu lub domeny"
   },
   "listsSearchLabel": {
-    "message": "Szukaj we wpisach"
+    "message": "Szukaj adresu lub domeny na listach"
   },
   "listsBoth": {
     "message": "Obie listy"
@@ -578,6 +665,9 @@
   "folderRemoved": {
     "message": "Usunięto $1 ($2)."
   },
+  "folderRestored": {
+    "message": "Przywrócono $1 ($2)."
+  },
   "listsEmpty": {
     "message": "Nie ma jeszcze żadnych wpisów."
   },
@@ -598,6 +688,9 @@
   },
   "colDate": {
     "message": "Dodano"
+  },
+  "sortBy": {
+    "message": "Sortuj według: $1"
   },
   "source_identity": {
     "message": "Własny adres"
@@ -629,6 +722,9 @@
   "newEntriesHint": {
     "message": "Zmiana dotyczy tylko przyszłych wpisów. Wpis dodawany w formularzu powyżej korzysta z własnego pola „Dotyczy”."
   },
+  "newEntriesSingle": {
+    "message": "Ma to znaczenie dopiero przy co najmniej dwóch kontach pocztowych."
+  },
   "logHint": {
     "message": "Ostatnie 5000 decyzji i ocen testowych Block Spam, bez treści wiadomości."
   },
@@ -642,13 +738,37 @@
     "message": "Pokaż:"
   },
   "logAll": {
-    "message": "Wszystkie"
+    "message": "Wszystkie decyzje"
   },
   "logTests": {
     "message": "Testy"
   },
   "logObserved": {
     "message": "Obserwowane"
+  },
+  "logPeriodLabel": {
+    "message": "Czas"
+  },
+  "period_all": {
+    "message": "Dowolny czas"
+  },
+  "period_today": {
+    "message": "Dzisiaj"
+  },
+  "period_yesterday": {
+    "message": "Wczoraj"
+  },
+  "period_week": {
+    "message": "Ostatnie 7 dni"
+  },
+  "period_month": {
+    "message": "Ostatnie 30 dni"
+  },
+  "period_older": {
+    "message": "Starsze niż 30 dni"
+  },
+  "logAccountLabel": {
+    "message": "Konto"
   },
   "logSearch": {
     "message": "Szukaj nadawcy lub tematu"
@@ -663,7 +783,7 @@
     "message": "Wyczyścić dziennik?"
   },
   "logClearText": {
-    "message": "Wszystkie zapisane decyzje zostaną usunięte. Listy pozostaną bez zmian."
+    "message": "Wszystkie zapisane decyzje zostaną usunięte i nie da się ich przywrócić. Listy pozostaną bez zmian."
   },
   "logClearConfirm": {
     "message": "Wyczyść dziennik"
@@ -676,6 +796,12 @@
   },
   "logEmpty": {
     "message": "Nie ma jeszcze żadnych decyzji."
+  },
+  "logEmptyOff": {
+    "message": "Nie ma jeszcze żadnych decyzji. Ochrona jest wyłączona."
+  },
+  "logEmptyWaiting": {
+    "message": "Nie ma jeszcze żadnych decyzji. Ochrona włączy się po zakończeniu skanowania."
   },
   "logNoMatch": {
     "message": "Żaden wpis nie pasuje."
@@ -932,6 +1058,9 @@
   "noFolderToAdd": {
     "message": "Żadnego innego folderu tego konta nie można tu dodać."
   },
+  "noFolderUsable": {
+    "message": "Żadnego folderu tego konta nie można tu użyć."
+  },
   "noAccounts": {
     "message": "W programie Thunderbird nie ma jeszcze konta pocztowego. Najpierw je dodaj."
   },
@@ -972,7 +1101,7 @@
     "message": "Foldery do sprawdzenia"
   },
   "screeningHint": {
-    "message": "Folder pośredni między Odebranymi a Niechcianymi na pocztę bez oceny AI. Gdy nadawca trafi na białą listę, jego wiadomości przechodzą stamtąd do Odebranych."
+    "message": "Folder do sprawdzenia to folder pośredni między Odebranymi a Niechcianymi. Gdy nadawca trafi na białą listę, jego wiadomości przechodzą stamtąd do Odebranych."
   },
   "screeningNone": {
     "message": "Brak"
@@ -1005,7 +1134,7 @@
     "message": "Do sprawdzenia"
   },
   "aiLead": {
-    "message": "Do usługi AI trafia wyłącznie poczta od nadawców spoza obu list, a poczta od nadawców z białej listy nigdy."
+    "message": "Do usługi AI trafia wyłącznie poczta od nadawców, których nie ma na żadnej z list."
   },
   "aiLeadTopic": {
     "message": "wysyłane dane"
@@ -1027,6 +1156,15 @@
   },
   "servicesNone": {
     "message": "Nie ma jeszcze żadnej usługi AI. Bez niej poczta od nieznanych nadawców podlega ustawieniu z kategorii Poczta przychodząca."
+  },
+  "aiProtectionOff": {
+    "message": "Ochrona jest wyłączona, więc do usługi AI nie trafia jeszcze żadna nowa poczta."
+  },
+  "aiWaitingNoMail": {
+    "message": "Do tego czasu do usługi AI nie trafia żadna nowa poczta."
+  },
+  "aiShowSetup": {
+    "message": "Pokaż konfigurację"
   },
   "serviceAddLabel": {
     "message": "Dodaj usługę:"
@@ -1382,11 +1520,17 @@
   "cutoffHint": {
     "message": "Od 0,00 do 1,00. Domyślnie 0,85. Wyższy próg przepuszcza więcej spamu, niższy grozi zablokowaniem pożądanej poczty."
   },
+  "cutoffUnused": {
+    "message": "Próg nie jest jeszcze używany: żadna usługa AI nie jest włączona."
+  },
   "promptTitle": {
     "message": "Prompt"
   },
   "promptHint": {
     "message": "Pytanie, na które AI odpowiada w sprawie każdej wiadomości. Modele decyzyjne otrzymują je jako instrukcje, modele czatu jako prompt systemowy."
+  },
+  "promptUnused": {
+    "message": "Prompt nie jest jeszcze używany: żadna usługa AI nie jest włączona."
   },
   "promptLanguage": {
     "message": "Domyślny prompt jest po angielsku, bo to model go czyta. Własny możesz napisać w dowolnym języku."
@@ -1599,7 +1743,7 @@
     "message": "Same klawisze B i W"
   },
   "bareKeysHint": {
-    "message": "Thunderbird pozwala dodatkom przechwytywać klawisze bez modyfikatora tylko przez Experiment, a dodatek z Experimentem musi prosić o pełny dostęp do programu Thunderbird i do komputera. Block Spam nigdy tego nie robi."
+    "message": "Thunderbird pozwala dodatkom przechwytywać klawisze bez modyfikatora tylko wtedy, gdy dodatek otrzyma pełny dostęp do programu Thunderbird i do komputera. Block Spam nigdy o to nie prosi."
   },
   "bareKeysSteps": {
     "message": "Jeśli akceptujesz to uprawnienie, zainstaluj osobny dodatek Block Spam Keys:"
@@ -1673,6 +1817,12 @@
   "forwardLabelsMore": {
     "message": "Dopiero potem sprawdzana jest załączona wiadomość. Dodaj etykietę, którą skrzynka przekazująca umieszcza przed pierwotnym nadawcą."
   },
+  "forwardLabelsUnused": {
+    "message": "Etykiety nie są jeszcze używane: na liście nie ma żadnej skrzynki przekazującej."
+  },
+  "forwardingAddOne": {
+    "message": "Dodaj skrzynkę"
+  },
   "exportTitle": {
     "message": "Eksport"
   },
@@ -1713,7 +1863,7 @@
     "message": "Zastąp wszystko"
   },
   "importButton": {
-    "message": "Importuj"
+    "message": "Importuj plik"
   },
   "importNotJson": {
     "message": "Ten plik nie jest eksportem Block Spam."
@@ -1745,9 +1895,6 @@
   "popupSettings": {
     "message": "Ustawienia"
   },
-  "popupDataProblem": {
-    "message": "Problem z danymi"
-  },
   "popupDataProblemText": {
     "message": "Block Spam nie mógł odczytać swoich zapisanych danych. Ochrona jest wyłączona do czasu rozwiązania problemu w ustawieniach."
   },
@@ -1760,17 +1907,23 @@
   "popupSetupText": {
     "message": "Najpierw przeskanuj wysłaną pocztę, aby poczta od osób, do których piszesz, nigdy nie była blokowana ani wysyłana do AI."
   },
+  "popupSetupScanning": {
+    "message": "Trwa skanowanie wysłanej poczty. Jego przebieg możesz śledzić w ustawieniach."
+  },
+  "popupSetupWaiting": {
+    "message": "Trwa skanowanie wysłanej poczty. Ochrona włączy się po jego zakończeniu."
+  },
   "popupOpenSetup": {
     "message": "Otwórz konfigurację"
   },
   "popupProblems_one": {
-    "message": "$1 problem wymaga uwagi."
+    "message": "$1 problem wymaga uwagi: $2."
   },
   "popupProblems_few": {
-    "message": "$1 problemy wymagają uwagi."
+    "message": "$1 problemy wymagają uwagi: $2."
   },
   "popupProblems_many": {
-    "message": "$1 problemów wymaga uwagi."
+    "message": "$1 problemów wymaga uwagi: $2."
   },
   "popupShowProblems": {
     "message": "Pokaż w ustawieniach"
@@ -1920,15 +2073,30 @@
     "message": "Nie znaleziono, więc nie przeniesiono z powrotem: $1"
   },
   "badgeProblems_one": {
-    "message": "Block Spam: $1 problem"
+    "message": "Block Spam: $1 problem ($2)"
   },
   "badgeProblems_few": {
-    "message": "Block Spam: $1 problemy"
+    "message": "Block Spam: $1 problemy ($2)"
   },
   "badgeProblems_many": {
-    "message": "Block Spam: $1 problemów"
+    "message": "Block Spam: $1 problemów ($2)"
   },
-  "badgeDataProblem": {
+  "tooltip_on": {
+    "message": "Block Spam: ochrona jest włączona"
+  },
+  "tooltip_off": {
+    "message": "Block Spam: ochrona jest wyłączona"
+  },
+  "tooltip_observing": {
+    "message": "Block Spam: ochrona jest włączona, tylko obserwacja"
+  },
+  "tooltip_waiting": {
+    "message": "Block Spam: ochrona włączy się po skanowaniu"
+  },
+  "tooltip_no_account": {
+    "message": "Block Spam: brak konta pocztowego"
+  },
+  "tooltip_invalid": {
     "message": "Block Spam: zapisane dane są nieprawidłowe"
   }
 }

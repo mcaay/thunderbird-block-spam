@@ -13,6 +13,9 @@ import { send } from "../../tb/protocol";
 import { hostGranted, refreshGrants, remedyOf, signedIn } from "../aiState";
 import { diagnosticSentence } from "../diagnostic";
 import {
+  address,
+  addressed,
+  bar,
   button,
   byId,
   description,
@@ -36,6 +39,7 @@ import {
 import type { Child, DialogResult, FieldError, Keyed } from "../dom";
 import { mayRedraw, sameNumber } from "../fields";
 import { formatLogTime, formatScore } from "../format";
+import { icon } from "../icons";
 import { LOOPBACK_ORIGIN, requestAccess } from "../permissions";
 import type { Model } from "../model";
 import type { Intent, Section, Shell } from "../section";
@@ -111,6 +115,29 @@ export function aiSection(shell: Shell): Section {
 
   const list = h("ol", { class: "services" });
   const empty = description(t("servicesNone"));
+  /**
+   * Said under the list while a service is switched on and protection is not: a tested service is not a working
+   * filter yet. The button leads to the step that is left.
+   */
+  const notProtecting = h("div", { class: "notice", attrs: { role: "status" } });
+
+  /** A setting that waits for an AI service: one line says that it is not used yet and leads to the services. */
+  const unused = (text: string): HTMLElement =>
+    h(
+      "div",
+      { class: "option-note plain", hidden: true },
+      icon("info"),
+      h("span", { text }),
+      button(t("openAi"), () => {
+        const target = list.querySelector<HTMLElement>('[data-focus="enabled"]') ?? presetSelect;
+        target.scrollIntoView({ block: "center" });
+        target.focus();
+      }, "link"),
+    );
+  const cutoffUnused = unused(t("cutoffUnused"));
+  cutoffUnused.id = "cutoff-unused";
+  const promptUnused = unused(t("promptUnused"));
+  promptUnused.id = "prompt-unused";
   const presetSelect = h(
     "select",
     { id: "preset", onchange: () => drawPresetHint() },
@@ -194,11 +221,14 @@ export function aiSection(shell: Shell): Section {
     ),
     presetHint,
     signInFailed,
+    notProtecting,
     h("h2", { text: t("cutoffTitle") }),
+    cutoffUnused,
     h("div", { class: "row" }, h("label", { for: "cutoff", text: t("cutoffLabel") }), cutoff, cutoffStatus.element),
     cutoffError.element,
-    description(t("cutoffHint")),
+    h("div", { class: "description", id: "cutoff-hint", text: t("cutoffHint") }),
     h("h2", { text: t("promptTitle"), id: "prompt-title" }),
+    promptUnused,
     h("div", { class: "description", id: "prompt-hint", text: t("promptHint") }),
     prompt,
     promptError.element,
@@ -602,7 +632,7 @@ export function aiSection(shell: Shell): Section {
       }
       void dialog({
         title: t("consentTitle"),
-        body: [t("consentText", hostOf(definition.endpoint)), t("consentWhat"), t("consentNever")],
+        body: [h("p", {}, ...addressed(t("consentText", hostOf(definition.endpoint)))), t("consentWhat"), t("consentNever")],
         confirmLabel,
         onConfirm: async () => {
           if (!(await requestAccess([pattern]))) {
@@ -840,23 +870,26 @@ export function aiSection(shell: Shell): Section {
     if (!point.enabled) {
       lines.push(h("div", { class: "service-state off", text: t("apDisabled") }));
     }
-    if (point.type === "chatgpt") {
+    const remedy = point.needsAttention ? remedyOf(point) : null;
+    // A missing sign-in is said once: by the line that needs attention when there is one, which also says what to do.
+    if (point.type === "chatgpt" && remedy !== "sign-in") {
       lines.push(
         h(
           "div",
           { class: "service-state" },
-          !signedIn(point)
-            ? t("chatgptSignedOut")
+          ...(!signedIn(point)
+            ? [t("chatgptSignedOut")]
             : (point.auth?.email ?? "") === ""
-              ? t("chatgptUsingPlan")
-              : t("chatgptUsingPlanAs", point.auth?.email ?? ""),
+              ? [t("chatgptUsingPlan")]
+              : addressed(t("chatgptUsingPlanAs", point.auth?.email ?? ""))),
           signedIn(point) ? " " : null,
           signedIn(point) ? externalLink(t("chatgptManageUsage"), USAGE_URL) : null,
         ),
       );
     }
-    if (point.needsAttention) {
-      lines.push(h("div", { class: "service-state attention" }, h("strong", { text: t("apNeedsAttention") }), " ", tCode("remedy", remedyOf(point))));
+    if (remedy !== null) {
+      // In the row itself the remedy points at the button that stands right below, not at "its row".
+      lines.push(h("div", { class: "service-state attention" }, h("strong", { text: t("apNeedsAttention") }), " ", remedy === "sign-in" ? t("remedySignInRow") : tCode("remedy", remedy)));
     }
     if (point.cooldownUntil > now) {
       // What happens meanwhile depends on the other services: it is said only where another one can answer.
@@ -960,9 +993,10 @@ export function aiSection(shell: Shell): Section {
       );
     }
 
-    const facts = [tCode("type", point.type), point.model === "" ? t("apNoModel") : point.model];
+    const facts: Child[] = [`${tCode("type", point.type)} · ${point.model === "" ? t("apNoModel") : point.model}`];
     if (point.type !== "chatgpt") {
-      facts.push(hostOf(point.endpoint));
+      // The host is a domain and breaks like one.
+      facts.push(" · ", address(hostOf(point.endpoint)));
     }
     return h(
       "li",
@@ -975,8 +1009,8 @@ export function aiSection(shell: Shell): Section {
         h(
           "div",
           { class: "service-info" },
-          h("label", { class: "service-name", for: enabledId, text: point.name }),
-          h("div", { class: "description service-facts", text: facts.join(" · ") }),
+          h("label", { class: "service-name", for: enabledId }, ...addressed(point.name)),
+          h("div", { class: "description service-facts" }, ...facts),
           ...statusLines(point, now),
         ),
         editing === null ? h("div", { class: "service-actions" }, test, edit, up, down, remove) : null,
@@ -1024,6 +1058,39 @@ export function aiSection(shell: Shell): Section {
     reconcile(list, items);
     list.hidden = items.length === 0;
     empty.hidden = items.length > 0;
+    drawDependents();
+  }
+
+  /** What depends on protection and on a service that is switched on: the note under the list, and the two settings that wait for a service. */
+  function drawDependents(): void {
+    const settings = model?.settings;
+    if (model === null || settings === null || settings === undefined) {
+      return;
+    }
+    const inUse = model.accessPoints.some((point) => point.enabled);
+    const waiting = model.status.wish.waiting;
+    const kind = !inUse || settings.protection ? "" : waiting ? "waiting" : "off";
+    if (notProtecting.dataset.kind !== kind) {
+      notProtecting.dataset.kind = kind;
+      replace(
+        notProtecting,
+        kind === ""
+          ? null
+          : bar("information", [kind === "waiting" ? `${t("wishWaiting")} ${t("aiWaitingNoMail")}` : t("aiProtectionOff")], [
+              button(t("aiShowSetup"), () => shell.go("overview", { kind: "protect" })),
+            ]),
+      );
+    }
+    cutoffUnused.hidden = inUse;
+    promptUnused.hidden = inUse;
+    // A hidden note would still be read as part of the description, so it is named only while it shows.
+    // A field that shows an error is described by the error until it is corrected.
+    if (!cutoff.hasAttribute("aria-invalid")) {
+      cutoff.setAttribute("aria-describedby", inUse ? "cutoff-hint" : "cutoff-unused cutoff-hint");
+    }
+    if (!prompt.hasAttribute("aria-invalid")) {
+      prompt.setAttribute("aria-describedby", inUse ? "prompt-hint" : "prompt-unused prompt-hint");
+    }
   }
 
   function maybeWelcome(): void {
@@ -1083,6 +1150,12 @@ export function aiSection(shell: Shell): Section {
         presetSelect.focus();
       } else if (intent.kind === "ai-edit") {
         openEditor(intent.id, null, intent.focus ?? "name");
+      } else if (intent.kind === "ai-service") {
+        // A warning that several services share leads to the first of them: its Edit button takes the focus.
+        const row = [...list.querySelectorAll<HTMLElement>("li")].find((item) => item.dataset.key === intent.id);
+        const target = row?.querySelector<HTMLElement>('[data-focus="edit"]') ?? null;
+        target?.scrollIntoView({ block: "center" });
+        target?.focus();
       }
     },
     unsaved() {

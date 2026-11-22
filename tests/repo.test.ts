@@ -9,6 +9,7 @@ import { PRESET_GROUPS, PRESETS } from "../src/ai/presets";
 import { COMMANDS } from "../src/core/commands";
 import { REASONS } from "../src/core/decision";
 import { DIAGNOSTIC_CODES } from "../src/core/diagnostics";
+import { PROBLEM_KINDS, PROTECTION_STATES } from "../src/core/problems";
 import { ACCESS_POINT_TYPES, DEFAULT_PROMPT } from "../src/core/settings";
 // @ts-expect-error The build scripts are plain JavaScript modules.
 import { crc32, createZip } from "../scripts/zip.mjs";
@@ -71,6 +72,15 @@ describe("strings", () => {
     // Mistakes a user can make: the codes of ValidationError that the pages translate.
     invalid: ["entry-invalid", "address-invalid", "account-unknown", "cutoff-range", "prompt-empty", "own-address", "no-sender", "import-invalid", "undo-gone", "folder-role"],
     remedy: ["sign-in", "permission", "key-missing", "key-rejected", "plan-refused"],
+    // The same for several services that share the cause.
+    remedyMany: ["sign-in", "permission", "key-missing", "key-rejected", "plan-refused"],
+    // The state of protection on the page and in the popup, and as the tooltip of the toolbar button. Problems are counted with a string of their own.
+    state: PROTECTION_STATES.filter((state) => state !== "problems"),
+    tooltip: PROTECTION_STATES.filter((state) => state !== "problems"),
+    // The short names of the problems.
+    cause: PROBLEM_KINDS,
+    // The times the log is looked through by.
+    period: ["all", "today", "yesterday", "week", "month", "older"],
     // What went wrong with a request to an AI service, see core/diagnostics.
     diag: DIAGNOSTIC_CODES,
     endpointHint: ["systemone", "openai-chat"],

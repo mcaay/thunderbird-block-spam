@@ -3,7 +3,7 @@
 
 import { t, tCode } from "../tb/i18n";
 import { RequestError } from "../tb/protocol";
-import { breakableParts } from "./format";
+import { addressPieces, breakableParts } from "./format";
 import { icon } from "./icons";
 import type { IconName } from "./icons";
 
@@ -172,16 +172,36 @@ export function iconButton(name: IconName, label: string, onclick: (event: Mouse
   return element;
 }
 
-/** An address or a domain whose lines break only after the "@" and before a dot. */
+/**
+ * An address or a domain whose lines break only after the "@" and before a dot. Each part
+ * between two such points is a box of its own that moves to the next line whole, and is
+ * broken inside only when it alone is longer than the line. A hyphen stays with the
+ * character after it, so that a line never ends with a hyphen that belongs to the address.
+ * Nothing is added to the text: copied, it is the plain address.
+ */
 export function address(value: string, cls = "address"): HTMLElement {
   const span = h("span", { class: cls });
   breakableParts(value).forEach((part, index) => {
     if (index > 0) {
       span.appendChild(document.createElement("wbr"));
     }
-    span.appendChild(document.createTextNode(part));
+    const box = h("span", { class: "part" });
+    part.split(/(-+[^-]?)/).forEach((piece, position) => {
+      if (piece !== "") {
+        box.appendChild(position % 2 === 1 ? h("span", { class: "glue", text: piece }) : document.createTextNode(piece));
+      }
+    });
+    span.appendChild(box);
   });
   return span;
+}
+
+/**
+ * A sentence, a label or a name that may hold addresses or domains: each of them is
+ * built with address(), so that it breaks like one wherever it is shown.
+ */
+export function addressed(text: string): Child[] {
+  return addressPieces(text).map((piece) => (piece.address ? address(piece.text) : piece.text));
 }
 
 /** A link to a page outside Thunderbird. It opens in the default browser. */
@@ -247,7 +267,8 @@ export function bar(kind: BarKind, content: Child[], actions: Child[] = []): HTM
     "div",
     { class: `bar ${kind}` },
     icon(BAR_ICONS[kind]),
-    h("div", { class: "bar-text" }, ...content),
+    // An account or a service can be named by an address: inside the sentence it still breaks like one.
+    h("div", { class: "bar-text" }, ...content.flatMap((part) => (typeof part === "string" ? addressed(part) : [part]))),
     actions.some((action) => action !== null && action !== undefined && action !== false) ? h("div", { class: "bar-actions" }, ...actions) : null,
   );
 }
@@ -306,7 +327,7 @@ export function inlineStatus(cls = ""): InlineStatus {
     element,
     set(message, kind = "plain") {
       stop();
-      element.textContent = message;
+      replace(element, ...addressed(message));
       element.className = `inline-status ${cls} ${kind}`.replace(/\s+/g, " ").trim();
       element.setAttribute("role", kind === "error" ? "alert" : "status");
     },

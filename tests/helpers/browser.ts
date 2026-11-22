@@ -63,6 +63,8 @@ export class FakeBrowser {
   readonly activatedTabs: number[] = [];
   /** The settings page as an open tab, when a test wants one. */
   optionsTab: { id: number; windowId: number } | null = null;
+  /** Whether that tab is the one in front. */
+  optionsTabActive = false;
   optionsPageOpened = 0;
   /** The context menu items, as menus.create received them. */
   menuItems: { id?: string; parentId?: string; title?: string; type?: string; contexts?: string[] }[] = [];
@@ -177,7 +179,7 @@ export class FakeBrowser {
         },
         query: async () => [
           { id: 1, type: "mail", active: true, windowId: 1 },
-          ...(this.optionsTab === null ? [] : [{ ...this.optionsTab, type: "content", active: false, url: "moz-extension://test/options/options.html#log" }]),
+          ...(this.optionsTab === null ? [] : [{ ...this.optionsTab, type: "content", active: this.optionsTabActive, url: "moz-extension://test/options/options.html#log" }]),
         ],
         get: async (id: number) => ({ id, type: "mail", active: true, windowId: 1 }),
         update: async (id: number) => {

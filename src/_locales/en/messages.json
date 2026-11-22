@@ -203,17 +203,35 @@
   "protectionSwitchOff": {
     "message": "Switch protection off"
   },
-  "stateOn": {
+  "state_on": {
     "message": "On"
   },
-  "stateOff": {
+  "state_off": {
     "message": "Off"
   },
-  "stateObserving": {
+  "state_observing": {
     "message": "On, observing only"
   },
-  "stateProblems": {
-    "message": "On, with problems"
+  "state_waiting": {
+    "message": "Switches on after the scan"
+  },
+  "state_no_account": {
+    "message": "No mail account"
+  },
+  "state_invalid": {
+    "message": "Data problem"
+  },
+  "stateProblems_one": {
+    "message": "On, $1 problem"
+  },
+  "stateProblems_few": {
+    "message": "On, $1 problems"
+  },
+  "stateProblems_many": {
+    "message": "On, $1 problems"
+  },
+  "stateLinkLabel": {
+    "message": "$1: state of protection. Opens the Overview."
   },
   "statusLastCheck": {
     "message": "Last check: $1."
@@ -269,11 +287,20 @@
   "warnNoJunk": {
     "message": "$1 has no Junk folder, so spam in this account stays where it is. Enable junk handling for the account in Thunderbird, or create a Junk folder."
   },
+  "warnNoJunkMany": {
+    "message": "No Junk folder: $1. Spam in these accounts stays where it is. Enable junk handling for them in Thunderbird, or create a Junk folder."
+  },
   "warnNeedsAttention": {
     "message": "The AI service $1 is not used."
   },
+  "warnNeedsAttentionMany": {
+    "message": "These AI services are not used: $1."
+  },
   "warnNoScreening": {
     "message": "Mail without an AI verdict goes to a screening folder, but $1 has none, so its mail stays where it is."
+  },
+  "warnNoScreeningMany": {
+    "message": "Mail without an AI verdict goes to a screening folder, but these accounts have none: $1. Their mail stays where it is."
   },
   "warnAiDown": {
     "message": "No AI service is working at the moment, so mail from unknown senders gets no AI verdict."
@@ -293,8 +320,44 @@
   "remedy_plan_refused": {
     "message": "OpenAI refused to use this plan. Sign in again, or check the plan in ChatGPT settings."
   },
+  "remedySignInRow": {
+    "message": "You are not signed in. Press “Continue with ChatGPT” below."
+  },
+  "remedyMany_key_rejected": {
+    "message": "Their keys were rejected. Edit each of them and enter a valid key."
+  },
+  "remedyMany_key_missing": {
+    "message": "Their keys are missing. Edit each of them and enter its key."
+  },
+  "remedyMany_permission": {
+    "message": "This computer has not allowed their hosts yet. Edit each of them and press “Save”."
+  },
+  "remedyMany_sign_in": {
+    "message": "You are not signed in. Use “Continue with ChatGPT” in the row of each of them."
+  },
+  "remedyMany_plan_refused": {
+    "message": "OpenAI refused to use these plans. Sign in again, or check the plans in ChatGPT settings."
+  },
+  "cause_ai_before_scan": {
+    "message": "sent mail not scanned yet"
+  },
+  "cause_no_junk": {
+    "message": "no Junk folder"
+  },
+  "cause_attention": {
+    "message": "AI service not used: $1"
+  },
+  "cause_ai_down": {
+    "message": "no AI service is working"
+  },
+  "cause_no_screening": {
+    "message": "no screening folder"
+  },
   "chooseScreening": {
     "message": "Choose a folder"
+  },
+  "chooseScreeningMany": {
+    "message": "Choose folders"
   },
   "openAi": {
     "message": "Show AI services"
@@ -327,13 +390,13 @@
     "message": "Add an AI service"
   },
   "step3Text": {
-    "message": "From then on new mail is checked. Mail that is already in your folders is never touched."
+    "message": "From then on new mail is checked."
   },
   "scanFirstTitle": {
     "message": "Scan your sent mail first?"
   },
   "scanFirstText": {
-    "message": "The scan puts everyone you have written to on the white list. It reads only the recipients of your sent mail and uses no AI."
+    "message": "The scan puts everyone you have written to on the white list. It reads only the recipients of your sent mail and uses no AI. Protection switches on by itself when the scan has finished."
   },
   "scanFirst": {
     "message": "Scan first"
@@ -345,10 +408,28 @@
     "message": "Wait for the scan to finish?"
   },
   "scanWaitText": {
-    "message": "The scan of your sent mail is still running. Until it has finished, mail from people you already write to could be sent to the AI."
+    "message": "The scan of your sent mail is still running. Until it has finished, mail from people you already write to could be sent to the AI. If you wait, protection switches on by itself when the scan has finished."
   },
   "scanWait": {
     "message": "Wait for the scan"
+  },
+  "wishWaiting": {
+    "message": "Protection switches on when the scan has finished."
+  },
+  "wishCancel": {
+    "message": "Don’t switch on"
+  },
+  "wishOn": {
+    "message": "The scan has finished and protection is on."
+  },
+  "wishOnEmpty": {
+    "message": "The scan has finished without finding any sent mail. Protection is on."
+  },
+  "wishCancelled": {
+    "message": "The scan was cancelled, so protection was not switched on."
+  },
+  "wishErrors": {
+    "message": "The scan ended with problems, so protection was not switched on."
   },
   "observationTitle": {
     "message": "Observation mode"
@@ -435,7 +516,7 @@
     "message": "Reset"
   },
   "scanTitle": {
-    "message": "Scan sent mail"
+    "message": "Scan of sent mail"
   },
   "scanHint": {
     "message": "Reads the recipients of the mail in the Sent folders above and adds them to the white list. Running it again is harmless."
@@ -533,11 +614,17 @@
   "listsFilterLabel": {
     "message": "Show:"
   },
+  "listsSourceLabel": {
+    "message": "Source:"
+  },
+  "listsAllSources": {
+    "message": "All sources"
+  },
   "listsSearch": {
-    "message": "Search"
+    "message": "Search address or domain"
   },
   "listsSearchLabel": {
-    "message": "Search entries"
+    "message": "Search address or domain in the lists"
   },
   "listsBoth": {
     "message": "Both lists"
@@ -578,6 +665,9 @@
   "folderRemoved": {
     "message": "Removed $1 ($2)."
   },
+  "folderRestored": {
+    "message": "Put back $1 ($2)."
+  },
   "listsEmpty": {
     "message": "No entries yet."
   },
@@ -598,6 +688,9 @@
   },
   "colDate": {
     "message": "Added"
+  },
+  "sortBy": {
+    "message": "Sort by: $1"
   },
   "source_identity": {
     "message": "Your address"
@@ -629,6 +722,9 @@
   "newEntriesHint": {
     "message": "Changing this affects future entries only. An entry you add with the form above uses its own “Applies to”."
   },
+  "newEntriesSingle": {
+    "message": "This makes a difference only with two or more mail accounts."
+  },
   "logHint": {
     "message": "The last 5,000 decisions and test scores of Block Spam, without the text of any message."
   },
@@ -642,13 +738,37 @@
     "message": "Show:"
   },
   "logAll": {
-    "message": "All"
+    "message": "All decisions"
   },
   "logTests": {
     "message": "Tests"
   },
   "logObserved": {
     "message": "Observed"
+  },
+  "logPeriodLabel": {
+    "message": "Time"
+  },
+  "period_all": {
+    "message": "Any time"
+  },
+  "period_today": {
+    "message": "Today"
+  },
+  "period_yesterday": {
+    "message": "Yesterday"
+  },
+  "period_week": {
+    "message": "Last 7 days"
+  },
+  "period_month": {
+    "message": "Last 30 days"
+  },
+  "period_older": {
+    "message": "Older than 30 days"
+  },
+  "logAccountLabel": {
+    "message": "Account"
   },
   "logSearch": {
     "message": "Search sender or subject"
@@ -663,7 +783,7 @@
     "message": "Clear the log?"
   },
   "logClearText": {
-    "message": "All logged decisions are deleted. The lists are not affected."
+    "message": "All logged decisions are deleted and cannot be brought back. The lists are not affected."
   },
   "logClearConfirm": {
     "message": "Clear log"
@@ -676,6 +796,12 @@
   },
   "logEmpty": {
     "message": "No decisions yet."
+  },
+  "logEmptyOff": {
+    "message": "No decisions yet. Protection is off."
+  },
+  "logEmptyWaiting": {
+    "message": "No decisions yet. Protection switches on when the scan has finished."
   },
   "logNoMatch": {
     "message": "No entry matches."
@@ -932,6 +1058,9 @@
   "noFolderToAdd": {
     "message": "No other folder of this account can be added here."
   },
+  "noFolderUsable": {
+    "message": "No folder of this account can be used here."
+  },
   "noAccounts": {
     "message": "Thunderbird has no mail account yet. Add one first."
   },
@@ -972,7 +1101,7 @@
     "message": "Screening folders"
   },
   "screeningHint": {
-    "message": "A folder between the Inbox and Junk for mail without an AI verdict. When a sender is added to the white list, their messages move from there to the Inbox."
+    "message": "The screening folder is a folder between the Inbox and Junk. When a sender is added to the white list, their messages move from there to the Inbox."
   },
   "screeningNone": {
     "message": "None"
@@ -1005,7 +1134,7 @@
     "message": "Screening"
   },
   "aiLead": {
-    "message": "Only mail from senders on neither list is sent to an AI service, and mail from senders on your white list never is."
+    "message": "Only mail from senders who are on neither list is sent to an AI service."
   },
   "aiLeadTopic": {
     "message": "what is sent"
@@ -1027,6 +1156,15 @@
   },
   "servicesNone": {
     "message": "No AI service yet. Without one, mail from unknown senders follows the setting under Incoming mail."
+  },
+  "aiProtectionOff": {
+    "message": "Protection is off, so no new mail is sent to an AI service yet."
+  },
+  "aiWaitingNoMail": {
+    "message": "Until then no new mail is sent to an AI service."
+  },
+  "aiShowSetup": {
+    "message": "Show setup"
   },
   "serviceAddLabel": {
     "message": "Add a service:"
@@ -1382,11 +1520,17 @@
   "cutoffHint": {
     "message": "From 0.00 to 1.00. The default is 0.85. A higher cutoff lets more spam through, a lower one risks blocking wanted mail."
   },
+  "cutoffUnused": {
+    "message": "The cutoff is not used yet: no AI service is switched on."
+  },
   "promptTitle": {
     "message": "Prompt"
   },
   "promptHint": {
     "message": "The question the AI answers about each email. Decision models get it as their instructions, chat models as their system prompt."
+  },
+  "promptUnused": {
+    "message": "The prompt is not used yet: no AI service is switched on."
   },
   "promptLanguage": {
     "message": "The default prompt is in English because it is the model that reads it. You can write yours in any language."
@@ -1599,7 +1743,7 @@
     "message": "The keys B and W on their own"
   },
   "bareKeysHint": {
-    "message": "Thunderbird lets an add-on capture keys without a modifier only through an Experiment, and an add-on with an Experiment must ask for full access to Thunderbird and your computer. Block Spam never does."
+    "message": "Thunderbird lets an add-on capture keys without a modifier only if the add-on is given full access to Thunderbird and your computer. Block Spam never asks for that."
   },
   "bareKeysSteps": {
     "message": "If you accept that permission, install the separate add-on Block Spam Keys:"
@@ -1673,6 +1817,12 @@
   "forwardLabelsMore": {
     "message": "Only after that is an attached message looked at. Add the label your forwarding mailbox writes before the original sender."
   },
+  "forwardLabelsUnused": {
+    "message": "The labels are not used yet: no forwarding mailbox is listed."
+  },
+  "forwardingAddOne": {
+    "message": "Add a mailbox"
+  },
   "exportTitle": {
     "message": "Export"
   },
@@ -1713,7 +1863,7 @@
     "message": "Replace everything"
   },
   "importButton": {
-    "message": "Import"
+    "message": "Import the file"
   },
   "importNotJson": {
     "message": "This file is not a Block Spam export."
@@ -1745,9 +1895,6 @@
   "popupSettings": {
     "message": "Settings"
   },
-  "popupDataProblem": {
-    "message": "Data problem"
-  },
   "popupDataProblemText": {
     "message": "Block Spam could not read its stored data. Protection is off until this is resolved in the settings."
   },
@@ -1760,17 +1907,23 @@
   "popupSetupText": {
     "message": "Scan your sent mail first, so that mail from people you write to is never blocked or sent to an AI."
   },
+  "popupSetupScanning": {
+    "message": "Your sent mail is being scanned. You can follow the scan in the settings."
+  },
+  "popupSetupWaiting": {
+    "message": "Your sent mail is being scanned. Protection switches on when the scan has finished."
+  },
   "popupOpenSetup": {
     "message": "Open setup"
   },
   "popupProblems_one": {
-    "message": "$1 problem needs your attention."
+    "message": "$1 problem needs your attention: $2."
   },
   "popupProblems_few": {
-    "message": "$1 problems need your attention."
+    "message": "$1 problems need your attention: $2."
   },
   "popupProblems_many": {
-    "message": "$1 problems need your attention."
+    "message": "$1 problems need your attention: $2."
   },
   "popupShowProblems": {
     "message": "Show in settings"
@@ -1920,15 +2073,30 @@
     "message": "No longer found, so not moved back: $1"
   },
   "badgeProblems_one": {
-    "message": "Block Spam: $1 problem"
+    "message": "Block Spam: $1 problem ($2)"
   },
   "badgeProblems_few": {
-    "message": "Block Spam: $1 problems"
+    "message": "Block Spam: $1 problems ($2)"
   },
   "badgeProblems_many": {
-    "message": "Block Spam: $1 problems"
+    "message": "Block Spam: $1 problems ($2)"
   },
-  "badgeDataProblem": {
+  "tooltip_on": {
+    "message": "Block Spam: protection is on"
+  },
+  "tooltip_off": {
+    "message": "Block Spam: protection is off"
+  },
+  "tooltip_observing": {
+    "message": "Block Spam: protection is on, observing only"
+  },
+  "tooltip_waiting": {
+    "message": "Block Spam: protection switches on after the scan"
+  },
+  "tooltip_no_account": {
+    "message": "Block Spam: no mail account"
+  },
+  "tooltip_invalid": {
     "message": "Block Spam: stored data is not valid"
   }
 }

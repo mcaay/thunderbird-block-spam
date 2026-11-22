@@ -591,7 +591,10 @@ details[open] > summary::before {
   border-radius: 4px;
 }
 
-/* The state of protection: a word, with an icon and a color that say the same. */
+/*
+ * The state of protection: a few words, with an icon and a color that say the same. One element for the header
+ * of the popup, the place under the name in the category list and the heading "Protection".
+ */
 .state {
   display: inline-flex;
   align-items: center;
@@ -606,12 +609,108 @@ details[open] > summary::before {
   color: var(--success);
 }
 
-.state.off {
+.state.off,
+.state.waiting {
   color: var(--deemphasized);
 }
 
-.state.problems {
+.state.problems,
+.state.no-account,
+.state.invalid {
   color: var(--warning);
+}
+
+/*
+ * An address or a domain breaks only after the "@" and before a dot: each part between two such points is a box
+ * that moves to the next line whole. A part that alone is longer than the line breaks inside, but never right
+ * after one of its hyphens: a hyphen and the character after it stay together.
+ */
+.address .part {
+  display: inline-block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.address .glue,
+.keep {
+  white-space: nowrap;
+}
+
+/* A link that is a button underneath, so that it does not navigate. */
+button.link {
+  min-height: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--link);
+  text-decoration: underline;
+  border: 0;
+  border-radius: 2px;
+  background: none;
+}
+
+button.link:hover:not(:disabled, [aria-disabled="true"]) {
+  background: none;
+}
+
+button.link:active:not(:disabled, [aria-disabled="true"]) {
+  color: var(--link-active);
+  background: none;
+}
+
+/*
+ * High contrast (forced colors). The system replaces colors and fills, and a control that is only dimmed would
+ * all but vanish or look like one that can act. An unavailable control is drawn in the system's gray text color
+ * at full strength instead: it stays visible, and it can be told from an available one.
+ */
+@media (forced-colors: active) {
+  button:disabled,
+  select:disabled,
+  input:disabled,
+  textarea:disabled {
+    opacity: 1;
+    color: GrayText;
+    border-color: GrayText;
+  }
+
+  button[aria-disabled="true"],
+  button.primary[aria-disabled="true"],
+  button.icon[aria-disabled="true"] {
+    color: GrayText;
+    border-color: GrayText;
+  }
+
+  /* An icon button has no border while it is available. Unavailable it keeps none: its icon is gray. */
+  button.icon[aria-disabled="true"] {
+    border-color: transparent;
+  }
+
+  button.link {
+    color: LinkText;
+  }
+
+  /* The fills of message bars are gone: the border that is left takes the color of the text, so that the bar keeps a boundary. */
+  .bar {
+    border-color: CanvasText;
+  }
+
+  /* The moving parts keep a visible shape. */
+  progress {
+    border: 1px solid CanvasText;
+  }
+
+  progress::-moz-progress-bar {
+    background-color: Highlight;
+  }
+
+  .spinner {
+    border-color: GrayText;
+    border-top-color: Highlight;
+  }
+
+  input[type="checkbox"]:checked {
+    border-color: Highlight;
+    background-color: Highlight;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

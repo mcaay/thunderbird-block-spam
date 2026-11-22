@@ -7,10 +7,12 @@
 import { localizePage, t } from "../tb/i18n";
 import { isPageEvent, send } from "../tb/protocol";
 import type { SettingsTarget } from "../tb/protocol";
+import { refreshGrants } from "./aiState";
 import { byId, errorText, reportError } from "./dom";
 import { loadModel } from "./model";
 import type { Model } from "./model";
 import { detectPermissionSupport } from "./permissions";
+import { stateOf } from "./problems";
 import { paneOf, PANES } from "./section";
 import type { Intent, PaneId, Section, Shell } from "./section";
 import { advancedSection } from "./sections/advanced";
@@ -22,6 +24,7 @@ import { listsSection } from "./sections/lists";
 import { logSection } from "./sections/log";
 import { overviewSection } from "./sections/overview";
 import { blockAndTrustSection } from "./sections/blockAndTrust";
+import { drawState } from "./state";
 
 const POLL_MS = 1000;
 /** Storage changes arrive in bursts, for example during a scan. They are drawn at most this often. */
@@ -149,6 +152,23 @@ nav.addEventListener("keydown", (event) => {
   }
 });
 
+/**
+ * The state of protection under the name of the add-on: the same icon and words as in the
+ * header of the popup, on every pane, as a link to the Overview where the switch is.
+ */
+const stateLink = byId<HTMLAnchorElement>("protection-state");
+stateLink.addEventListener("click", (event) => {
+  event.preventDefault();
+  shell.go("overview");
+});
+
+function renderState(current: Model): void {
+  const shown = stateOf(current);
+  const text = drawState(stateLink, shown.kind, shown.problems);
+  // The name starts with the words that are seen, then says what they are and where the link leads.
+  stateLink.setAttribute("aria-label", t("stateLinkLabel", text));
+}
+
 function renderAll(next: Model): void {
   const wasFatal = isFatal();
   model = next;
@@ -156,6 +176,15 @@ function renderAll(next: Model): void {
   if (isFatal() !== wasFatal) {
     showPane(paneOfAddress(), false);
   }
+  renderState(next);
+  // What a service needs depends on the host permissions, which are asked for: when the answer changes the problems, the state follows.
+  void refreshGrants(next.accessPoints)
+    .then((changed) => {
+      if (changed && model === next) {
+        renderState(next);
+      }
+    })
+    .catch(() => undefined);
   for (const section of Object.values(sections)) {
     try {
       section.render(next);

@@ -2,7 +2,7 @@
 // another folder. Used for Sent folders and for monitored folders.
 
 import { t } from "../../tb/i18n";
-import { description, focusNeighbor, h, option, removeButton } from "../dom";
+import { addressed, description, focusNeighbor, h, option, removeButton } from "../dom";
 import type { Keyed } from "../dom";
 import type { AccountView, FolderView } from "../model";
 import type { FolderRef } from "../../core/types";
@@ -81,12 +81,20 @@ export function folderEditors(accounts: readonly AccountView[], options: FolderE
         return h(
           "div",
           { class: "account-block" },
-          h("h3", { text: account.name }),
+          h("h3", {}, ...addressed(account.name)),
+          // Nothing listed and nothing to add is one line, not two that say the same of an account without a usable folder.
+          rows.length === 0 && candidates.length === 0 ? description(t("noFolderUsable")) : null,
           // An empty list is one line of text, not an empty box.
-          rows.length === 0 ? description(t("noFolders")) : h("ul", { class: "plain-list", attrs: { "aria-label": account.name } }, ...rows),
+          rows.length === 0
+            ? candidates.length === 0
+              ? null
+              : description(t("noFolders"))
+            : h("ul", { class: "plain-list", attrs: { "aria-label": account.name } }, ...rows),
           // Nothing left to offer is said in one line, not shown as an empty menu.
           candidates.length === 0
-            ? description(t("noFolderToAdd"))
+            ? rows.length === 0
+              ? null
+              : description(t("noFolderToAdd"))
             : h("div", { class: "row" }, h("label", { for: selectId, class: "visually-hidden", text: t("folderToAdd", account.name) }), select, add),
         );
       },

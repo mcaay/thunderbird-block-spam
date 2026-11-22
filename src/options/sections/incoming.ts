@@ -1,5 +1,6 @@
-// Incoming mail: monitored folders, what happens to mail without an AI verdict, and
-// the screening folder of each account.
+// Incoming mail: monitored folders, and what happens to mail without an AI verdict. The
+// screening folder of each account is the dependent part of the option that moves such
+// mail there: it stands under the menu, and only while that option is chosen.
 
 import type { SettingsPatch } from "../../core/edit";
 import { folderCandidates, mayJoin, screeningFolderPaths } from "../../core/folders";
@@ -7,7 +8,7 @@ import { folderKey } from "../../core/ports";
 import type { Settings } from "../../core/types";
 import { t, tCode } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
-import { button, byId, description, errorText, guard, h, inlineStatus, notice, option, reconcile, replace, setUnavailable } from "../dom";
+import { addressed, button, byId, description, errorText, guard, h, inlineStatus, notice, option, reconcile, replace, setUnavailable } from "../dom";
 import { icon } from "../icons";
 import { chosenIn, folderRef, folderView, forgetAccounts, hasFolder, monitoredFolders, withoutFolder } from "../model";
 import type { Model } from "../model";
@@ -24,24 +25,35 @@ export function incomingSection(shell: Shell): Section {
   const monitored = h("div", { class: "accounts" });
   /** What the last change of the monitored folders did, with Undo. */
   const changed = notice();
-  const screening = h("div", { class: "screening" });
+  const screening = h("div", { class: "screening", attrs: { role: "group", "aria-labelledby": "screening-title" } });
   /** What "Create folder" did, per account. Kept across redraws. */
   const created = new Map<string, { text: string; ok: boolean }>();
   const noVerdict = h(
     "select",
     {
       id: "no-verdict",
-      attrs: { "aria-describedby": "no-verdict-note" },
+      attrs: { "aria-describedby": "no-verdict-hint" },
       onchange: () => void guard(() => update({ noVerdictAction: noVerdict.value as Settings["noVerdictAction"] })),
     },
     option("leave", t("noVerdictLeave")),
     option("junk", t("noVerdictJunk")),
     option("screening", t("noVerdictScreening")),
   );
-  /** Said while the screening folder is the choice and an account has none: its mail then stays where it is. */
+  /** Said while an account has no screening folder: its mail then stays where it is. */
   const noVerdictNote = h("div", { class: "option-note", id: "no-verdict-note", hidden: true, attrs: { role: "status" } });
+  /**
+   * What the option "Move it to the screening folder" needs: the folder of each account. It is shown only while that
+   * option is chosen, so that nothing can be set here that has no effect. The stored folders stay and come back with it.
+   */
+  const dependent = h(
+    "div",
+    { class: "sub-option screening-folders", hidden: true },
+    h("h3", { text: t("screeningTitle"), id: "screening-title" }),
+    noVerdictNote,
+    screening,
+  );
   /** Said in place of the lists while Thunderbird has no mail account. */
-  const noAccounts = [description(t("noAccounts")), description(t("noAccounts"))];
+  const noAccounts = description(t("noAccounts"));
   /** The accounts whose folder is being created right now. */
   const creating = new Set<string>();
 
@@ -52,15 +64,12 @@ export function incomingSection(shell: Shell): Section {
     h("h2", { text: t("monitoredTitle") }),
     description(t("monitoredHint")),
     changed.element,
-    noAccounts[0],
+    noAccounts,
     monitored,
     h("h2", { text: t("noVerdictTitle") }),
     h("div", { class: "row" }, h("label", { for: "no-verdict", text: t("noVerdictLabel") }), noVerdict),
-    noVerdictNote,
-    h("h2", { text: t("screeningTitle") }),
-    description(t("screeningHint")),
-    noAccounts[1],
-    screening,
+    h("div", { class: "description", id: "no-verdict-hint", text: t("screeningHint") }),
+    dependent,
   );
 
   function createFolder(accountId: string): void {
@@ -157,7 +166,7 @@ export function incomingSection(shell: Shell): Section {
             return h(
               "div",
               { class: "screening-row" },
-              h("label", { for: id, text: account.name }),
+              h("label", { for: id }, ...addressed(account.name)),
               // Nothing to choose from is said in one line, not shown as a menu with one item.
               chosen === null && candidates.length === 0 ? h("span", { class: "description no-candidate", text: t("screeningNoCandidate") }) : select,
               create,
@@ -179,7 +188,7 @@ export function incomingSection(shell: Shell): Section {
     const signature = show ? without.join("\n") : "";
     if (noVerdictNote.dataset.signature !== signature) {
       noVerdictNote.dataset.signature = signature;
-      replace(noVerdictNote, show ? icon("warning") : null, show ? h("span", { text: t("noVerdictNoFolder", without.join(", ")) }) : null);
+      replace(noVerdictNote, show ? icon("warning") : null, show ? h("span", {}, ...addressed(t("noVerdictNoFolder", without.join(", ")))) : null);
     }
     noVerdictNote.hidden = !show;
   }
@@ -192,9 +201,14 @@ export function incomingSection(shell: Shell): Section {
         return;
       }
       noVerdict.value = settings.noVerdictAction;
-      for (const line of noAccounts) {
-        line.hidden = next.accounts.length > 0;
+      noAccounts.hidden = next.accounts.length > 0;
+      // The folders belong to the one option that uses them. Without a mail account there is no folder to choose either.
+      const uses = settings.noVerdictAction === "screening" && next.accounts.length > 0;
+      if (!uses && dependent.contains(document.activeElement)) {
+        // The part goes away with the option: the keyboard goes back to the menu it depends on.
+        noVerdict.focus();
       }
+      dependent.hidden = !uses;
       drawNoVerdictNote(next);
       reconcile(
         monitored,
@@ -216,7 +230,7 @@ export function incomingSection(shell: Shell): Section {
                     await update({ monitoredFoldersAdded: [...withoutFolder(current.monitoredFoldersAdded, folder), folderRef(folder)] });
                   }
                 },
-                t("listsRestored", folder.name),
+                t("folderRestored", folder.name, account.name),
               );
             }),
           onAdd: (_account, folder) => {
@@ -229,7 +243,8 @@ export function incomingSection(shell: Shell): Section {
     },
     reveal(intent: Intent) {
       if (intent.kind === "screening") {
-        document.getElementById(`screening-${intent.accountId}`)?.focus();
+        // The menu of the account the warning was about, or else the option the folders depend on.
+        (document.getElementById(`screening-${intent.accountId}`) ?? noVerdict).focus();
       }
     },
     leave() {

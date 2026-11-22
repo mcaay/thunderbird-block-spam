@@ -86,6 +86,10 @@ export function learningSection(shell: Shell): Section {
     } else {
       setUnavailable(start, scanRunning || starting);
     }
+    // The dates belong to the button: while it cannot start a scan they have nothing to limit.
+    const idle = accountCount > 0 && !scanRunning;
+    from.disabled = !idle;
+    to.disabled = !idle;
   }
 
   /** Said in place of the folder lists while Thunderbird has no mail account. */
@@ -143,7 +147,7 @@ export function learningSection(shell: Shell): Section {
                     await update(addPatch(account, folder, latest));
                   }
                 },
-                t("listsRestored", folder.name),
+                t("folderRestored", folder.name, account.name),
               );
             }),
           onAdd: (account, folder) => {

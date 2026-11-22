@@ -54,10 +54,6 @@ header {
   min-height: 0;
 }
 
-.recent > h2 {
-  flex: none;
-}
-
 .recent > .decisions {
   flex: 0 1 auto;
   min-height: 56px;
@@ -98,6 +94,19 @@ h2 {
   margin: 0 0 4px;
   font-size: 1em;
   font-weight: 600;
+}
+
+/* A heading with the way to more of the same at the end of its line. */
+.heading-row {
+  display: flex;
+  flex: none;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.heading-row > button.link {
+  font-size: 0.9em;
 }
 
 section > .description:last-child,
@@ -365,13 +374,19 @@ p.result {
   margin: 0 0 6px;
 }
 
-/* While the score box asks or answers, it takes the whole width and the switch moves below it. */
+/* While the score box asks or answers, it takes the whole width and the switch moves below it. The buttons keep filling their rows. */
 .footer .score:has(p) {
   flex-basis: 100%;
 }
 
-.footer .score:has(p) > button {
-  width: auto;
+/* While protection waits for the scan, the switch says so above its button and takes a row of its own. */
+.footer .row.end:has(p) {
+  flex-basis: 100%;
+}
+
+.footer .row.end > p {
+  flex-basis: 100%;
+  margin: 0;
 }
 
 /* High contrast (forced colors): the colors of the dots are gone, the difference between filled and hollow stays. */
@@ -395,5 +410,14 @@ p.result {
   .decision:hover {
     outline: 1px solid CanvasText;
     outline-offset: -1px;
+  }
+
+  /* The fills of the warning line and of a result are gone: a border in the color of the text keeps their boundary. */
+  .result {
+    border-color: CanvasText;
+  }
+
+  .notice {
+    border-bottom: 1px solid CanvasText;
   }
 }

@@ -61,6 +61,29 @@ export function breakableParts(value: string): string[] {
   return value.split(/(?<=@)|(?=\.)/).filter((part) => part !== "");
 }
 
+/** Something that reads like an email address or like a domain: name@host.tld, host.tld. */
+const ADDRESS_LIKE = /[^\s@,;:()<>"\u201e\u201d\u201c]+@(?:[\p{L}\p{N}-]+\.)+\p{L}{2,}|(?:[\p{L}\p{N}][\p{L}\p{N}-]*\.)+\p{L}{2,}/gu;
+
+/**
+ * A text taken apart into what reads like an address or a domain and everything else,
+ * in order. Joined again the pieces give the text.
+ */
+export function addressPieces(text: string): { text: string; address: boolean }[] {
+  const pieces: { text: string; address: boolean }[] = [];
+  let last = 0;
+  for (const match of text.matchAll(ADDRESS_LIKE)) {
+    if (match.index > last) {
+      pieces.push({ text: text.slice(last, match.index), address: false });
+    }
+    pieces.push({ text: match[0], address: true });
+    last = match.index + match[0].length;
+  }
+  if (last < text.length) {
+    pieces.push({ text: text.slice(last), address: false });
+  }
+  return pieces;
+}
+
 const MAC_MODIFIERS: Record<string, string> = { MacCtrl: "⌃", Alt: "⌥", Shift: "⇧", Ctrl: "⌘", Command: "⌘" };
 /** The order Apple writes modifiers in. */
 const MAC_ORDER = ["⌃", "⌥", "⇧", "⌘"];

@@ -6,7 +6,8 @@ import type { SettingsPatch } from "../../core/edit";
 import { BUNDLED_PUBLIC_DOMAINS } from "../../data/publicDomains";
 import { stringsLocale, t, tCode } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
-import { address, button, byId, description, fieldError, focusNeighbor, guard, h, inlineStatus, learnMore, notice, reconcile, removeButton, replace } from "../dom";
+import { address, addressed, button, byId, description, fieldError, focusNeighbor, guard, h, inlineStatus, learnMore, notice, reconcile, removeButton, replace } from "../dom";
+import { icon } from "../icons";
 import type { Keyed } from "../dom";
 import { mayRedraw, sameLabels } from "../fields";
 import type { Model } from "../model";
@@ -92,7 +93,11 @@ export function advancedSection(): Section {
     const state = current();
     domainError.set(null);
     // Both buttons are unavailable until the field holds a domain: the line under it says what is expected.
-    verdict.textContent = typed === "" ? "" : state.domain === null ? t("publicInvalid") : state.isPublic ? t("publicIsPublic", state.domain) : t("publicIsCustom", state.domain);
+    const said = typed === "" ? "" : state.domain === null ? t("publicInvalid") : state.isPublic ? t("publicIsPublic", state.domain) : t("publicIsCustom", state.domain);
+    if (verdict.textContent !== said) {
+      // The domain in the sentence breaks like a domain.
+      replace(verdict, ...addressed(said));
+    }
     makePublic.disabled = state.domain === null || state.isPublic;
     makeCustom.disabled = state.domain === null || !state.isPublic;
   }
@@ -147,6 +152,17 @@ export function advancedSection(): Section {
   const labels = h("input", { type: "text", id: "forward-labels", oninput: () => drawLabelsState(), attrs: { spellcheck: "false", autocomplete: "off" } });
   const labelsError = fieldError(labels, "forward-labels-error");
   const labelsStatus = inlineStatus();
+  /** Said while no forwarding mailbox is listed: the labels are read only in mail that such a mailbox forwarded. */
+  const labelsUnused = h(
+    "div",
+    { class: "option-note plain", id: "forward-labels-unused", hidden: true },
+    icon("info"),
+    h("span", { text: t("forwardLabelsUnused") }),
+    button(t("forwardingAddOne"), () => {
+      mailbox.scrollIntoView({ block: "center" });
+      mailbox.focus();
+    }, "link"),
+  );
   /** What the page put into the labels field last. Anything else in it is an edit. */
   let labelsShown: string | null = null;
   let labelsStored = "";
@@ -239,6 +255,7 @@ export function advancedSection(): Section {
     mailboxNotice.element,
     mailboxes.element,
     h("h3", { text: t("forwardLabelsTitle") }),
+    labelsUnused,
     description(t("forwardLabelsHint"), learnMore(t("forwardLabelsTitle"), t("forwardLabelsMore"))),
     h("div", { class: "row" }, h("label", { for: "forward-labels", class: "visually-hidden", text: t("forwardLabelsTitle") }), labels, saveLabels, labelsStatus.element),
     labelsError.element,
@@ -270,6 +287,7 @@ export function advancedSection(): Section {
       added.draw(settings.publicDomainsAdded, removable("publicDomainsAdded", domainNotice));
       removed.draw(settings.publicDomainsRemoved, removable("publicDomainsRemoved", domainNotice));
       mailboxes.draw(settings.forwardingMailboxes, removable("forwardingMailboxes", mailboxNotice));
+      labelsUnused.hidden = settings.forwardingMailboxes.length > 0;
       describe();
       const stored = settings.forwardLabels.join(", ");
       labelsStored = stored;

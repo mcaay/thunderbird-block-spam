@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { logEntryKey } from "../../src/core/keys";
-import { breakableParts, formatLogTime, formatScore, formatShortcut, formatShortTime, logTimeParts, matchesSearch, parseEntryDetail } from "../../src/options/format";
+import { addressPieces, breakableParts, formatLogTime, formatScore, formatShortcut, formatShortTime, logTimeParts, matchesSearch, parseEntryDetail } from "../../src/options/format";
 import { folderDisplayName } from "../../src/options/model";
 
 describe("times", () => {
@@ -104,5 +104,29 @@ describe("folder names", () => {
 
   it("falls back to the path where a name is missing", () => {
     expect(folderDisplayName({ path: "/Archive/Old", name: "" }, names)).toBe("Archive / Old");
+  });
+});
+
+describe("addresses and domains inside a sentence", () => {
+  const found = (text: string): string[] => addressPieces(text).filter((piece) => piece.address).map((piece) => piece.text);
+
+  it("finds them, without the punctuation of the sentence around them", () => {
+    expect(found("Removed kontakt@nowy-partner.test.")).toEqual(["kontakt@nowy-partner.test"]);
+    expect(found("On the black list: newsletter@partner-firma.test (only katarzyna.wisniewska@biuro-rachunek.test)")).toEqual([
+      "newsletter@partner-firma.test",
+      "katarzyna.wisniewska@biuro-rachunek.test",
+    ]);
+    expect(found("Blocked: coldoutreach.test, oddzial-regionalny.centrum-uslug.test")).toEqual(["coldoutreach.test", "oddzial-regionalny.centrum-uslug.test"]);
+    expect(found("\u201ekontakt@firma.test\u201d jest na li\u015bcie")).toEqual(["kontakt@firma.test"]);
+  });
+
+  it("leaves numbers, times, versions and plain words alone", () => {
+    expect(found("Last check: 02:20. Today: 11 messages checked, 0.97 scored.")).toEqual([]);
+    expect(found("Rig alice, version 1.0.0, http://127.0.0.1:8765, np. tak, e.g. this")).toEqual([]);
+  });
+
+  it("gives back the whole text when its pieces are joined", () => {
+    const text = "Without a screening folder: zamowienia.hurtowe@drukarnia-centrum.test, Rig bob. Their mail stays.";
+    expect(addressPieces(text).map((piece) => piece.text).join("")).toBe(text);
   });
 });

@@ -26,12 +26,15 @@ import type { FolderFacts } from "./core/folders";
 import { Engine } from "./core/engine";
 import type { CommandOutcome, CommandUndo, LogActionUndo, ScanProgress } from "./core/engine";
 import { applyImport, buildExport } from "./core/exportImport";
-import { KEY_ACCESS_POINTS, KEY_ATTENTION_NOTIFIED, KEY_LAST_COMMAND, KEY_SETTINGS } from "./core/keys";
+import { KEY_ACCESS_POINTS, KEY_ATTENTION_NOTIFIED, KEY_LAST_COMMAND, KEY_PROTECTION_WISH, KEY_SETTINGS } from "./core/keys";
 import { whiteListIsOnlyIdentities } from "./core/lists";
 import { validateLogEntry } from "./core/log";
 import { isLogAction } from "./core/logAction";
 import { folderKey } from "./core/ports";
-import { findProblems, remedyFor, scanIsComplete } from "./core/problems";
+import { findProblems, protectionState, remedyFor, scanIsComplete } from "./core/problems";
+import type { Remedy } from "./core/problems";
+import { NO_WISH, outcomeOfScan, readWish } from "./core/protectionWish";
+import type { ProtectionWish } from "./core/protectionWish";
 import { SerialQueue } from "./core/queue";
 import { asArray, asBoolean, asNumber, asRecord, asString, invalidSettings, isSettingName, validateEntry, ValidationError, withDefaults } from "./core/settings";
 import { AppState } from "./core/state";
@@ -40,6 +43,7 @@ import { BUNDLED_PUBLIC_DOMAINS } from "./data/publicDomains";
 import { t, tCode, tn } from "./tb/i18n";
 import { hold, withKeepAlive } from "./tb/keepAlive";
 import { collect, messagePages, messagesOfTab, ThunderbirdMail } from "./tb/mail";
+import { problemNames, wishOutcomeText } from "./tb/stateText";
 import { COMPANION_ID, KEY_PENDING_SIGN_IN } from "./tb/protocol";
 import type {
   CommandRecord,
@@ -79,7 +83,15 @@ let app: App | null = null;
 let fatal: string | null = null;
 /** With invalid stored data: the settings that are all that is wrong, see Status.repair. */
 let repair: string[] | null = null;
-let scan: { progress: ScanProgress; cancelled: boolean } | null = null;
+/** The manual scan of this session: its progress, the dates it is limited to, and whether Cancel was pressed. */
+interface RunningScan {
+  progress: ScanProgress;
+  cancelled: boolean;
+  range: { from: number | null; to: number | null };
+}
+let scan: RunningScan | null = null;
+/** "Switch protection on" that waits for the scan, as stored. See core/protectionWish. */
+let wish: ProtectionWish = NO_WISH;
 let scoring = false;
 let signIn: StoredSignIn | null = null;
 let signInError = "";
@@ -127,6 +139,14 @@ async function start(): Promise<void> {
     app = { state, engine, ai };
     fatal = null;
     repair = null;
+    wish = readWish(raw[KEY_PROTECTION_WISH]);
+    if (wish.waiting !== null && state.settings.protection) {
+      // Protection was switched on some other way since: there is nothing left to wait for.
+      await saveWish({ waiting: null, outcome: wish.outcome });
+    } else if (wish.waiting !== null && scan?.progress.running !== true) {
+      // Thunderbird was closed while the scan ran. The wish is kept, so the scan starts again and protection follows it.
+      beginScan(engine, wish.waiting.from, wish.waiting.to);
+    }
     const pending = raw[KEY_PENDING_SIGN_IN] as StoredSignIn | undefined;
     signIn =
       pending !== undefined && typeof pending.startedAt === "number" && Date.now() - pending.startedAt < SIGN_IN_TIMEOUT_MS
@@ -139,6 +159,7 @@ async function start(): Promise<void> {
     }
   } catch (error) {
     app = null;
+    wish = NO_WISH;
     fatal = errorText(error);
     repair = raw === null ? null : await repairableSettings(raw);
     console.error("Block Spam: stored data is not valid. Protection is off.", error);
@@ -268,9 +289,10 @@ function requestAttention(mode: AttentionMode): void {
   })();
 }
 
-async function showBadge(title: string | null): Promise<void> {
-  await browser.action.setBadgeText({ text: title === null ? "" : "!" });
-  if (title !== null) {
+/** The toolbar button: a badge while something is wrong, and the state of protection as its tooltip. */
+async function showButton(badge: boolean, title: string): Promise<void> {
+  await browser.action.setBadgeText({ text: badge ? "!" : "" });
+  if (badge) {
     await browser.action.setBadgeBackgroundColor({ color: BADGE_COLOR });
     await browser.action.setBadgeTextColor({ color: BADGE_TEXT_COLOR });
   }
@@ -288,36 +310,54 @@ async function hostGranted(point: AccessPoint): Promise<boolean> {
 
 async function updateAttention(mode: AttentionMode): Promise<void> {
   if (app === null) {
-    await showBadge(fatal === null ? null : t("badgeDataProblem"));
+    await showButton(fatal !== null, tCode("tooltip", fatal === null ? "off" : "invalid"));
     return;
   }
   const { state } = app;
   const settings = state.settings;
-  let count = 0;
-  if (settings.protection) {
-    const [accounts, inboxes, junk] = await Promise.all([mail.accounts(), mail.specialFolders("inbox"), mail.specialFolders("junk")]);
-    count = findProblems({
-      settings,
-      accessPoints: state.accessPoints,
-      accounts: accounts.map((account) => ({
-        id: account.id,
-        inboxes: inboxes.filter((folder) => folder.accountId === account.id),
-        hasJunk: junk.some((folder) => folder.accountId === account.id),
-      })),
-      onlyOwnAddresses: whiteListIsOnlyIdentities(state.entries) && !scanIsComplete(scan?.progress ?? null),
-      now: Date.now(),
-    }).length;
+  const [accounts, inboxes, junk] = await Promise.all([mail.accounts(), mail.specialFolders("inbox"), mail.specialFolders("junk")]);
+  const needing = state.accessPoints.filter((point) => point.enabled && point.needsAttention);
+  const refused = new Set<string>();
+  for (const point of needing) {
+    if (!(await hostGranted(point))) {
+      refused.add(point.id);
+    }
   }
-  await showBadge(count === 0 ? null : tn("badgeProblems", count));
+  // Problems change what happens to mail only while protection is on. Until then the settings page shows them, and the button stays quiet.
+  const problems = settings.protection
+    ? findProblems({
+        settings,
+        accessPoints: state.accessPoints,
+        accounts: accounts.map((account) => ({
+          id: account.id,
+          inboxes: inboxes.filter((folder) => folder.accountId === account.id),
+          hasJunk: junk.some((folder) => folder.accountId === account.id),
+        })),
+        onlyOwnAddresses: whiteListIsOnlyIdentities(state.entries) && !scanIsComplete(scan?.progress ?? null),
+        hostGranted: (point) => !refused.has(point.id),
+        now: Date.now(),
+      })
+    : [];
+  const shown = protectionState({
+    invalid: false,
+    accounts: accounts.length,
+    protection: settings.protection,
+    observation: settings.observation,
+    problems: problems.length,
+    waiting: wish.waiting !== null,
+  });
+  await showButton(
+    shown === "problems",
+    shown === "problems" ? tn("badgeProblems", problems.length, problemNames(problems, state.accessPoints)) : tCode("tooltip", shown),
+  );
   if (mode === "badge") {
     return;
   }
   const loud = mode === "loud";
 
-  // One notification per service, not repeated until the service has worked again.
+  // One notification per cause, not repeated until the service has worked again.
   const stored = (await browser.storage.local.get(KEY_ATTENTION_NOTIFIED))[KEY_ATTENTION_NOTIFIED];
   const notified = new Set(Array.isArray(stored) ? stored.filter((id): id is string => typeof id === "string") : []);
-  const needing = state.accessPoints.filter((point) => point.enabled && point.needsAttention);
   let changed = false;
   for (const id of [...notified]) {
     if (!needing.some((point) => point.id === id)) {
@@ -325,18 +365,29 @@ async function updateAttention(mode: AttentionMode): Promise<void> {
       changed = true;
     }
   }
+  /** The services that need attention for the first time, by what to do about them: one remedy is one notification. */
+  const fresh = new Map<Remedy, AccessPoint[]>();
   for (const point of needing) {
     if (notified.has(point.id) || (loud && !settings.protection)) {
       continue;
     }
     notified.add(point.id);
     changed = true;
-    if (loud) {
+    const remedy = remedyFor(point, !refused.has(point.id));
+    fresh.set(remedy, [...(fresh.get(remedy) ?? []), point]);
+  }
+  if (loud) {
+    for (const [remedy, points] of fresh) {
+      const [only] = points;
+      const message =
+        points.length === 1 && only !== undefined
+          ? `${t("warnNeedsAttention", only.name)} ${tCode("remedy", remedy)}`
+          : `${t("warnNeedsAttentionMany", points.map((point) => point.name).join(", "))} ${tCode("remedyMany", remedy)}`;
       await browser.notifications
-        .create(`${ATTENTION_NOTIFICATION}${point.id}`, {
+        .create(`${ATTENTION_NOTIFICATION}${points.map((point) => point.id).join(",")}`, {
           type: "basic",
           title: t("extensionName"),
-          message: `${t("warnNeedsAttention", point.name)} ${tCode("remedy", remedyFor(point, await hostGranted(point)))}`,
+          message,
           iconUrl: browser.runtime.getURL("icons/icon.svg"),
         })
         .catch((error: unknown) => console.warn("Block Spam: the notification could not be shown", error));
@@ -365,12 +416,95 @@ async function openSettingsAt(target: SettingsTarget): Promise<void> {
   }
 }
 
-// A click on the notification about a service leads to the warning with its fix.
+// A click on the notification about a service leads to the warning with its fix, and one about protection to its switch.
 browser.notifications.onClicked.addListener((id) => {
-  if (id.startsWith(ATTENTION_NOTIFICATION)) {
+  if (id.startsWith(ATTENTION_NOTIFICATION) || id === WISH_NOTIFICATION) {
     void openSettingsAt({ pane: "overview", logKey: null }).catch((error: unknown) => console.warn("Block Spam: the settings could not be opened", error));
   }
 });
+
+// ---------------------------------------------------------------------------
+// The manual scan of the sent mail, and protection that waits for it.
+
+const WISH_NOTIFICATION = "protection-after-scan";
+
+async function switchProtection(state: AppState, on: boolean): Promise<void> {
+  state.settings.protection = on;
+  if (on) {
+    // The moment protection really goes on is the one that counts: mail that arrived before it is never touched.
+    state.settings.protectionOnAt = Date.now();
+  }
+  await state.saveSettings();
+  if (on) {
+    requestTick();
+  }
+}
+
+async function saveWish(next: ProtectionWish): Promise<void> {
+  wish = next;
+  if (next.waiting === null && next.outcome === null) {
+    await store.remove([KEY_PROTECTION_WISH]);
+  } else {
+    await store.set({ [KEY_PROTECTION_WISH]: next });
+  }
+}
+
+/** True while the settings page is the tab in front: what it shows needs no notification. */
+async function settingsInFront(): Promise<boolean> {
+  const address = browser.runtime.getURL("options/options.html");
+  const tabs = await browser.tabs.query({ active: true }).catch(() => []);
+  return tabs.some((tab) => tab.active === true && tab.url?.startsWith(address) === true);
+}
+
+/**
+ * A scan has ended while protection waited for it. A scan that ran to its end switches
+ * protection on, also when it read no message. A cancelled scan and one that could
+ * not read a folder drop the wish. Either way the outcome is kept for the page to say.
+ */
+async function settleWish(ended: RunningScan): Promise<void> {
+  if (wish.waiting === null || app === null) {
+    return;
+  }
+  const outcome = outcomeOfScan(ended.progress, Date.now());
+  if (outcome.kind === "on") {
+    await switchProtection(app.state, true);
+  }
+  await saveWish({ waiting: null, outcome });
+  // Cancel was pressed on the page, which says what follows. The other two ends can come while nobody looks.
+  if (outcome.kind !== "cancelled" && !(await settingsInFront())) {
+    await browser.notifications
+      .create(WISH_NOTIFICATION, { type: "basic", title: t("extensionName"), message: wishOutcomeText(outcome), iconUrl: browser.runtime.getURL("icons/icon.svg") })
+      .catch((error: unknown) => console.warn("Block Spam: the notification could not be shown", error));
+  }
+}
+
+function beginScan(engine: Engine, from: number | null, to: number | null): void {
+  const current: RunningScan = {
+    cancelled: false,
+    range: { from, to },
+    progress: { running: true, cancelled: false, folderIndex: 0, folderCount: 0, folder: null, scanned: 0, added: 0, errors: [], total: null },
+  };
+  scan = current;
+  mail.resetCache();
+  void withKeepAlive(async () => {
+    try {
+      current.progress = await engine.scan(
+        { from, to },
+        (progress) => {
+          current.progress = progress;
+        },
+        () => current.cancelled,
+      );
+    } catch (error) {
+      current.progress = { ...current.progress, running: false, errors: [...current.progress.errors, errorText(error)] };
+    }
+    if (scan === current) {
+      await settleWish(current).catch((error: unknown) => console.error("Block Spam: protection could not be switched on after the scan", error));
+    }
+    // A scan that ran to its end ends the warning about AI before the first scan.
+    requestAttention("silent");
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Live send: teaches the recipients immediately.
@@ -840,19 +974,34 @@ const handlers: Handlers = {
         accessPointId: signIn?.accessPointId ?? null,
       },
       scoring,
+      wish: { waiting: wish.waiting !== null, outcome: wish.outcome },
     };
   },
 
   async setProtection({ on }) {
     const { state } = need();
-    state.settings.protection = on === true;
+    await switchProtection(state, on === true);
+    // Switched by hand: a wish that waited for the scan is settled by this, and what the last one came to is history.
+    await saveWish(NO_WISH);
+    return null;
+  },
+
+  async protectAfterScan() {
+    const { state, engine } = need();
     if (state.settings.protection) {
-      state.settings.protectionOnAt = Date.now();
+      return null;
     }
-    await state.saveSettings();
-    if (state.settings.protection) {
-      requestTick();
+    const running = scan?.progress.running === true ? scan : null;
+    // Stored before the scan starts: a scan of an empty mailbox can end at once.
+    await saveWish({ waiting: { since: Date.now(), from: running?.range.from ?? null, to: running?.range.to ?? null }, outcome: null });
+    if (running === null) {
+      beginScan(engine, null, null);
     }
+    return null;
+  },
+
+  async clearProtectionWish() {
+    await saveWish(NO_WISH);
     return null;
   },
 
@@ -938,27 +1087,11 @@ const handlers: Handlers = {
     if (scan?.progress.running === true) {
       throw new Error(t("errorScanRunning"));
     }
-    const current = {
-      cancelled: false,
-      progress: { running: true, cancelled: false, folderIndex: 0, folderCount: 0, folder: null, scanned: 0, added: 0, errors: [], total: null } as ScanProgress,
-    };
-    scan = current;
-    mail.resetCache();
-    void withKeepAlive(async () => {
-      try {
-        current.progress = await engine.scan(
-          { from, to },
-          (progress) => {
-            current.progress = progress;
-          },
-          () => current.cancelled,
-        );
-      } catch (error) {
-        current.progress = { ...current.progress, running: false, errors: [...current.progress.errors, errorText(error)] };
-      }
-      // A scan that ran to its end ends the warning about AI before the first scan.
-      requestAttention("silent");
-    });
+    if (wish.outcome !== null) {
+      // What the last wish came to is history once the next scan starts.
+      await saveWish({ waiting: wish.waiting, outcome: null });
+    }
+    beginScan(engine, from, to);
     return null;
   },
 

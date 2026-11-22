@@ -4,7 +4,7 @@
 import type { ImportMode, ImportReport } from "../../core/exportImport";
 import { t } from "../../tb/i18n";
 import { RequestError, send } from "../../tb/protocol";
-import { bar, button, byId, description, dialog, download, errorText, guard, h, inlineStatus, learnMore, option, replace, whileBusy } from "../dom";
+import { addressed, bar, button, byId, description, dialog, download, errorText, guard, h, inlineStatus, learnMore, option, replace, whileBusy } from "../dom";
 import type { Section } from "../section";
 
 function reportLines(report: ImportReport): string[] {
@@ -77,7 +77,7 @@ export function backupSection(): Section {
       showProblem(null);
       replace(
         report,
-        bar("success", [h("strong", { text: t("importDone") }), h("ul", {}, ...reportLines(result).map((line) => h("li", { text: line })))]),
+        bar("success", [h("strong", { text: t("importDone") }), h("ul", {}, ...reportLines(result).map((line) => h("li", {}, ...addressed(line))))]),
       );
       report.firstElementChild?.setAttribute("role", "status");
       file.value = "";

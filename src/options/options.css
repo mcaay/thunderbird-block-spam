@@ -36,8 +36,37 @@ body:dir(rtl) {
   height: 70px;
   margin: 0 6px;
   padding: 0 6.5px;
+}
+
+/* The name of the add-on, and under it the state of protection: visible on every pane, and one click from the switch. */
+.brand .identity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.brand-name {
   font-size: 1.1em;
   font-weight: 600;
+  line-height: 1.3;
+}
+
+.brand .state {
+  line-height: 1.3;
+  text-decoration: none;
+  border-radius: 2px;
+  /* A state that is long in some language wraps under the name instead of leaving the list. */
+  white-space: normal;
+}
+
+.brand .state > .icon {
+  align-self: flex-start;
+  margin-top: 1px;
+}
+
+.brand .state:hover {
+  text-decoration: underline;
 }
 
 .category-list {
@@ -204,6 +233,25 @@ details.more > .more-body p {
 
 .option-note > .icon {
   margin-top: 1px;
+}
+
+/* A note that warns of nothing: it says what will happen, or that a setting is not used yet. Only its icon is colored. */
+.option-note.plain {
+  color: inherit;
+}
+
+.option-note.plain > .icon {
+  color: var(--icon-information);
+}
+
+/* What the note offers stands at the end of its sentence, in line with it. */
+.option-note > button.small {
+  flex: none;
+  margin: -3px 0 -3px 2px;
+}
+
+.option-note > button.link {
+  flex: none;
 }
 
 /* Confirmations and failures that appear in place. An empty holder takes no room. */
@@ -375,6 +423,11 @@ h2 > .state {
   margin-top: 12px;
 }
 
+/* The screening folders belong to one option of the menu above them: they stand under it, indented like every dependent option. */
+.screening-folders > h3 {
+  margin-top: 8px;
+}
+
 /* One grid for all accounts, so that the folder menus line up under each other. */
 .screening {
   display: grid;
@@ -456,6 +509,11 @@ h2 > .state {
   flex: 1;
   min-width: 160px;
   max-width: 320px;
+}
+
+/* A second label in the row of filters keeps a little more distance from the menu before it. */
+.filters select + label {
+  margin-inline-start: 6px;
 }
 
 .filters input[type="search"] + button {
@@ -540,6 +598,52 @@ thead th {
   font-weight: 600;
   white-space: nowrap;
   color: var(--deemphasized);
+}
+
+/*
+ * A header that sorts its column, as in Thunderbird's own tables: it looks like the header it is, and the column
+ * that gives the order carries a small arrow, up for ascending and down for descending. No button chrome.
+ */
+thead th button.sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-height: 0;
+  max-width: 100%;
+  margin: -2px -4px;
+  padding: 2px 4px;
+  font: inherit;
+  color: inherit;
+  border: 0;
+  border-radius: 2px;
+  background: none;
+}
+
+thead th button.sort:hover {
+  color: var(--text);
+  background: none;
+}
+
+thead th button.sort::after {
+  content: "";
+  flex: none;
+  width: 10px;
+  height: 10px;
+  background-color: currentColor;
+  mask: var(--chevron-mask) center / 10px no-repeat;
+  visibility: hidden;
+}
+
+thead th[aria-sort] button.sort {
+  color: var(--text);
+}
+
+thead th[aria-sort] button.sort::after {
+  visibility: visible;
+}
+
+thead th[aria-sort="ascending"] button.sort::after {
+  transform: rotate(180deg);
 }
 
 tbody tr:hover {
@@ -657,8 +761,9 @@ table.log .when .clock {
   white-space: nowrap;
 }
 
+/* Wide enough for the longest decision of both languages in one line, so that rows of one kind are of one height. */
 table.log .col-outcome {
-  width: 252px;
+  width: 280px;
 }
 
 table.log .col-score {
@@ -698,8 +803,9 @@ table.log .scorer {
   white-space: nowrap;
 }
 
+/* As wide as the widest button of both languages and its padding. */
 table.log .col-action {
-  width: 136px;
+  width: 124px;
   text-align: end;
 }
 
@@ -710,27 +816,6 @@ table.log .col-action button {
 table.log .show-message {
   font-size: 0.9em;
   white-space: nowrap;
-}
-
-/* The link is a button underneath, so that it does not navigate. */
-button.link {
-  min-height: 0;
-  padding: 0;
-  font: inherit;
-  color: var(--link);
-  text-decoration: underline;
-  border: 0;
-  border-radius: 2px;
-  background: none;
-}
-
-button.link:hover:not(:disabled, [aria-disabled="true"]) {
-  background: none;
-}
-
-button.link:active:not(:disabled, [aria-disabled="true"]) {
-  color: var(--link-active);
-  background: none;
 }
 
 table.log td.col-action {
@@ -801,14 +886,49 @@ table.log .detail {
   color: var(--error);
 }
 
+/* Not the result of an action: something the row has to say about itself, in the quieter color. */
+.row-feedback.plain {
+  color: var(--description);
+}
+
 /*
  * The entry the popup pointed at: a frame in the accent color with a heavier edge at its
  * start. No fill, so that every text of the row keeps the contrast it has on the page.
+ * A table row paints no shadow along its top and bottom, so the frame is drawn on its
+ * cells: every cell its top and bottom edge, the first one the start, the last one the end.
  */
-table.log tr.highlight {
+table.log tr.highlight > td {
   box-shadow:
-    inset 3px 0 0 AccentColor,
-    inset 0 0 0 1px AccentColor;
+    inset 0 1px 0 AccentColor,
+    inset 0 -1px 0 AccentColor;
+}
+
+table.log tr.highlight > td:first-child {
+  box-shadow:
+    inset 0 1px 0 AccentColor,
+    inset 0 -1px 0 AccentColor,
+    inset 3px 0 0 AccentColor;
+}
+
+table.log tr.highlight > td:last-child {
+  box-shadow:
+    inset 0 1px 0 AccentColor,
+    inset 0 -1px 0 AccentColor,
+    inset -1px 0 0 AccentColor;
+}
+
+table.log tr.highlight > td:first-child:dir(rtl) {
+  box-shadow:
+    inset 0 1px 0 AccentColor,
+    inset 0 -1px 0 AccentColor,
+    inset -3px 0 0 AccentColor;
+}
+
+table.log tr.highlight > td:last-child:dir(rtl) {
+  box-shadow:
+    inset 0 1px 0 AccentColor,
+    inset 0 -1px 0 AccentColor,
+    inset 1px 0 0 AccentColor;
 }
 
 table.log tr:focus-visible {
@@ -1029,8 +1149,24 @@ dialog.modal p {
     }
   }
 
+  /* The name and the state of protection head the row of categories, in one line. */
   .brand {
-    display: none;
+    flex: 1 1 100%;
+    height: auto;
+    margin: 0 2px;
+    padding: 2px 8px 4px;
+  }
+
+  .brand img {
+    width: 20px;
+    height: 20px;
+  }
+
+  .brand .identity {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 10px;
   }
 
   /* Both groups of categories flow as one row, so that a line is filled before the next one starts. */
@@ -1140,10 +1276,40 @@ dialog.modal p {
     border: 0;
   }
 
+  /* The cell of the time gives way to its parts: the time keeps its place, and the account gets a line of its own under the subject. */
   table.log .col-time {
-    grid-area: time;
-    width: auto;
+    display: contents;
     color: var(--deemphasized);
+  }
+
+  table.log .when {
+    grid-area: time;
+  }
+
+  table.log .account {
+    grid-column: 1 / -1;
+    overflow: visible;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  /* In the stacked layout the row is a grid and paints its own frame. */
+  table.log tr.highlight {
+    box-shadow:
+      inset 3px 0 0 AccentColor,
+      inset 0 0 0 1px AccentColor;
+  }
+
+  table.log tr.highlight:dir(rtl) {
+    box-shadow:
+      inset -3px 0 0 AccentColor,
+      inset 0 0 0 1px AccentColor;
+  }
+
+  table.log tr.highlight > td,
+  table.log tr.highlight > td:first-child,
+  table.log tr.highlight > td:last-child {
+    box-shadow: none;
   }
 
   table.log .col-message {
@@ -1209,21 +1375,14 @@ dialog.modal p {
     box-shadow: none;
   }
 
-  /* The progress bar and the spinner keep a visible moving part. */
-  progress {
-    border: 1px solid CanvasText;
+  table.log tr.highlight > td,
+  table.log tr.highlight > td:first-child,
+  table.log tr.highlight > td:last-child {
+    box-shadow: none;
   }
 
-  progress::-moz-progress-bar {
-    background-color: Highlight;
-  }
-
-  .spinner {
-    border-color: GrayText;
-    border-top-color: Highlight;
-  }
-
-  button.link {
+  /* The state of protection is a link: it takes the color of links, and the icon says which state it is. */
+  .brand .state {
     color: LinkText;
   }
 

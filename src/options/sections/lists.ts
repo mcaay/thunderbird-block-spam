@@ -1,10 +1,11 @@
-// Lists: the white list and the black list with search, add and remove, and the
-// scope of entries the add-on creates by itself.
+// Lists: the white list and the black list with add and remove, the scope of entries
+// the add-on creates by itself, and the table of all entries: filters by list and by
+// source, a search, and a sort by every column.
 
 import { keyOf } from "../../core/lists";
 import { SCOPE_ALL } from "../../core/types";
-import type { Entry, Settings } from "../../core/types";
-import { t, tCode, tn } from "../../tb/i18n";
+import type { Entry, EntrySource, Settings } from "../../core/types";
+import { stringsLocale, t, tCode, tn } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
 import {
   address,
@@ -30,11 +31,17 @@ import type { Model } from "../model";
 import type { Section } from "../section";
 
 const PAGE = 200;
+const SOURCES: EntrySource[] = ["identity", "sent", "scan", "ai", "manual"];
+
+/** The columns the table sorts by. */
+type SortKey = "value" | "list" | "scope" | "source" | "date";
 
 export function listsSection(): Section {
   const root = byId("lists");
   let model: Model | null = null;
   let limit = PAGE;
+  /** The column the table is sorted by, and its direction. Newest first until a header is pressed. */
+  let sort: { key: SortKey; descending: boolean } = { key: "date", descending: true };
   /** What the last removal did, with Undo. It stands between the filter and the table. */
   const removed = notice();
 
@@ -45,6 +52,12 @@ export function listsSection(): Section {
     option("all", t("listsBoth")),
     option("white", t("listWhite")),
     option("black", t("listBlack")),
+  );
+  const source = h(
+    "select",
+    { id: "entries-source", onchange: () => reset() },
+    option("all", t("listsAllSources")),
+    ...SOURCES.map((name) => option(name, tCode("source", name))),
   );
   const search = h("input", {
     type: "search",
@@ -118,6 +131,31 @@ export function listsSection(): Section {
     addButton,
   );
 
+  /**
+   * A column header that sorts the table: the first press sorts by its column, the second reverses the order.
+   * It looks like the header it is, with an arrow while its column gives the order, as in Thunderbird's own tables.
+   */
+  const headers = new Map<SortKey, HTMLTableCellElement>();
+  function sortHeader(key: SortKey, label: string): HTMLTableCellElement {
+    const press = button(
+      label,
+      () => {
+        // Text reads from A to Z first, dates from the newest.
+        sort = sort.key === key ? { key, descending: !sort.descending } : { key, descending: key === "date" };
+        limit = PAGE;
+        draw();
+      },
+      "sort",
+    );
+    press.title = t("sortBy", label);
+    const cell = h("th", { attrs: { scope: "col" } }, press);
+    headers.set(key, cell);
+    return cell;
+  }
+
+  /** Said while Thunderbird has fewer than two accounts: the choice then makes no difference yet. */
+  const sharingNote = description(t("newEntriesSingle"));
+
   const newScope = h(
     "select",
     {
@@ -141,8 +179,17 @@ export function listsSection(): Section {
     h("h2", { text: t("newEntriesTitle") }),
     h("div", { class: "row" }, h("label", { for: "new-scope", text: t("newEntriesLabel") }), newScope),
     description(t("newEntriesHint")),
+    sharingNote,
     h("h2", { text: t("listsEntriesTitle") }),
-    h("div", { class: "row filters" }, h("label", { for: "entries-filter", text: t("listsFilterLabel") }), filter, search),
+    h(
+      "div",
+      { class: "row filters" },
+      h("label", { for: "entries-filter", text: t("listsFilterLabel") }),
+      filter,
+      h("label", { for: "entries-source", text: t("listsSourceLabel") }),
+      source,
+      search,
+    ),
     summary,
     removed.element,
     h(
@@ -164,11 +211,11 @@ export function listsSection(): Section {
         h(
           "tr",
           {},
-          h("th", { text: t("colValue"), attrs: { scope: "col" } }),
-          h("th", { text: t("colList"), attrs: { scope: "col" } }),
-          h("th", { text: t("colScope"), attrs: { scope: "col" } }),
-          h("th", { text: t("colSource"), attrs: { scope: "col" } }),
-          h("th", { text: t("colDate"), attrs: { scope: "col" } }),
+          sortHeader("value", t("colValue")),
+          sortHeader("list", t("colList")),
+          sortHeader("scope", t("colScope")),
+          sortHeader("source", t("colSource")),
+          sortHeader("date", t("colDate")),
           h("th", { attrs: { scope: "col" } }, h("span", { class: "visually-hidden", text: t("colActions") })),
         ),
       ),
@@ -184,6 +231,34 @@ export function listsSection(): Section {
 
   function scopeLabel(entry: Entry): string {
     return entry.scope === SCOPE_ALL || model === null ? t("scopeAll") : accountName(model, entry.scope);
+  }
+
+  function listLabel(entry: Entry): string {
+    return t(entry.list === "white" ? "listWhite" : "listBlack");
+  }
+
+  /** What a column shows for an entry, as the text it is sorted by. */
+  const sortText: Record<Exclude<SortKey, "date">, (entry: Entry) => string> = {
+    value: (entry) => entry.value,
+    list: listLabel,
+    scope: scopeLabel,
+    source: (entry) => tCode("source", entry.source),
+  };
+  /** Alphabetical in the language of the interface, ignoring case. */
+  const collator = new Intl.Collator(stringsLocale(), { sensitivity: "accent", numeric: true });
+
+  /** All entries that match, in the order of the chosen column. Entries that are equal there keep the newest first. */
+  function sorted(entries: Entry[]): Entry[] {
+    const direction = sort.descending ? -1 : 1;
+    const key = sort.key;
+    if (key === "date") {
+      return entries.sort((a, b) => direction * (a.addedAt - b.addedAt) || collator.compare(a.value, b.value));
+    }
+    const text = sortText[key];
+    const labels = new Map(entries.map((entry) => [entry, text(entry)]));
+    return entries.sort(
+      (a, b) => direction * collator.compare(labels.get(a) ?? "", labels.get(b) ?? "") || b.addedAt - a.addedAt || collator.compare(a.value, b.value),
+    );
   }
 
   function remove(entry: Entry, row: HTMLElement): void {
@@ -203,7 +278,7 @@ export function listsSection(): Section {
       "tr",
       { tabIndex: -1 },
       h("td", { class: "value" }, address(entry.value)),
-      h("td", { class: "nowrap", text: t(entry.list === "white" ? "listWhite" : "listBlack") }),
+      h("td", { class: "nowrap", text: listLabel(entry) }),
       h("td", { class: "nowrap ellipsis", text: scopeLabel(entry), title: scopeLabel(entry) }),
       h("td", { class: "nowrap", text: tCode("source", entry.source) }),
       h("td", { class: "nowrap ellipsis", text: formatDate(entry.addedAt), title: formatFullTime(entry.addedAt) }),
@@ -218,13 +293,23 @@ export function listsSection(): Section {
       return;
     }
     const needle = search.value.trim().toLowerCase();
-    const matching = model.entries
-      .filter((entry) => filter.value === "all" || entry.list === filter.value)
-      .filter((entry) => needle === "" || entry.value.includes(needle))
-      .sort((a, b) => b.addedAt - a.addedAt || a.value.localeCompare(b.value));
+    // The sort covers every entry that matches, not only the rows that are drawn.
+    const matching = sorted(
+      model.entries
+        .filter((entry) => filter.value === "all" || entry.list === filter.value)
+        .filter((entry) => source.value === "all" || entry.source === source.value)
+        .filter((entry) => needle === "" || entry.value.includes(needle)),
+    );
+    for (const [key, cell] of headers) {
+      if (key === sort.key) {
+        cell.setAttribute("aria-sort", sort.descending ? "descending" : "ascending");
+      } else {
+        cell.removeAttribute("aria-sort");
+      }
+    }
     // Without a filter the line counts the rows, with one it counts what matches. The button under the table offers the rest.
     const total = model.entries.length;
-    const filtered = filter.value !== "all" || needle !== "";
+    const filtered = filter.value !== "all" || source.value !== "all" || needle !== "";
     const count = total === 0 ? "" : filtered ? t("matchCount", matching.length, total) : t("logCount", Math.min(matching.length, limit), total);
     if (summary.textContent !== count) {
       summary.textContent = count;
@@ -271,6 +356,7 @@ export function listsSection(): Section {
       const black = next.entries.length - white;
       counts.textContent = `${tn("listsWhiteCount", white)} ${tn("listsBlackCount", black)}`;
       newScope.value = next.settings.newEntryScope;
+      sharingNote.hidden = next.accounts.length > 1;
 
       const scopeSignature = JSON.stringify(next.accounts.map((account) => [account.id, account.name]));
       if (addScope.dataset.signature !== scopeSignature) {

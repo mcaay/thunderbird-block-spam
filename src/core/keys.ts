@@ -10,6 +10,8 @@ export const KEY_LOG_META = "logMeta";
 export const KEY_LAST_COMMAND = "lastCommand";
 /** The AI services the user was already told about that they need attention. */
 export const KEY_ATTENTION_NOTIFIED = "attentionNotified";
+/** "Switch protection on" that waits for the scan of the sent mail, and what became of it. See core/protectionWish. */
+export const KEY_PROTECTION_WISH = "protectionWish";
 export const PREFIX_PROCESSED_IN = "processed:in:";
 export const PREFIX_PROCESSED_SENT = "processed:sent:";
 export const PREFIX_LOG = "log:";

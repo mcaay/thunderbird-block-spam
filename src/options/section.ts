@@ -21,6 +21,10 @@ export type Intent =
   | { kind: "ai-add" }
   /** `focus` names the field the link is about: the key, for a warning about a rejected or a missing key. */
   | { kind: "ai-edit"; id: string; focus?: "key" }
+  /** The row of a service, for a warning that several services share. */
+  | { kind: "ai-service"; id: string }
+  /** The control that switches protection on: setup step 3, or else the switch itself. */
+  | { kind: "protect" }
   | { kind: "screening"; accountId: string }
   | { kind: "log-entry"; key: string };
 

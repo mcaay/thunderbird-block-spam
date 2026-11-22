@@ -1,22 +1,26 @@
-// The toolbar popup: the state of protection, the last block or trust command with
-// Undo, what the lists and the log say about the selected message with the buttons to
-// block and trust its sender, the last ten decisions (each opens its entry in the
-// log), the AI test of selected messages and the protection switch.
+// The toolbar popup: the state of protection (the same one the settings page shows),
+// the last block or trust command with Undo, what the lists and the log say about the
+// selected message with the buttons to block and trust its sender, the last ten
+// decisions (each opens its entry in the log), the AI test of selected messages and
+// the protection switch.
 
 import type { CommandName } from "../core/commandNames";
 import type { SenderInfo } from "../core/engine";
 import { KEY_ACCESS_POINTS, KEY_ENTRIES, KEY_SETTINGS, logEntryKey } from "../core/keys";
-import { findProblems, scanIsComplete } from "../core/problems";
-import type { AccountFacts } from "../core/problems";
+import { findProblems, protectionState, scanIsComplete } from "../core/problems";
+import type { AccountFacts, Problem } from "../core/problems";
 import type { AccessPoint, Entry, LogEntry, Settings } from "../core/types";
-import { address, button, byId, errorText, h, iconButton, replace, setUnavailable, tNodes } from "../options/dom";
+import { hostGranted, refreshGrants } from "../options/aiState";
+import { address, addressed, button, byId, errorText, h, iconButton, replace, setUnavailable, tNodes } from "../options/dom";
 import type { Child } from "../options/dom";
 import { formatFullTime, formatLogTime, formatScore, formatShortTime } from "../options/format";
 import { icon } from "../options/icons";
 import { logReader } from "../options/logData";
 import { loadShortcutKeys } from "../options/shortcutKeys";
 import type { ShortcutKeys } from "../options/shortcutKeys";
+import { drawState } from "../options/state";
 import { localizePage, stringsLocale, t, tCode, tn } from "../tb/i18n";
+import { problemNames } from "../tb/stateText";
 import { send } from "../tb/protocol";
 import type { CommandRecord, SettingsTarget, Status } from "../tb/protocol";
 
@@ -67,22 +71,6 @@ async function openSettings(target: SettingsTarget | null = null): Promise<void>
   window.close();
 }
 
-/** The same state as on the Overview of the settings page. */
-function drawState(status: Status, settings: Settings | null, problems: boolean): void {
-  if (status.fatal !== null || settings === null) {
-    stateBox.className = "state problems";
-    replace(stateBox, icon("warning"), t("popupDataProblem"));
-    return;
-  }
-  const kind = !settings.protection ? "off" : problems ? "problems" : settings.observation ? "observing" : "on";
-  stateBox.className = `state ${kind}`;
-  replace(
-    stateBox,
-    icon(kind === "problems" ? "warning" : kind === "off" ? "off" : "success"),
-    t(kind === "off" ? "stateOff" : kind === "problems" ? "stateProblems" : kind === "observing" ? "stateObserving" : "stateOn"),
-  );
-}
-
 /** What the check for problems needs to know about the accounts: their Inbox folders, and whether they have a Junk folder. */
 async function accountFacts(): Promise<AccountFacts[]> {
   const [accounts, inboxes, junk] = await Promise.all([
@@ -99,14 +87,13 @@ async function accountFacts(): Promise<AccountFacts[]> {
   }));
 }
 
-/** How many warnings the Overview of the settings page shows at the moment. They matter here while protection is on. */
-async function countProblems(settings: Settings, accessPoints: AccessPoint[], onlyOwnAddresses: boolean): Promise<number> {
+/** The warnings the Overview of the settings page shows at the moment, one per cause. They matter here while protection is on. */
+async function currentProblems(settings: Settings, accessPoints: AccessPoint[], accounts: AccountFacts[], onlyOwnAddresses: boolean): Promise<Problem[]> {
   if (!settings.protection) {
-    return 0;
+    return [];
   }
-  // When the accounts cannot be read, the problems of the AI services are still found.
-  const accounts = await accountFacts().catch(() => []);
-  return findProblems({ settings, accessPoints, accounts, onlyOwnAddresses, now: Date.now() }).length;
+  await refreshGrants(accessPoints.filter((point) => point.enabled && point.needsAttention)).catch(() => false);
+  return findProblems({ settings, accessPoints, accounts, onlyOwnAddresses, hostGranted, now: Date.now() });
 }
 
 /**
@@ -127,7 +114,8 @@ function resultBox(lines: readonly string[], failed: boolean, caption: string, a
     "div",
     { class: `result ${failed ? "error" : "ok"}`, attrs: { role: failed ? "alert" : "status" } },
     icon(failed ? "warning" : "success"),
-    h("div", { class: "result-text" }, caption === "" ? null : h("div", { class: "description", text: caption }), ...lines.map((line) => h("div", { text: line }))),
+    // A line can name addresses and domains: they break like addresses.
+    h("div", { class: "result-text" }, caption === "" ? null : h("div", { class: "description", text: caption }), ...lines.map((line) => h("div", {}, ...addressed(line)))),
     actions.some((action) => action !== null) ? h("div", { class: "result-actions" }, ...actions) : null,
   );
 }
@@ -389,9 +377,12 @@ function decisionRow(entry: LogEntry, now: number): HTMLElement {
 function drawRecent(): void {
   const now = Date.now();
   const entries = log.slice(0, RECENT);
+  // The popup shows the last ten. The way to all of them stands next to the heading.
+  const all = button(t("otherWaysLogLink"), () => void openSettings({ pane: "log", logKey: null }).catch(() => undefined), "link");
+  all.dataset.focus = "open-log";
   replace(
     recentBox,
-    h("h2", { text: t("popupRecent"), id: "recent-title" }),
+    h("div", { class: "heading-row" }, h("h2", { text: t("popupRecent"), id: "recent-title" }), entries.length === 0 ? null : all),
     entries.length === 0
       ? h("p", { class: "description", text: t("popupNoDecisions") })
       : // The list scrolls when the popup is full, and can then take the focus: it is named by its heading.
@@ -486,16 +477,61 @@ function drawScoreButton(element: HTMLElement | null = scoreBox.querySelector<HT
   }
 }
 
-function toggleButton(settings: Settings): HTMLButtonElement {
+/** Draws the popup anew and puts the keyboard focus back on the control of the same kind. */
+async function redraw(kind: string | null): Promise<void> {
+  await draw();
+  restoreFocus(kind);
+}
+
+/**
+ * The protection switch. While protection waits for the scan, the popup says so and offers to call it off.
+ * Switching on while a scan runs and an AI service is on waits for that scan, as the settings page does by
+ * default: mail from people the scan has not learned yet is not sent to the AI.
+ */
+function switchBox(settings: Settings, status: Status, hasAi: boolean): HTMLElement {
+  if (status.wish.waiting) {
+    const cancel = button(t("wishCancel"), () => {
+      setUnavailable(cancel, true);
+      void send("clearProtectionWish", {})
+        .catch((error: unknown) => showScoreMessage(errorText(error), true))
+        .finally(() => void redraw("toggle"));
+    });
+    cancel.dataset.focus = "toggle";
+    return h("div", { class: "row end" }, h("p", { class: "description", text: t("wishWaiting"), attrs: { role: "status" } }), cancel);
+  }
+  const afterScan = !settings.protection && status.scan?.running === true && hasAi;
   const toggle = button(t(settings.protection ? "protectionSwitchOff" : "protectionSwitchOn"), () => {
     setUnavailable(toggle, true);
-    void send("setProtection", { on: !settings.protection })
+    void (afterScan ? send("protectAfterScan", {}) : send("setProtection", { on: !settings.protection }))
       .catch((error: unknown) => showScoreMessage(errorText(error), true))
       // The footer is drawn anew with the other label: the keyboard stays on the switch.
-      .finally(() => void draw().then(() => restoreFocus("toggle")));
+      .finally(() => void redraw("toggle"));
   });
   toggle.dataset.focus = "toggle";
-  return toggle;
+  return h("div", { class: "row end" }, toggle);
+}
+
+/** While protection waits for the scan the popup asks once a second whether the scan has ended, and then shows what came of it. */
+let waitTimer: ReturnType<typeof setInterval> | null = null;
+
+function watchWish(waiting: boolean): void {
+  if (!waiting && waitTimer !== null) {
+    clearInterval(waitTimer);
+    waitTimer = null;
+  }
+  if (waiting && waitTimer === null) {
+    waitTimer = setInterval(() => {
+      void send("getStatus", {})
+        .then((status) => {
+          if (!status.wish.waiting) {
+            const active = document.activeElement;
+            return redraw(active instanceof HTMLElement ? (active.dataset.focus ?? null) : null);
+          }
+          return undefined;
+        })
+        .catch(() => undefined);
+    }, 1000);
+  }
 }
 
 async function draw(): Promise<void> {
@@ -506,17 +542,34 @@ async function draw(): Promise<void> {
   ]);
   shortcuts = keys;
   const settings = status.fatal === null ? ((stored[KEY_SETTINGS] as Settings | undefined) ?? null) : null;
+  watchWish(status.wish.waiting);
+  if (status.fatal !== null || settings === null) {
+    // Stored data that failed validation is not read any further.
+    drawState(stateBox, "invalid", 0);
+    replace(content, h("section", {}, h("p", { text: t("popupDataProblemText") }), h("div", { class: "row" }, button(t("popupOpenSettings"), () => void openSettings()))));
+    return;
+  }
   const accessPoints = (stored[KEY_ACCESS_POINTS] as AccessPoint[] | undefined) ?? [];
   const entries = (stored[KEY_ENTRIES] as Entry[] | undefined) ?? [];
   // Learned: the white list holds more than the user's own addresses, or a scan found that there is nobody to add.
   const learned = entries.some((entry) => entry.list === "white" && entry.source !== "identity") || scanIsComplete(status.scan);
   // The popup points at setup until then, or until protection was switched on without it.
-  const setupDone = learned || settings?.protection === true;
-  const problems = status.fatal === null && settings !== null ? await countProblems(settings, accessPoints, !learned) : 0;
-  drawState(status, settings, problems > 0);
-  if (status.fatal !== null || settings === null) {
-    // Stored data that failed validation is not read any further.
-    replace(content, h("section", {}, h("p", { text: t("popupDataProblemText") }), h("div", { class: "row" }, button(t("popupOpenSettings"), () => void openSettings()))));
+  const setupDone = learned || settings.protection;
+  // When the accounts cannot be read, the problems of the AI services are still found, and the popup does not claim that there is no account.
+  const accounts = await accountFacts().catch(() => null);
+  const problems = await currentProblems(settings, accessPoints, accounts ?? [], !learned);
+  const shown = protectionState({
+    invalid: false,
+    accounts: accounts === null ? 1 : accounts.length,
+    protection: settings.protection,
+    observation: settings.observation,
+    problems: problems.length,
+    waiting: status.wish.waiting,
+  });
+  drawState(stateBox, shown, problems.length);
+  if (shown === "no-account") {
+    // Without a mail account there is nothing to select, to scan or to protect. Setup is not pointed at: its first step cannot be done.
+    replace(content, h("section", {}, h("p", { text: t("noAccounts") })));
     return;
   }
   const hasAi = accessPoints.some((point) => point.enabled);
@@ -531,6 +584,8 @@ async function draw(): Promise<void> {
   drawCommand(tabId);
 
   if (!setupDone) {
+    // A scan that is running is said to be running: "scan first" is true only before it.
+    const scanning = status.scan?.running === true;
     replace(
       content,
       commandBox,
@@ -538,8 +593,8 @@ async function draw(): Promise<void> {
         "section",
         { class: "setup" },
         h("h2", { text: t("popupSetupTitle") }),
-        h("p", { class: "description", text: t("popupSetupText") }),
-        h("div", { class: "row" }, button(t("popupOpenSetup"), () => void openSettings({ pane: "overview", logKey: null }), "primary")),
+        h("p", { class: "description", text: t(status.wish.waiting ? "popupSetupWaiting" : scanning ? "popupSetupScanning" : "popupSetupText") }),
+        h("div", { class: "row" }, button(t("popupOpenSetup"), () => void openSettings({ pane: "overview", logKey: null }), scanning ? "" : "primary")),
       ),
       selectionBox,
     );
@@ -551,16 +606,16 @@ async function draw(): Promise<void> {
     replace(scoreBox, scoreButton());
   }
   scoreBox.hidden = !hasAi;
-  replace(footer, scoreBox, h("div", { class: "row end" }, toggleButton(settings)));
-  // The warnings themselves, each with its fix, are on the Overview of the settings page.
+  replace(footer, scoreBox, switchBox(settings, status, hasAi));
+  // The warnings themselves, each with its fix, are on the Overview of the settings page. Here they are counted and named.
   const notice =
-    problems === 0
+    problems.length === 0
       ? null
       : h(
           "section",
           { class: "notice" },
           icon("warning"),
-          h("span", { class: "notice-text", text: tn("popupProblems", problems), attrs: { role: "status" } }),
+          h("span", { class: "notice-text", attrs: { role: "status" } }, ...addressed(tn("popupProblems", problems.length, problemNames(problems, accessPoints)))),
           button(t("popupShowProblems"), () => void openSettings({ pane: "overview", logKey: null }), "small"),
         );
   replace(content, notice, commandBox, selectionBox, recentBox, footer);
@@ -571,6 +626,6 @@ async function draw(): Promise<void> {
 localizePage();
 byId("open-settings").addEventListener("click", () => void openSettings());
 void draw().catch((error: unknown) => {
-  stateBox.className = "state problems";
+  stateBox.className = "state invalid";
   replace(stateBox, icon("warning"), errorText(error));
 });

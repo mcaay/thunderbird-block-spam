@@ -4,7 +4,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CHATGPT_MODELS_URL } from "../src/ai/chatgpt";
 import { CHATGPT_ORIGINS, DISCOVERY_URL, ISSUER, JWKS_URL, TOKEN_URL } from "../src/ai/chatgptAuth";
-import { KEY_ACCESS_POINTS, KEY_ATTENTION_NOTIFIED, KEY_ENTRIES, KEY_LAST_COMMAND, KEY_SETTINGS } from "../src/core/keys";
+import { KEY_ACCESS_POINTS, KEY_ATTENTION_NOTIFIED, KEY_ENTRIES, KEY_LAST_COMMAND, KEY_PROTECTION_WISH, KEY_SETTINGS } from "../src/core/keys";
 import { defaultSettings } from "../src/core/settings";
 import type { AccessPoint } from "../src/core/types";
 import { FakeBrowser, loadBackground } from "./helpers/browser";
@@ -386,7 +386,8 @@ describe("problems on the toolbar button", () => {
 
   it("shows a badge with the number of problems in the title while protection is on", async () => {
     const { fake, background } = await setup({ protection: true, protectionOnAt: 1 }, [rejected()]);
-    expect(fake.badge).toMatchObject({ text: "!", title: "badgeProblems_one(1)" });
+    // One cause is one problem. The tooltip counts the problems and names them.
+    expect(fake.badge).toMatchObject({ text: "!", title: "badgeProblems_one(1, cause_attention(OpenAI))" });
     expect(fake.badge.color).not.toBeNull();
 
     // Editing the service clears the problem, and the badge with it.
@@ -396,18 +397,38 @@ describe("problems on the toolbar button", () => {
       apiKey: "sk-new",
     });
     await settle();
-    expect(fake.badge).toMatchObject({ text: "", title: null });
+    expect(fake.badge).toMatchObject({ text: "", title: "tooltip_on" });
   });
 
   it("shows no badge while protection is off, and one for stored data that is not valid", async () => {
     const off = await setup({ protection: false }, [rejected()]);
-    expect(off.fake.badge).toMatchObject({ text: "", title: null });
+    expect(off.fake.badge).toMatchObject({ text: "", title: "tooltip_off" });
     await off.background.send("setProtection", { on: true });
     await settle();
     expect(off.fake.badge.text).toBe("!");
 
     const broken = await setup({ cutoff: 7 }, []);
-    expect(broken.fake.badge).toMatchObject({ text: "!", title: "badgeDataProblem" });
+    expect(broken.fake.badge).toMatchObject({ text: "!", title: "tooltip_invalid" });
+  });
+
+  it("carries the state of protection as the tooltip of the button, without a badge while nothing is wrong", async () => {
+    const observing = await setup({ protection: true, protectionOnAt: 1, observation: true }, []);
+    expect(observing.fake.badge).toMatchObject({ text: "", title: "tooltip_observing" });
+    await observing.background.send("updateSettings", { patch: { observation: false } });
+    await settle();
+    expect(observing.fake.badge).toMatchObject({ text: "", title: "tooltip_on" });
+  });
+
+  it("counts one problem for several services that need the same thing, and announces them together", async () => {
+    const second = rejected({ id: "gemini", name: "Gemini" });
+    const missing = rejected({ id: "local", name: "Local", apiKey: "", lastError: "" });
+    const { fake, background } = await setup({ protection: true, protectionOnAt: 1 }, [rejected(), second, missing]);
+    expect(fake.badge).toMatchObject({ text: "!", title: "badgeProblems_many(2, cause_attention(OpenAI, Gemini); cause_attention(Local))" });
+    background.fire(fake.api.alarms.onAlarm as unknown as FakeEvent, { name: "tick" });
+    await settle();
+    expect(fake.notifications).toEqual(["warnNeedsAttentionMany(OpenAI, Gemini) remedyMany_key_rejected", "warnNeedsAttention(Local) remedy_key_missing"]);
+    expect(fake.notificationIds).toEqual(["attention:openai,gemini", "attention:local"]);
+    expect(fake.storage[KEY_ATTENTION_NOTIFIED]).toEqual(["openai", "gemini", "local"]);
   });
 
   it("announces a service once when it first needs attention, and again only after it has worked", async () => {
@@ -467,6 +488,167 @@ describe("problems on the toolbar button", () => {
     background.fire(fake.api.notifications.onClicked as unknown as FakeEvent, "notification");
     await settle();
     expect(fake.activatedTabs).toEqual([7]);
+  });
+});
+
+describe("protection that waits for the scan of the sent mail", () => {
+  type Settings = ReturnType<typeof defaultSettings>;
+  const settingsOf = (fake: FakeBrowser): Settings => fake.storage[KEY_SETTINGS] as Settings;
+  const sent = (id: number): tb.MessageHeader => ({ ...FakeBrowser.header(id, "Me <me@mycompany.example>", "f-sent"), recipients: [`person${id}@customer${id}.example`] });
+
+  async function setup(extra: Record<string, unknown> = {}, messages = 3) {
+    const jev = accessPoint({ id: "jev", name: "Jev" });
+    const fake = new FakeBrowser({ [KEY_SETTINGS]: defaultSettings(Date.now()), [KEY_ACCESS_POINTS]: [jev], ...extra });
+    fake.folderMessages.set(
+      "f-sent",
+      Array.from({ length: messages }, (_, index) => sent(index + 1)),
+    );
+    const background = await loadBackground(fake, fakeFetch({}).fetch);
+    await settle();
+    return { fake, background };
+  }
+
+  const status = async (background: Background) => {
+    const reply = await background.send("getStatus", {});
+    if (!reply.ok) {
+      throw new Error(reply.error);
+    }
+    return reply.result;
+  };
+
+  it("scans first and then switches protection on by itself, from the moment the scan has ended", async () => {
+    const { fake, background } = await setup();
+    const asked = Date.now();
+    expect(await background.send("protectAfterScan", {})).toEqual({ ok: true, result: null });
+    // Stored at once, so the wish survives a closed settings page and a restart.
+    expect(fake.storage[KEY_PROTECTION_WISH]).toMatchObject({ waiting: { from: null, to: null }, outcome: null });
+    expect((await status(background)).wish.waiting).toBe(true);
+    expect(settingsOf(fake).protection).toBe(false);
+    expect(fake.badge.title).toBe("tooltip_waiting");
+
+    await settle();
+    const after = await status(background);
+    expect(after.scan).toMatchObject({ running: false, scanned: 3 });
+    expect(after.wish).toMatchObject({ waiting: false, outcome: { kind: "on", scanned: 3 } });
+    expect(settingsOf(fake).protection).toBe(true);
+    // The moment protection really went on is the one that counts for mail that is never touched.
+    expect(settingsOf(fake).protectionOnAt).toBeGreaterThanOrEqual(asked);
+    // The settings page is not in front: a notification says what happened.
+    expect(fake.notifications).toEqual(["wishOn"]);
+    expect(fake.badge.title).toBe("tooltip_on");
+  });
+
+  it("waits for a scan that is already running instead of starting a second one", async () => {
+    const { fake, background } = await setup();
+    const from = Date.UTC(2020, 0, 1);
+    await background.send("startScan", { from, to: null });
+    await background.send("protectAfterScan", {});
+    // The dates of the running scan are kept with the wish, for a restart of Thunderbird.
+    expect(fake.storage[KEY_PROTECTION_WISH]).toMatchObject({ waiting: { from, to: null } });
+    await settle();
+    expect(settingsOf(fake).protection).toBe(true);
+  });
+
+  it("switches protection on after a scan that read no message, and says that it found none", async () => {
+    const { fake, background } = await setup({}, 0);
+    await background.send("protectAfterScan", {});
+    await settle();
+    expect(settingsOf(fake).protection).toBe(true);
+    expect((await status(background)).wish.outcome).toMatchObject({ kind: "on", scanned: 0 });
+    expect(fake.notifications).toEqual(["wishOnEmpty"]);
+  });
+
+  it("drops the wish when the scan is cancelled, and keeps the reason for the page", async () => {
+    const { fake, background } = await setup();
+    await background.send("protectAfterScan", {});
+    await background.send("cancelScan", {});
+    await settle();
+    expect(settingsOf(fake).protection).toBe(false);
+    expect((await status(background)).wish).toMatchObject({ waiting: false, outcome: { kind: "cancelled" } });
+    // Cancel was pressed on the page, which says what follows: no notification.
+    expect(fake.notifications).toEqual([]);
+    expect(fake.badge.title).toBe("tooltip_off");
+  });
+
+  it("drops the wish when the scan could not read a folder, and says so also when nobody looks", async () => {
+    const { fake, background } = await setup();
+    (fake.api.messages as unknown as { list: () => Promise<never> }).list = async () => {
+      throw new Error("the server went away");
+    };
+    await background.send("protectAfterScan", {});
+    await settle();
+    expect(settingsOf(fake).protection).toBe(false);
+    expect((await status(background)).wish).toMatchObject({ waiting: false, outcome: { kind: "errors" } });
+    expect(fake.notifications).toEqual(["wishErrors"]);
+    // A click on that notification leads to the switch.
+    background.fire(fake.api.notifications.onClicked as unknown as FakeEvent, "protection-after-scan");
+    await settle();
+    expect(fake.optionsPageOpened).toBe(1);
+  });
+
+  it("sends no notification while the settings page is the tab in front", async () => {
+    const { fake, background } = await setup();
+    fake.optionsTab = { id: 7, windowId: 1 };
+    fake.optionsTabActive = true;
+    await background.send("protectAfterScan", {});
+    await settle();
+    expect(settingsOf(fake).protection).toBe(true);
+    expect(fake.notifications).toEqual([]);
+  });
+
+  it("lets the user call the wish off, and settles it when protection is switched by hand", async () => {
+    const called = await setup();
+    await called.background.send("protectAfterScan", {});
+    await called.background.send("clearProtectionWish", {});
+    await settle();
+    expect(settingsOf(called.fake).protection).toBe(false);
+    expect(called.fake.storage[KEY_PROTECTION_WISH]).toBeUndefined();
+    expect((await status(called.background)).wish).toEqual({ waiting: false, outcome: null });
+
+    // "Switch on anyway" while the wish waits: protection is on now, and the scan that ends later changes nothing.
+    const byHand = await setup();
+    await byHand.background.send("protectAfterScan", {});
+    await byHand.background.send("setProtection", { on: true });
+    const onAt = settingsOf(byHand.fake).protectionOnAt;
+    await settle();
+    expect(settingsOf(byHand.fake).protection).toBe(true);
+    expect(settingsOf(byHand.fake).protectionOnAt).toBe(onAt);
+    expect((await status(byHand.background)).wish).toEqual({ waiting: false, outcome: null });
+    expect(byHand.fake.notifications).toEqual([]);
+  });
+
+  it("forgets what the last wish came to when protection is switched or the next scan starts", async () => {
+    const outcome = { kind: "cancelled", at: 5, scanned: 2 };
+    const scanned = await setup({ [KEY_PROTECTION_WISH]: { waiting: null, outcome } });
+    expect((await status(scanned.background)).wish.outcome).toEqual(outcome);
+    await scanned.background.send("startScan", { from: null, to: null });
+    expect((await status(scanned.background)).wish.outcome).toBeNull();
+
+    const switched = await setup({ [KEY_PROTECTION_WISH]: { waiting: null, outcome } });
+    await switched.background.send("setProtection", { on: true });
+    expect(switched.fake.storage[KEY_PROTECTION_WISH]).toBeUndefined();
+  });
+
+  it("keeps the wish across a restart of Thunderbird: the scan starts again and protection follows it", async () => {
+    const { fake, background } = await setup({ [KEY_PROTECTION_WISH]: { waiting: { since: 5, from: null, to: null }, outcome: null } });
+    // The background page was loaded with the stored wish and no scan: it started one by itself.
+    const after = await status(background);
+    expect(after.scan).toMatchObject({ running: false, scanned: 3 });
+    expect(after.wish).toMatchObject({ waiting: false, outcome: { kind: "on" } });
+    expect(settingsOf(fake).protection).toBe(true);
+  });
+
+  it("does nothing when protection is on already, and ignores a stored wish that is not one", async () => {
+    const on = await setup({ [KEY_SETTINGS]: { ...defaultSettings(Date.now()), protection: true, protectionOnAt: 1 } });
+    await on.background.send("protectAfterScan", {});
+    await settle();
+    expect((await status(on.background)).scan).toBeNull();
+    expect(on.fake.storage[KEY_PROTECTION_WISH]).toBeUndefined();
+
+    const broken = await setup({ [KEY_PROTECTION_WISH]: { waiting: "yes" } });
+    expect((await status(broken.background)).wish).toEqual({ waiting: false, outcome: null });
+    expect((await status(broken.background)).scan).toBeNull();
+    expect(settingsOf(broken.fake).protection).toBe(false);
   });
 });
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findProblems, remedyFor, scanIsComplete, scanStep } from "../../src/core/problems";
+import { findProblems, protectionState, remedyFor, scanIsComplete, scanStep } from "../../src/core/problems";
 import type { AccountFacts, ProblemInput } from "../../src/core/problems";
 import { defaultSettings } from "../../src/core/settings";
 import { accessPoint } from "../helpers/harness";
@@ -97,43 +97,61 @@ describe("problems that keep protection from working as set up", () => {
     expect(findProblems(input({ accessPoints: [accessPoint({ enabled: false })], onlyOwnAddresses: true }))).toEqual([]);
   });
 
-  it("names every monitored account without a Junk folder", () => {
+  it("names every monitored account without a Junk folder, as one problem", () => {
     const accounts = [account("work", { hasJunk: false }), account("home"), account("feeds", { inboxes: [], hasJunk: false })];
     // An account without an Inbox and without added folders is not monitored at all.
-    expect(findProblems(input({ accounts }))).toEqual([{ kind: "no-junk", accountId: "work" }]);
+    expect(findProblems(input({ accounts }))).toEqual([{ kind: "no-junk", accountIds: ["work"] }]);
     const settings = { ...defaultSettings(NOW), monitoredFoldersAdded: [{ accountId: "feeds", path: "/News" }] };
-    expect(findProblems(input({ accounts, settings }))).toEqual([
-      { kind: "no-junk", accountId: "work" },
-      { kind: "no-junk", accountId: "feeds" },
-    ]);
+    // One cause is one problem, however many accounts share it.
+    expect(findProblems(input({ accounts, settings }))).toEqual([{ kind: "no-junk", accountIds: ["work", "feeds"] }]);
   });
 
-  it("names every service that is switched on and needs the user", () => {
+  it("names every service that is switched on and needs the user, with what to do about it", () => {
     const accessPoints = [
-      accessPoint({ id: "a", needsAttention: true }),
+      accessPoint({ id: "a", needsAttention: true, lastError: "HTTP 401" }),
       accessPoint({ id: "b" }),
       accessPoint({ id: "c", needsAttention: true, enabled: false }),
     ];
-    expect(findProblems(input({ accessPoints }))).toEqual([{ kind: "attention", accessPointId: "a" }]);
+    expect(findProblems(input({ accessPoints }))).toEqual([{ kind: "attention", remedy: "key-rejected", accessPointIds: ["a"] }]);
+  });
+
+  it("puts services with the same cause and remedy into one problem, and keeps different remedies apart", () => {
+    const accessPoints = [
+      accessPoint({ id: "a", needsAttention: true, lastError: "HTTP 401" }),
+      accessPoint({ id: "b", needsAttention: true, apiKey: "", lastError: "" }),
+      accessPoint({ id: "c", needsAttention: true, lastError: "HTTP 403" }),
+      accessPoint({ id: "d", needsAttention: true, lastError: "HTTP 401" }),
+    ];
+    expect(findProblems(input({ accessPoints }))).toEqual([
+      { kind: "attention", remedy: "key-rejected", accessPointIds: ["a", "c", "d"] },
+      { kind: "attention", remedy: "key-missing", accessPointIds: ["b"] },
+    ]);
+    // A host this computer has not allowed needs the permission first, whatever else is wrong with the service.
+    expect(findProblems(input({ accessPoints, hostGranted: (point) => point.id !== "d" }))).toEqual([
+      { kind: "attention", remedy: "key-rejected", accessPointIds: ["a", "c"] },
+      { kind: "attention", remedy: "key-missing", accessPointIds: ["b"] },
+      { kind: "attention", remedy: "permission", accessPointIds: ["d"] },
+    ]);
   });
 
   it("says that no service is working only when waiting can change that", () => {
     const paused = accessPoint({ id: "a", cooldownUntil: NOW + 60_000 });
-    const rejected = accessPoint({ id: "b", needsAttention: true });
+    const rejected = accessPoint({ id: "b", needsAttention: true, lastError: "HTTP 401" });
+    const attention = { kind: "attention", remedy: "key-rejected", accessPointIds: ["b"] };
     // One paused, one working: the next service takes over.
     expect(findProblems(input({ accessPoints: [paused, accessPoint({ id: "c" })] }))).toEqual([]);
     // All paused or waiting for the user.
-    expect(findProblems(input({ accessPoints: [paused, rejected] }))).toEqual([{ kind: "attention", accessPointId: "b" }, { kind: "ai-down" }]);
+    expect(findProblems(input({ accessPoints: [paused, rejected] }))).toEqual([attention, { kind: "ai-down" }]);
     // Only services that need the user: their own warnings say all there is to say.
-    expect(findProblems(input({ accessPoints: [rejected] }))).toEqual([{ kind: "attention", accessPointId: "b" }]);
+    expect(findProblems(input({ accessPoints: [rejected] }))).toEqual([attention]);
     // The pause is over.
     expect(findProblems(input({ accessPoints: [paused], now: NOW + 60_000 }))).toEqual([]);
   });
 
   it("names monitored accounts without a screening folder when mail without a verdict goes there", () => {
-    const accounts = [account("work"), account("home")];
+    const accounts = [account("work"), account("home"), account("club")];
     const screening = { ...defaultSettings(NOW), noVerdictAction: "screening" as const, screeningFolders: [{ accountId: "work", path: "/Screening" }] };
-    expect(findProblems(input({ accounts, settings: screening }))).toEqual([{ kind: "no-screening", accountId: "home" }]);
+    expect(findProblems(input({ accounts, settings: screening }))).toEqual([{ kind: "no-screening", accountIds: ["home", "club"] }]);
     // With another setting for such mail, a missing screening folder does not matter.
     expect(findProblems(input({ accounts, settings: { ...screening, noVerdictAction: "leave" } }))).toEqual([]);
   });
@@ -149,5 +167,33 @@ describe("problems that keep protection from working as set up", () => {
       }),
     );
     expect(problems.map((problem) => problem.kind)).toEqual(["ai-before-scan", "no-junk", "attention", "ai-down", "no-screening"]);
+  });
+});
+
+describe("the state of protection", () => {
+  const facts = { invalid: false, accounts: 1, protection: false, observation: false, problems: 0, waiting: false };
+
+  it("is off after installation and on once protection is switched on", () => {
+    expect(protectionState(facts)).toBe("off");
+    expect(protectionState({ ...facts, protection: true })).toBe("on");
+  });
+
+  it("shows one state at a time, the most important first", () => {
+    const everything = { invalid: true, accounts: 0, protection: true, observation: true, problems: 2, waiting: true };
+    expect(protectionState(everything)).toBe("invalid");
+    expect(protectionState({ ...everything, invalid: false })).toBe("no-account");
+    expect(protectionState({ ...everything, invalid: false, accounts: 2 })).toBe("problems");
+    expect(protectionState({ ...everything, invalid: false, accounts: 2, problems: 0 })).toBe("observing");
+    expect(protectionState({ ...everything, invalid: false, accounts: 2, problems: 0, observation: false })).toBe("on");
+  });
+
+  it("says that protection waits for the scan only while it is off", () => {
+    expect(protectionState({ ...facts, waiting: true })).toBe("waiting");
+    expect(protectionState({ ...facts, waiting: true, protection: true })).toBe("on");
+  });
+
+  it("counts problems only while protection is on, and observation only then", () => {
+    expect(protectionState({ ...facts, problems: 3 })).toBe("off");
+    expect(protectionState({ ...facts, observation: true })).toBe("off");
   });
 });

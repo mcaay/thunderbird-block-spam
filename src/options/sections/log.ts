@@ -1,5 +1,5 @@
-// Log: the last 5000 decisions with a filter, a search, and one action per row that
-// undoes the decision where it is seen.
+// Log: the last 5000 decisions, newest first, with filters by decision, by time and by
+// account, a search, and one action per row that undoes the decision where it is seen.
 
 import { buildPublicDomains, parseSender } from "../../core/address";
 import type { LogActionOutcome, LogActionUndo } from "../../core/engine";
@@ -14,7 +14,7 @@ import { BUNDLED_PUBLIC_DOMAINS } from "../../data/publicDomains";
 import { stringsLocale, t, tCode } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
 import { attemptsLines } from "../diagnostic";
-import { address, button, byId, dialog, errorText, guard, h, option, reconcile, replace, setUnavailable, tNodes } from "../dom";
+import { address, addressed, button, byId, dialog, errorText, guard, h, option, reconcile, replace, setUnavailable, tNodes } from "../dom";
 import type { Child } from "../dom";
 import { formatFullTime, formatScore, logTimeParts, matchesSearch, parseEntryDetail } from "../format";
 import { logReader } from "../logData";
@@ -25,6 +25,30 @@ import { loadShortcutKeys } from "../shortcutKeys";
 
 const OUTCOMES: Outcome[] = ["trusted", "blocked", "spam", "passed", "no-verdict", "released", "error"];
 const LOG_PAGE = 100;
+const DAY_MS = 24 * 60 * 60 * 1000;
+/** The times a log is looked through by. */
+const PERIODS = ["all", "today", "yesterday", "week", "month", "older"] as const;
+type Period = (typeof PERIODS)[number];
+/** Whether a moment falls into a period, counted in whole days back from today. */
+function inPeriod(time: number, period: Period, now: number): boolean {
+  if (period === "all") {
+    return true;
+  }
+  const today = new Date(now).setHours(0, 0, 0, 0);
+  const yesterday = new Date(today).setDate(new Date(today).getDate() - 1);
+  switch (period) {
+    case "today":
+      return time >= today;
+    case "yesterday":
+      return time >= yesterday && time < today;
+    case "week":
+      return time >= today - 6 * DAY_MS;
+    case "month":
+      return time >= today - 29 * DAY_MS;
+    default:
+      return time < today - 29 * DAY_MS;
+  }
+}
 
 /** What an action of this session did to a row. */
 interface RowResult {
@@ -71,6 +95,18 @@ export function logSection(): Section {
     option("tests", t("logTests")),
     option("observed", t("logObserved")),
   );
+  const refilter = (): void => {
+    limit = LOG_PAGE;
+    highlighted = null;
+    draw();
+  };
+  const period = h(
+    "select",
+    { id: "log-period", onchange: refilter, attrs: { "aria-label": t("logPeriodLabel") } },
+    ...PERIODS.map((name) => option(name, tCode("period", name))),
+  );
+  /** With several accounts the log can be narrowed to one of them. */
+  const account = h("select", { id: "log-account", hidden: true, onchange: refilter, attrs: { "aria-label": t("logAccountLabel") } });
   const search = h("input", {
     type: "search",
     id: "log-search",
@@ -114,6 +150,8 @@ export function logSection(): Section {
       { class: "row filters" },
       h("label", { for: "log-filter", text: t("logFilterLabel") }),
       filter,
+      period,
+      account,
       search,
       clear,
     ),
@@ -276,14 +314,20 @@ export function logSection(): Section {
   function rowControls(entry: LogEntry, key: string, current: Offer | null): { control: Child; feedback: Child } {
     const result = results.get(key);
     const working = busy.has(key);
-    const text = result === undefined ? null : h("span", { text: result.text, attrs: { role: result.kind === "error" ? "alert" : "status" } });
+    const text = result === undefined ? null : h("span", { attrs: { role: result.kind === "error" ? "alert" : "status" } }, ...addressed(result.text));
     if (result !== undefined && result.undo !== null) {
       const data = result.undo;
       const undoButton = setUnavailable(button(t("undo"), () => undo(key, data), "small"), working);
       undoButton.dataset.focus = "act";
       return { control: undoButton, feedback: h("div", { class: `row-feedback ${result.kind}` }, text) };
     }
-    const feedback = result === undefined ? null : h("div", { class: `row-feedback ${result.kind}` }, text);
+    const feedback =
+      result !== undefined
+        ? h("div", { class: `row-feedback ${result.kind}` }, text)
+        : gone.has(key)
+          ? // Where the results of actions stand: the message of this row was looked for and is gone.
+            h("div", { class: "row-feedback plain" }, h("span", { text: t("logMessageGone"), attrs: { role: "status" } }))
+          : null;
     if (current === null) {
       return { control: null, feedback };
     }
@@ -311,11 +355,9 @@ export function logSection(): Section {
   }
 
   function messageLink(entry: LogEntry, key: string): Child {
-    if (entry.messageId === "") {
+    // A message that was looked for and is gone has no link any more: the row says so under its decision.
+    if (entry.messageId === "" || gone.has(key)) {
       return null;
-    }
-    if (gone.has(key)) {
-      return h("span", { class: "description", text: t("logMessageGone"), attrs: { role: "status" } });
     }
     const link = button(t("logShowMessage"), () => showMessage(entry, key), "link show-message");
     link.dataset.focus = "show";
@@ -328,6 +370,24 @@ export function logSection(): Section {
     const subject = entry.subject === "" ? t("logNoSubject") : entry.subject;
     const sender = entry.sender === "" ? t("logUnknownSender") : entry.sender;
     const actionText = entry.action === "none" ? "" : entry.observed ? tCode("actionObserved", entry.action) : tCode("action", entry.action);
+    // A badge never stands alone on a line: it stays with the word before it.
+    const badges: Child[] = [];
+    if (entry.observed) {
+      badges.push(" ", h("span", { class: "badge", text: t("logObservedBadge") }));
+    }
+    if (entry.test) {
+      badges.push(" ", h("span", { class: "badge", text: t("logTestBadge") }));
+    }
+    const lastSpace = actionText.lastIndexOf(" ");
+    const outcomeLabel = h("span", { class: `outcome outcome-${entry.outcome}`, text: tCode("outcome", entry.outcome) });
+    const outcomeParts: Child[] =
+      actionText === ""
+        ? [badges.length === 0 ? outcomeLabel : h("span", { class: "keep" }, outcomeLabel, ...badges)]
+        : [
+            outcomeLabel,
+            h("span", { class: "outcome-action", text: `, ${actionText.slice(0, lastSpace + 1)}` }),
+            h("span", { class: "keep" }, h("span", { class: "outcome-action", text: actionText.slice(lastSpace + 1) }), ...badges),
+          ];
     const showAccount = (model?.accounts.length ?? 0) > 1;
     const cell = (cls: string, ...children: Child[]): HTMLElement => h("td", { class: cls, attrs: { role: "cell" } }, ...children);
     const controls = rowControls(entry, key, current);
@@ -345,8 +405,8 @@ export function logSection(): Section {
           when.date === null ? null : " ",
           h("span", { class: "clock", text: when.clock }),
         ),
-        // With several accounts, the account stands under the time: when and where.
-        showAccount ? h("div", { class: "account description", text: entry.account, title: entry.account }) : null,
+        // With several accounts, the account stands under the time: when and where. In the stacked layout it has a line of its own.
+        showAccount ? h("div", { class: "account description", title: entry.account }, ...addressed(entry.account)) : null,
       ),
       cell(
         "col-message",
@@ -364,17 +424,13 @@ export function logSection(): Section {
         h(
           "div",
           { class: "outcome-line" },
-          h("span", { class: `outcome outcome-${entry.outcome}`, text: tCode("outcome", entry.outcome) }),
-          actionText === "" ? null : h("span", { class: "outcome-action", text: `, ${actionText}` }),
-          entry.observed ? " " : null,
-          entry.observed ? h("span", { class: "badge", text: t("logObservedBadge") }) : null,
-          entry.test ? " " : null,
-          entry.test ? h("span", { class: "badge", text: t("logTestBadge") }) : null,
+          ...outcomeParts,
           entry.score === null
             ? null
             : h("span", { class: "score-inline", text: entry.accessPoint === "" ? score : `${score} (${entry.accessPoint})`, title: t("logScoreTitle", score) }),
         ),
-        ...detailLines(entry).map((line) => h("div", { class: "detail description", text: line })),
+        // An entry of a list is named by its address or domain, which breaks like one.
+        ...detailLines(entry).map((line) => h("div", { class: "detail description" }, ...addressed(line))),
         controls.feedback,
       ),
       cell(
@@ -392,8 +448,21 @@ export function logSection(): Section {
     const now = Date.now();
     const today = new Date(now).toDateString();
     const needle = search.value.trim();
+    const when = period.value as Period;
+    // The menu of accounts is there with more than one account. An account that is chosen stays chosen while it exists.
+    const accounts = model?.accounts ?? [];
+    const accountsSignature = JSON.stringify(accounts.map((item) => [item.id, item.name]));
+    if (account.dataset.signature !== accountsSignature) {
+      const chosen = account.value;
+      account.dataset.signature = accountsSignature;
+      replace(account, option("all", t("scopeAll"), chosen === "all" || chosen === ""), ...accounts.map((item) => option(item.id, item.name, chosen === item.id)));
+      account.hidden = accounts.length < 2;
+    }
+    const where = account.hidden ? "all" : account.value;
     const matching = entries.filter(
       (entry) =>
+        inPeriod(entry.time, when, now) &&
+        (where === "all" || entry.accountId === where) &&
         (filter.value === "all"
           ? true
           : filter.value === "tests"
@@ -410,8 +479,17 @@ export function logSection(): Section {
       }
     }
     // Without a filter the line counts the rows, with one it counts what matches. The button under the table offers the rest.
-    const filtered = filter.value !== "all" || needle !== "";
+    const filtered = filter.value !== "all" || when !== "all" || where !== "all" || needle !== "";
     const count = entries.length === 0 ? "" : filtered ? t("matchCount", matching.length, entries.length) : t("logCount", Math.min(matching.length, limit), entries.length);
+    // An empty log says why it is empty when protection is not on yet.
+    const emptyText =
+      entries.length > 0
+        ? t("logNoMatch")
+        : model?.status.wish.waiting === true
+          ? t("logEmptyWaiting")
+          : model?.settings?.protection === false
+            ? t("logEmptyOff")
+            : t("logEmpty");
     if (summary.textContent !== count) {
       summary.textContent = count;
     }
@@ -423,13 +501,8 @@ export function logSection(): Section {
         ? [
             {
               key: "empty",
-              signature: String(entries.length === 0),
-              build: () =>
-                h(
-                  "tr",
-                  { class: "empty-row", attrs: { role: "row" } },
-                  h("td", { colSpan: 5, class: "empty", text: t(entries.length === 0 ? "logEmpty" : "logNoMatch"), attrs: { role: "cell" } }),
-                ),
+              signature: emptyText,
+              build: () => h("tr", { class: "empty-row", attrs: { role: "row" } }, h("td", { colSpan: 5, class: "empty", text: emptyText, attrs: { role: "cell" } })),
             },
           ]
         : matching.slice(0, limit).map((entry) => {
@@ -502,6 +575,8 @@ export function logSection(): Section {
       }
       // The entry has to be among the rows: no filter, no search.
       filter.value = "all";
+      period.value = "all";
+      account.value = "all";
       search.value = "";
       wanted = intent.key;
       highlighted = intent.key;

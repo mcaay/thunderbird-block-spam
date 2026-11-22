@@ -17,6 +17,7 @@ import type {
 } from "../core/engine";
 import type { ExportResult, ImportMode, ImportReport } from "../core/exportImport";
 import type { LogAction } from "../core/logAction";
+import type { WishOutcome } from "../core/protectionWish";
 import type { Entry, EntryKind, ListName, LogEntry } from "../core/types";
 
 /** Where a block or trust command came from. */
@@ -41,7 +42,15 @@ export interface StoredCommand extends CommandRecord {
 
 export interface Requests {
   getStatus: { request: Record<string, never>; result: Status };
+  /** Switches protection now. A wish that waited for the scan is settled by it. */
   setProtection: { request: { on: boolean }; result: null };
+  /**
+   * Switches protection on when the scan of the sent mail has finished without an error: the scan that is
+   * running, or else a scan of everything that is started here. The wish is stored and survives a restart.
+   */
+  protectAfterScan: { request: Record<string, never>; result: null };
+  /** Calls that wish off, and forgets what the last one came to. */
+  clearProtectionWish: { request: Record<string, never>; result: null };
   updateSettings: { request: { patch: SettingsPatch }; result: { invalid: string[] } };
   /** Without a kind, a value with a name before an "@" is an address and anything else a domain. */
   addEntry: {
@@ -173,6 +182,8 @@ export interface Status {
   signIn: SignInStatus;
   /** A test of selected messages is running. */
   scoring: boolean;
+  /** "Switch protection on" that waits for the scan: whether one is waiting, and what the last one came to until the user has seen it. */
+  wish: { waiting: boolean; outcome: WishOutcome | null };
 }
 
 /** Sends a request to the background and returns its result. Rejects with the background's error message. */
