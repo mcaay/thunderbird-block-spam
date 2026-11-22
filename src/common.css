@@ -669,7 +669,8 @@ details[open] > summary::before {
 
 /* A link on the fill of a bar has the color of the bar's text and its underline: the link colors do not keep 4.5 to 1 on every fill of both themes. */
 .bar a,
-.bar button.link {
+.bar button.link,
+.bar button.link:hover:not(:disabled, [aria-disabled="true"]) {
   color: inherit;
 }
 
