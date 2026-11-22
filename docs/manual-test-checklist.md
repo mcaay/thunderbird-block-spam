@@ -163,7 +163,7 @@ Practical result: `messages.listInlineTextParts` returned exactly `[{"contentTyp
 
 ### B9. The screening flow
 
-- [ ] "Create folder" under Incoming mail asks for the folder permission and creates a "Screening" folder. If Thunderbird reports that folder creation is not available yet, create the folder by hand, choose it in the list and record this.
+- [ ] "Create the folder “Screening”" under Incoming mail asks for the folder permission and creates a "Screening" folder. Afterwards the button is unavailable, and its tooltip says that the folder is the screening folder already. Where a folder of that name exists but is not chosen, the button reads "Use the folder “Screening”". If Thunderbird reports that folder creation is not available yet, create the folder by hand, choose it in the list and record this.
 - [ ] With "no AI verdict" set to the screening folder and no AI: mail from unknown senders lands there.
 - [ ] Write to one of those senders, or press a trust shortcut: their messages move from the screening folder to the Inbox.
 
@@ -184,7 +184,7 @@ Overview:
 - [ ] Setup step 1 while a long scan runs: a spinner, a progress bar that fills, Cancel, and no filled button on step 3. After Cancel the step shows its number again and "Scan again" is filled. Only after the scan has ended does the step show its check mark.
 - [ ] A scan in an account whose Sent folders are empty says that no sent mail was found and links to the Sent folders.
 - [ ] "Block and trust by hand" names the two shortcuts as they are set and links to the pane "Block and trust".
-- [ ] With protection on and a problem (for example a rejected key): the Block Spam button in the toolbar has a badge, and its title (the label, when the toolbar shows labels) names the number of problems. The badge goes away when the problem is fixed or protection is switched off.
+- [ ] With protection on and a problem (for example a rejected key): the Block Spam button in the toolbar has a badge, and its tooltip names the number of problems. Its label, when the toolbar shows labels, stays "Block Spam". The badge goes away when the problem is fixed or protection is switched off.
 - [ ] When an AI service first answers 401 for incoming mail, one desktop notification names the service and the remedy. More mail does not repeat it. A click on it opens the Overview.
 
 Lists:
@@ -192,12 +192,17 @@ Lists:
 - [ ] Add an address and a domain without choosing a kind. A wrong value ("not an address") is refused with the reason under the field, and the field keeps the focus.
 - [ ] Search and filter the entries, with scope "All accounts" and with one account.
 - [ ] Remove an entry: a confirmation with "Undo (Ctrl+Z)" (Cmd+Z on macOS) appears above the table and stays until the next action. Undo puts the entry back with its source and date, and the shortcut does the same. With the keyboard, the focus moves to the remove button of the next row.
-- [ ] "New entries" (shared or per account) is in this pane, above the table.
+- [ ] "Sharing between accounts" (shared or per account) is in this pane, above the table. Its hint says that an entry added with the form uses its own "Applies to".
+- [ ] "Add" is unavailable while the field is empty.
+- [ ] The line under the filter reads "Showing 200 of 4,001." without a filter, and "Matching: 12 of 4,001." with a filter or a search.
 - [ ] With more than 200 entries the button under the table reads like "Show 200 more (3,801 left)".
 
 Log:
 
-- [ ] Entries appear by themselves, the filter and the search by sender or subject work, "Clear log" asks first.
+- [ ] Entries appear by themselves, the filter and the search by sender or subject work and say how many entries match ("Matching: 2 of 13."), "Clear log…" asks first and is unavailable while the log is empty.
+- [ ] An entry from another day shows its date above the time, an entry from another year the date with the year. Nothing paints over the sender, also with a 12-hour clock.
+- [ ] In a window narrower than 900 pixels the rows are stacked and every row starts its outcome at the same place, whatever the account is called.
+- [ ] The line above the filter names the two shortcuts: one trusts the sender of the selected message, the other blocks it.
 - [ ] "Trust domain" (or "Trust address" for a sender at a public provider) on a Spam or Blocked row puts the sender on the white list, moves the message from Junk back to the Inbox and says so in the row. Undo appears where the button was and takes both back.
 - [ ] "Block domain" on a Passed row blocks the domain ("Block address" at a public provider) and moves the message to Junk. On a Trusted row the button reads "Block address".
 - [ ] "Show message" opens the message of the row in a tab. For a message that was deleted, the row says that it was not found.
@@ -209,6 +214,9 @@ Log:
 Learning and Incoming mail:
 
 - [ ] The folder lists are plain rows with a trash can. "Add folder" is unavailable until a folder is chosen.
+- [ ] The folder menus offer only folders that can be right: no Inbox, Junk, Trash, Drafts, Templates or Outbox as a Sent folder, no Sent, Junk, Trash, Drafts, Templates or Outbox as a monitored folder, neither of these as the screening folder, and no folder that is on one of the other two lists. A folder that was stored before stays listed and can be removed. An account with nothing left to offer says so in one line.
+- [ ] "Mail without an AI verdict" set to the screening folder while an account has none: a line under the menu names the account.
+- [ ] Without any mail account in Thunderbird, both panes say so in one line and "Scan sent mail" is unavailable.
 - [ ] Remove a folder: a confirmation with Undo appears in the group, and Undo puts the folder back.
 - [ ] The date fields of the scan: the line under them says that both are optional and what an empty field means.
 
@@ -222,7 +230,13 @@ AI:
 - [ ] The pane opens with what is sent and that mail from the white list never is.
 - [ ] Add a service from each group of the menu. The line under the menu describes the choice. The editor opens as a new row of the list, and for an existing service inside its row.
 - [ ] "Load models" before the first save shows the consent dialog and the permission prompt, then the models as a menu in place of the Model field, with "Other…" as its last item, which brings the text field back. Nothing says "Loading…" while the dialog is open, nor after Cancel.
-- [ ] The hint of the API key field ends with "Get a key" or "Documentation" for a service from a preset.
+- [ ] The hint of the API key field ends with "Get a key" or "Documentation" for a service from a preset. The sentence about servers on this computer shows only for an address on this computer.
+- [ ] "Load models" for a service whose model is not on the loaded list: the menu marks that model as not on the list, and the status says that the model that is set is not among them.
+- [ ] While a slow service answers, the row says "Testing…" and the editor "Loading…", and the button that was pressed is unavailable.
+- [ ] The warning about a rejected key on the Overview opens the editor with the focus in the API key field.
+- [ ] The services are plain rows with separator lines, also with the editor or a sign-in inside a row.
+- [ ] Under the prompt, two lines say how to try a prompt or a cutoff: with "Test AI on selected messages…" of the toolbar button, and with the observation option on the Overview (a link).
+- [ ] The ChatGPT sign-in: where the page updates by itself, the text says so and a hint says what to do when it does not; where the address has to be pasted, one instruction says so. "Finish sign-in" is unavailable until an address is pasted. Test of a service without a sign-in is unavailable.
 - [ ] After Save the service is tested once and its row shows the result.
 - [ ] Edit, reorder (arrows), disable, test and remove services. Removing asks first.
 - [ ] The permission prompt for a new host appears and can be accepted. Thunderbird has data collection permissions switched off today, so the prompt shows the host only. If a later Thunderbird refuses the data collection part, the page says to press the button again and then asks for the hosts alone. Record which happened.
@@ -234,8 +248,9 @@ AI:
 
 Export and import:
 
+- [ ] "Import" is unavailable until a file is chosen.
 - [ ] Export, then import with Merge and with Replace on a second profile. The file is chosen with the button "Choose file", and the report counts the entries and names what was skipped. Account-scoped entries follow the account with the same email address.
-- [ ] Stored data that is not valid (edit the add-on's storage by hand in a test profile, for example replace an older `log:` chunk with text): protection is off, the page shows only the Overview with the error, "Download the raw data" and "Reset everything…", the popup shows the data problem, the toolbar button has a badge, and the reset gives a working add-on again.
+- [ ] Stored data that is not valid (edit the add-on's storage by hand in a test profile, for example replace an older `log:` chunk with text): protection is off, the page shows only the Overview with the error, "Download the raw data…" and "Reset everything…", the popup shows the data problem, the toolbar button has a badge, and the reset gives a working add-on again.
 - [ ] One stored setting that is not valid (for example `settings.cutoff` set to 7): the page names the setting with its default and offers "Reset only this setting" first. It sets back that setting only, and the page says so.
 
 Block and trust:
@@ -246,15 +261,17 @@ Block and trust:
 
 - [ ] The panel looks like a Thunderbird panel in both themes (the test instance could not show the panel itself, only its content).
 - [ ] The header shows the state as the Overview does, and Settings opens the settings page. With the settings page already open it is brought to the front, not loaded anew.
-- [ ] With one message selected: the sender, the list entry that decides it ("On the white list (entry ...)" or "On neither list"), the decision about this message as a row that opens its log entry, "Block sender" and "Trust sender" with their shortcuts, and "Whole domain" with its own pair. For a sender at a public provider the popup says that only the address is used. A button that would change nothing is unavailable.
+- [ ] With one message selected: the sender, the list entry that decides it ("On the white list (entry ...)" or "On neither list"), the decision about this message as a row that opens its log entry, "Block address" and "Trust address" with their shortcuts, and "Whole domain" with its own pair. For a sender at a public provider the popup says that only the address is used. A button that would change nothing is unavailable.
 - [ ] After a click the result stands at the top with Undo and Dismiss. Undo takes the command back and the popup says so.
 - [ ] The panel and the popup inside it have the same background and text color, in the light and in the dark theme: no seam, no lighter rectangle inside the rounded panel.
 - [ ] With several messages selected: their number, and the same buttons for all of them.
 - [ ] The last ten decisions. Tests and observed decisions say so and have a hollow dot. A click on a row opens the Log pane with that entry in view, marked and focused.
-- [ ] With a problem (for example a rejected key) the state reads "On, with problems" and a line with "Show in Settings" opens the Overview.
+- [ ] With a problem (for example a rejected key) the state reads "On, with problems" and a line with "Show in settings" opens the Overview.
 - [ ] "Switch protection off" and "Switch protection on".
 - [ ] "Test AI on selected messages…" asks for confirmation, writes test entries to the log, moves nothing and creates no entry.
-- [ ] The confirmation names the number of selected messages. With more than 50 selected, it refuses and sends nothing.
+- [ ] The confirmation names the number of selected messages. With no message selected, or with more than 50, the button is unavailable and its tooltip says why.
+- [ ] After a shortcut, the popup shows the command with its time, and with its date too when the command is not from today.
+- [ ] With the keyboard: after "Trust address", Undo, Cancel or the protection switch, the focus is on a control of the popup, never lost.
 
 ### B12. The companion add-on
 

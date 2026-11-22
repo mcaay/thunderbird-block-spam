@@ -103,7 +103,7 @@ The Overview of the settings page lists three steps, each with its button. Until
 
 Consider ticking **observation mode**, the option right under the protection switch, first and watching the log for a few days. It can be ticked before protection is on.
 
-Once protection is on, the Overview and the popup show its state, the time of the last check, today's figures and whether the AI services work. When something needs you (a rejected key, an account without a Junk folder), the state reads "On, with problems" and a warning leads to the fix. You do not have to open anything to notice: the Block Spam button in the toolbar gets a badge and says how many problems there are, and a desktop notification tells you once when an AI service first needs attention.
+Once protection is on, the Overview and the popup show its state, the time of the last check, today's figures and whether the AI services work. When something needs you (a rejected key, an account without a Junk folder), the state reads "On, with problems" and a warning leads to the fix. You do not have to open anything to notice: the Block Spam button in the toolbar gets a badge and its tooltip says how many problems there are (its label stays "Block Spam"), and a desktop notification tells you once when an AI service first needs attention.
 
 The settings page opens from the toolbar popup (Settings), or from Add-ons and Themes.
 
@@ -112,7 +112,7 @@ The settings page opens from the toolbar popup (Settings), or from Add-ons and T
 
 All of these do the same two things: put the sender on a list and move the message (Block to Junk, Trust back to the Inbox from Junk or from a screening folder).
 
-- **Toolbar popup.** Select one or more messages and click the Block Spam button in the toolbar. For one message the popup says which list entry decides its sender and what Block Spam decided about the message, with "Block sender" and "Trust sender" and a quieter pair for the whole domain. Afterwards it says what was added and offers Undo.
+- **Toolbar popup.** Select one or more messages and click the Block Spam button in the toolbar. For one message the popup says which list entry decides its sender and what Block Spam decided about the message, with "Block address" and "Trust address" and a quieter pair for the whole domain. Afterwards it says what was added and offers Undo.
 - **Context menu.** Right-click a message in the message list and choose Block Spam.
 - **Keyboard shortcuts:**
 	- `Alt` + `B` ⮕ add the address to the BLACK LIST and move the message to Junk

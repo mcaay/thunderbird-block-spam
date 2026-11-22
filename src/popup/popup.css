@@ -140,8 +140,11 @@ section > p:last-child {
   overflow-wrap: anywhere;
 }
 
+/* The decision about the selected message is a row like those of the last decisions: its time stands at the end of the row, in line with theirs. */
 .selection > .decision.own {
+  display: grid;
   grid-template-columns: 8px minmax(0, 1fr) auto;
+  gap: 0 7px;
   width: calc(100% + 12px);
   margin: 0 -6px 4px;
 }

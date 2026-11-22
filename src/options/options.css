@@ -192,13 +192,18 @@ details.more > .more-body p {
   margin-top: 4px;
 }
 
+/* A note about an option: an icon and a sentence. A long sentence wraps next to the icon, not under it. */
 .option-note {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 8px;
+  align-items: flex-start;
+  gap: 6px;
   margin: 2px 0 6px;
   color: var(--warning);
+  overflow-wrap: anywhere;
+}
+
+.option-note > .icon {
+  margin-top: 1px;
 }
 
 /* Confirmations and failures that appear in place. An empty holder takes no room. */

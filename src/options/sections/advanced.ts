@@ -91,7 +91,8 @@ export function advancedSection(): Section {
     const typed = domain.value.trim();
     const state = current();
     domainError.set(null);
-    verdict.textContent = typed === "" || state.domain === null ? "" : state.isPublic ? t("publicIsPublic", state.domain) : t("publicIsCustom", state.domain);
+    // Both buttons are unavailable until the field holds a domain: the line under it says what is expected.
+    verdict.textContent = typed === "" ? "" : state.domain === null ? t("publicInvalid") : state.isPublic ? t("publicIsPublic", state.domain) : t("publicIsCustom", state.domain);
     makePublic.disabled = state.domain === null || state.isPublic;
     makeCustom.disabled = state.domain === null || !state.isPublic;
   }
