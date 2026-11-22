@@ -1607,17 +1607,11 @@
   "editorEditTitle": {
     "message": "Edycja: $1"
   },
-  "draftChanged": {
-    "message": "Zmiany w usłudze „$1” nie są zapisane."
+  "discardedChanges": {
+    "message": "Odrzucono zmiany w usłudze „$1”."
   },
-  "draftNew": {
-    "message": "Nowa usługa nie jest zapisana."
-  },
-  "draftContinue": {
-    "message": "Wróć do edycji"
-  },
-  "draftContinueNew": {
-    "message": "Wróć do edycji: nowa usługa"
+  "discardedNew": {
+    "message": "Odrzucono nową usługę."
   },
   "fieldName": {
     "message": "Nazwa"
@@ -2128,6 +2122,18 @@
   },
   "importEntries": {
     "message": "Dodane wpisy: $1. Przeniesione z drugiej listy: $2. Już istniejące: $3."
+  },
+  "importMovedWhite": {
+    "message": "Przeniesione na białą listę: $1."
+  },
+  "importMovedWhiteMore": {
+    "message": "Przeniesione na białą listę: $1 i jeszcze $2."
+  },
+  "importMovedBlack": {
+    "message": "Przeniesione na czarną listę: $1."
+  },
+  "importMovedBlackMore": {
+    "message": "Przeniesione na czarną listę: $1 i jeszcze $2."
   },
   "importReplaced": {
     "message": "Ustawienia zostały zastąpione. Zaimportowane usługi AI: $1. Wpisz ponownie ich klucze."

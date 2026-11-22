@@ -166,6 +166,12 @@ export interface ImportReport {
   mode: ImportMode;
   entriesAdded: number;
   entriesReplaced: number;
+  /**
+   * For a merge: the entries that changed sides, by the list the file put them on. Whether to keep the import
+   * depends on which senders these are.
+   */
+  movedToWhite: string[];
+  movedToBlack: string[];
   entriesUnchanged: number;
   skipped: SkippedItem[];
   accessPoints: number;
@@ -305,6 +311,8 @@ export function applyImport(
     mode,
     entriesAdded: 0,
     entriesReplaced: 0,
+    movedToWhite: [],
+    movedToBlack: [],
     entriesUnchanged: 0,
     skipped: [],
     accessPoints: 0,
@@ -337,6 +345,7 @@ export function applyImport(
       } else if (existing.list !== entry.list) {
         target.entries.set(key, entry);
         report.entriesReplaced += 1;
+        (entry.list === "white" ? report.movedToWhite : report.movedToBlack).push(entry.value);
         undo.restore.push(existing);
       } else {
         report.entriesUnchanged += 1;

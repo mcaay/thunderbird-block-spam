@@ -1607,17 +1607,11 @@
   "editorEditTitle": {
     "message": "Edit: $1"
   },
-  "draftChanged": {
-    "message": "The changes to “$1” are not saved."
+  "discardedChanges": {
+    "message": "Discarded the changes to “$1”."
   },
-  "draftNew": {
-    "message": "The new service is not saved."
-  },
-  "draftContinue": {
-    "message": "Continue editing"
-  },
-  "draftContinueNew": {
-    "message": "Continue editing: new service"
+  "discardedNew": {
+    "message": "Discarded the new service."
   },
   "fieldName": {
     "message": "Name"
@@ -2128,6 +2122,18 @@
   },
   "importEntries": {
     "message": "Entries added: $1. Moved from the other list: $2. Already there: $3."
+  },
+  "importMovedWhite": {
+    "message": "Moved to the white list: $1."
+  },
+  "importMovedWhiteMore": {
+    "message": "Moved to the white list: $1 and $2 more."
+  },
+  "importMovedBlack": {
+    "message": "Moved to the black list: $1."
+  },
+  "importMovedBlackMore": {
+    "message": "Moved to the black list: $1 and $2 more."
   },
   "importReplaced": {
     "message": "The settings were replaced. AI services imported: $1. Enter their keys again."

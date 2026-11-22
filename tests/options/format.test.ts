@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { logEntryKey } from "../../src/core/keys";
-import { addressPieces, breakableParts, formatLogTime, formatScore, formatShortcut, formatShortTime, logTimeParts, matchesSearch, parseEntryDetail } from "../../src/options/format";
+import { addressPieces, breakableParts, firstFew, formatLogTime, formatScore, formatShortcut, formatShortTime, logTimeParts, matchesSearch, parseEntryDetail } from "../../src/options/format";
 import { folderDisplayName } from "../../src/options/model";
 
 describe("times", () => {
@@ -141,5 +141,19 @@ describe("addresses and domains inside a sentence", () => {
   it("gives back the whole text when its pieces and their tails are joined", () => {
     const text = "Without a screening folder: zamowienia.hurtowe@drukarnia-centrum.test, Rig bob. Their mail stays.";
     expect(addressPieces(text).map((piece) => piece.text + piece.tail).join("")).toBe(text);
+  });
+});
+
+describe("a line that names the entries an import moved", () => {
+  it("names the first ten and counts the rest", () => {
+    const values = Array.from({ length: 13 }, (_, index) => `sender${index}.example`);
+    expect(firstFew(values.slice(0, 2))).toEqual({ shown: ["sender0.example", "sender1.example"], more: 0 });
+    expect(firstFew(values.slice(0, 10)).more).toBe(0);
+    expect(firstFew(values)).toEqual({ shown: values.slice(0, 10), more: 3 });
+    expect(firstFew([])).toEqual({ shown: [], more: 0 });
+  });
+
+  it("says an entry once when it moved for two accounts", () => {
+    expect(firstFew(["a.example", "b.example", "a.example"])).toEqual({ shown: ["a.example", "b.example"], more: 0 });
   });
 });

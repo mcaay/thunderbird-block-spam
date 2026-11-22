@@ -312,6 +312,33 @@ export type BarKind = "information" | "success" | "warning" | "critical";
 
 const BAR_ICONS: Record<BarKind, IconName> = { information: "info", success: "success", warning: "warning", critical: "critical" };
 
+/**
+ * The close button of a bar that stays until the next action (a confirmation with Undo, a report, a result): the
+ * same one everywhere, at the end of the bar after its other buttons. A bar that describes a state that still
+ * holds (a warning, a note that something waits) has none: it goes when the state does.
+ */
+export function closeButton(onclick: () => void): HTMLButtonElement {
+  const element = iconButton("close", t("dismiss"), onclick);
+  element.dataset.focus = "close";
+  return element;
+}
+
+/**
+ * Where the keyboard goes on when a bar is closed and no control is named for it: the first control that follows
+ * the bar in its pane and can be reached with Tab, or else the title of the pane. It is never left on nothing.
+ */
+export function focusAfter(element: Element): void {
+  const pane = element.closest("section.pane");
+  const next = [...(pane ?? document.body).querySelectorAll<HTMLElement>(FOCUSABLE)].find(
+    (candidate) =>
+      !element.contains(candidate) &&
+      (element.compareDocumentPosition(candidate) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0 &&
+      candidate.tabIndex >= 0 &&
+      candidate.getClientRects().length > 0,
+  );
+  (next ?? paneTitle(element))?.focus();
+}
+
 /** A message bar: an icon, text, and optionally buttons or links that lead to the fix. */
 export function bar(kind: BarKind, content: Child[], actions: Child[] = []): HTMLElement {
   return h(
@@ -519,9 +546,9 @@ export function undoLabel(): string {
 export interface Notice {
   element: HTMLElement;
   /**
-   * Shows a confirmation. It stays until the next action here. With `undo` it carries
-   * an Undo button, and Ctrl+Z or Command+Z does the same; `undone` is what it says
-   * once the action was taken back.
+   * Shows a confirmation. It stays until the next action here, or until its close button
+   * is pressed. With `undo` it carries an Undo button, and Ctrl+Z or Command+Z does the
+   * same; `undone` is what it says once the action was taken back.
    */
   show(message: string, undo?: () => Promise<unknown> | void, undone?: string): void;
   clear(): void;
@@ -541,8 +568,12 @@ function onUndoKey(event: KeyboardEvent): void {
   }
 }
 
-/** The place of a group where its confirmations appear. Put its element where the result of the action is seen. */
-export function notice(): Notice {
+/**
+ * The place of a group where its confirmations appear. Put its element where the result of the action is seen.
+ * `afterClose` names the control the confirmation belongs to: it takes the focus when the bar is closed. Without
+ * it, or when it names none, the control that follows the bar does.
+ */
+export function notice(afterClose?: () => HTMLElement | null): Notice {
   // It can take the focus, for when the button that was pressed is gone: then it reads its text.
   const element = h("div", { class: "notice", tabIndex: -1, attrs: { role: "group" } });
   const self: Notice = {
@@ -575,7 +606,17 @@ export function notice(): Notice {
           document.addEventListener("keydown", onUndoKey);
         }
       }
-      const box = bar("information", [message], [undoButton]);
+      const close = closeButton(() => {
+        // The bar goes away, and the button that was pressed with it: the focus moves first, so that it is never on nothing.
+        const target = afterClose?.() ?? null;
+        if (target !== null && target.isConnected) {
+          target.focus();
+        } else {
+          focusAfter(element);
+        }
+        self.clear();
+      });
+      const box = bar("information", [message], [undoButton, close]);
       box.setAttribute("role", "status");
       element.setAttribute("aria-label", message);
       replace(element, box);
@@ -641,7 +682,13 @@ export function reportError(message: string): void {
     }
   }
   const holder = host;
-  const box = bar("critical", [message], [iconButton("close", t("dismiss"), () => holder.remove())]);
+  const box = bar("critical", [message], [
+    closeButton(() => {
+      // The bar goes away with its button: the keyboard goes on with what follows it in the pane.
+      focusAfter(holder);
+      holder.remove();
+    }),
+  ]);
   box.setAttribute("role", "alert");
   replace(holder, box);
 }

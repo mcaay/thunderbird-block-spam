@@ -145,6 +145,9 @@ describe("import: merge", () => {
     const before = { settings: structuredClone(local.settings), accessPoints: structuredClone(local.accessPoints) };
     const report = applyImport(local, file, "merge", context());
     expect(report).toMatchObject({ mode: "merge", entriesAdded: 1, entriesReplaced: 1, entriesUnchanged: 1, skipped: [], accessPoints: 0 });
+    // The entry that changed sides is named, by the list the file put it on: a trusted sender became a blocked one.
+    expect(report.movedToBlack).toEqual(["cold@outreach.example"]);
+    expect(report.movedToWhite).toEqual([]);
     expect(local.settings).toEqual(before.settings);
     expect(local.accessPoints).toEqual(before.accessPoints);
     expect(local.entries.size).toBe(4);

@@ -1049,7 +1049,7 @@ describe("undoing a merge of an import", () => {
     const many = Array.from({ length: 3000 }, (_, index) => ({ list: "white", kind: "domain", value: `new${index}.example`, scope: "all", source: "scan", addedAt: 9 }));
     const incoming = { ...file, entries: [{ list: "white", kind: "domain", value: "blocked-here.example", scope: "all", source: "sent", addedAt: 9 }, { list: "white", kind: "domain", value: "kept.example", scope: "all", source: "sent", addedAt: 9 }, ...many] };
     const reply = await background.send("importData", { file: incoming, mode: "merge" });
-    expect(reply).toMatchObject({ ok: true, result: { entriesAdded: 3000, entriesReplaced: 1, entriesUnchanged: 1 } });
+    expect(reply).toMatchObject({ ok: true, result: { entriesAdded: 3000, entriesReplaced: 1, entriesUnchanged: 1, movedToWhite: ["blocked-here.example"], movedToBlack: [] } });
     if (!reply.ok || reply.result.undoId === null) {
       throw new Error("the merge offered no Undo");
     }
