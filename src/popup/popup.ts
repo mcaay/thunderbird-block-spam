@@ -110,13 +110,19 @@ function restoreFocus(kind: string | null): void {
 // ---------------------------------------------------------------------------
 // The last command, with Undo.
 
-function resultBox(lines: readonly string[], failed: boolean, caption: string, actions: Child[]): HTMLElement {
+function resultBox(lines: readonly string[], failed: boolean, caption: string, actions: Child[], link: HTMLElement | null = null): HTMLElement {
   return h(
     "div",
     { class: `result ${failed ? "error" : "ok"}`, attrs: { role: failed ? "alert" : "status" } },
     icon(failed ? "warning" : "success"),
-    // A line can name addresses and domains: they break like addresses.
-    h("div", { class: "result-text" }, caption === "" ? null : h("div", { class: "description", text: caption }), ...lines.map((line) => h("div", {}, ...addressed(line)))),
+    // A line can name addresses and domains: they break like addresses. A link ends the last line as a part of it, tied to
+    // the word before it, so the text keeps the width of the box and the link never stands alone on a line.
+    h(
+      "div",
+      { class: "result-text" },
+      caption === "" ? null : h("div", { class: "description", text: caption }),
+      ...lines.map((line, index) => h("div", {}, ...addressed(line), ...(link !== null && index === lines.length - 1 ? ["\u00a0", link] : []))),
+    ),
     actions.some((action) => action !== null) ? h("div", { class: "result-actions" }, ...actions) : null,
   );
 }
@@ -421,7 +427,7 @@ function showScoreMessage(message: string, isError = false, withLog = false): vo
   });
   // A result that sends the reader to the log for the reasons leads there.
   const openLog = withLog ? button(t("otherWaysLogLink"), () => void openSettings({ pane: "log", logKey: null }).catch(() => undefined), "link") : null;
-  replace(scoreBox, resultBox([message], isError, "", [openLog, close]), scoreButton());
+  replace(scoreBox, resultBox([message], isError, "", [close], openLog), scoreButton());
   // The buttons of the question are gone: the keyboard goes back to the button that asks again.
   restoreFocus("score");
 }
