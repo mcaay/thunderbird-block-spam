@@ -20,7 +20,8 @@ import { loadShortcutKeys } from "../options/shortcutKeys";
 import type { ShortcutKeys } from "../options/shortcutKeys";
 import { drawState } from "../options/state";
 import { localizePage, stringsLocale, t, tCode, tn } from "../tb/i18n";
-import { problemNames } from "../tb/stateText";
+import { commandTitle } from "../tb/commandText";
+import { problemLines } from "../tb/stateText";
 import { send } from "../tb/protocol";
 import type { CommandRecord, SettingsTarget, Status } from "../tb/protocol";
 
@@ -103,7 +104,7 @@ async function currentProblems(settings: Settings, accessPoints: AccessPoint[], 
  */
 function restoreFocus(kind: string | null): void {
   const same = kind === null ? undefined : [...document.querySelectorAll<HTMLElement>("[data-focus]")].find((candidate) => candidate.dataset.focus === kind && candidate.closest("[hidden]") === null);
-  (same ?? selectionBox.querySelector<HTMLElement>(".row button") ?? byId("open-settings")).focus();
+  (same ?? selectionBox.querySelector<HTMLElement>(".commands button") ?? byId("open-settings")).focus();
 }
 
 // ---------------------------------------------------------------------------
@@ -171,26 +172,29 @@ function drawCommand(tabId: number | null): void {
 // ---------------------------------------------------------------------------
 // Block and trust for the selected messages: the same four commands as the shortcuts.
 
-function commandButton(label: string, name: string, command: CommandName, tabId: number, cls: string, unchanged = false): HTMLButtonElement {
+/** `name` is the accessible name: the label and its object. `title` is the tooltip: the whole sentence of what the command does. */
+function commandButton(label: string, name: string, command: CommandName, tabId: number, title = "", unchanged = false): HTMLButtonElement {
   const key = shortcuts.keys.get(command);
   const element = h(
     "button",
-    { type: "button", class: cls, attrs: { "aria-label": name } },
-    h("span", { text: label }),
+    { type: "button", attrs: { "aria-label": name } },
+    // The label stands at the start of the button and its key at the end.
+    h("span", { class: "label", text: label }),
     key === undefined ? null : h("span", { class: "key", text: key, attrs: { "aria-hidden": "true" } }),
   );
   element.dataset.focus = command;
+  if (title !== "") {
+    element.title = title;
+  }
   if (unchanged) {
     // The sender is on this list already and the message is where the command would put it.
-    setUnavailable(element, true);
-    element.title = t("popupNoChange");
-    element.setAttribute("aria-label", `${name}. ${t("popupNoChange")}`);
+    setUnavailable(element, true, t("popupNoChange"));
   }
   element.addEventListener("click", () => {
     if (element.getAttribute("aria-disabled") === "true") {
       return;
     }
-    for (const other of selectionBox.querySelectorAll(".row button")) {
+    for (const other of selectionBox.querySelectorAll(".commands button")) {
       other.setAttribute("aria-disabled", "true");
     }
     void (async () => {
@@ -283,21 +287,20 @@ async function drawSelection(tabId: number | null, quiet = false): Promise<void>
   }
   const many = count > 1 || sender === null;
   const unchanged = (command: CommandName): boolean => sender?.unchanged.includes(command) === true;
+  const title = (command: CommandName): string => commandTitle(command, sender?.effects[command]);
   const parts: Child[] = [];
-  let domainRow: Child = null;
+  /** What stands between the address row and the domain row: the line that names the domain. */
+  let domainLine: Child = null;
+  let domainButtons: Child[] = [];
+  /** Said in place of the domain row for a sender at a public mail provider. */
+  let publicNote: Child = null;
   if (many) {
     parts.push(h("h2", { text: tn("popupSelectedMany", count) }));
-    domainRow = h(
-      "div",
-      { class: "domain" },
-      h("div", { class: "description", text: t("popupDomains") }),
-      h(
-        "div",
-        { class: "row" },
-        commandButton(t("popupBlockShort"), t("cmdBlockDomain"), "block-domain", tabId, "small"),
-        commandButton(t("popupTrustShort"), t("cmdTrustDomain"), "trust-domain", tabId, "small"),
-      ),
-    );
+    domainLine = h("div", { class: "description domain-line", text: t("popupDomains") });
+    domainButtons = [
+      commandButton(t("popupBlockShort"), t("cmdBlockDomain"), "block-domain", tabId),
+      commandButton(t("popupTrustShort"), t("cmdTrustDomain"), "trust-domain", tabId),
+    ];
   } else if (sender !== null) {
     parts.push(h("h2", { text: t("popupSelectedOne") }));
     parts.push(
@@ -321,31 +324,32 @@ async function drawSelection(tabId: number | null, quiet = false): Promise<void>
       parts.push(h("p", { class: "description", text: t("popupUnknownSender") }));
     } else if (sender.domainTarget?.kind === "domain") {
       const domain = sender.domainTarget.value;
-      domainRow = h(
-        "div",
-        { class: "domain" },
-        h("div", { class: "description" }, t("popupDomain"), " ", address(domain), ":"),
-        h(
-          "div",
-          { class: "row" },
-          commandButton(t("popupBlockShort"), t("popupBlockDomainNamed", domain), "block-domain", tabId, "small", unchanged("block-domain")),
-          commandButton(t("popupTrustShort"), t("popupTrustDomainNamed", domain), "trust-domain", tabId, "small", unchanged("trust-domain")),
-        ),
-      );
+      domainLine = h("div", { class: "description domain-line" }, t("popupDomain"), " ", address(domain), ":");
+      domainButtons = [
+        commandButton(t("popupBlockShort"), t("popupBlockDomainNamed", domain), "block-domain", tabId, title("block-domain"), unchanged("block-domain")),
+        commandButton(t("popupTrustShort"), t("popupTrustDomainNamed", domain), "trust-domain", tabId, title("trust-domain"), unchanged("trust-domain")),
+      ];
     } else {
-      domainRow = h("p", { class: "description", text: t("popupPublicNote") });
+      publicNote = h("p", { class: "description public-note", text: t("popupPublicNote") });
     }
   }
+  const blockLabel = t(many ? "popupBlockMany" : "popupBlock");
+  const trustLabel = t(many ? "popupTrustMany" : "popupTrust");
+  // The name is the label and its object: the address the button acts on.
+  const named = (label: string): string => (sender === null || sender.address === "" || many ? label : t("labelNamed", label, sender.address));
   replace(
     selectionBox,
     ...parts,
+    // The main controls of the panel: two columns of equal width that fill it, Block under Block and Trust under Trust.
     h(
       "div",
-      { class: "row" },
-      commandButton(t(many ? "popupBlockMany" : "popupBlock"), t(many ? "popupBlockMany" : "popupBlock"), "block-address", tabId, "", unchanged("block-address")),
-      commandButton(t(many ? "popupTrustMany" : "popupTrust"), t(many ? "popupTrustMany" : "popupTrust"), "trust-address", tabId, "", unchanged("trust-address")),
+      { class: "commands" },
+      commandButton(blockLabel, named(blockLabel), "block-address", tabId, title("block-address"), unchanged("block-address")),
+      commandButton(trustLabel, named(trustLabel), "trust-address", tabId, title("trust-address"), unchanged("trust-address")),
+      domainLine,
+      ...domainButtons,
+      publicNote,
     ),
-    domainRow,
   );
 }
 
@@ -458,6 +462,7 @@ function scoreButton(): HTMLButtonElement {
   });
   element.dataset.role = "score";
   element.dataset.focus = "score";
+  element.classList.add("small");
   drawScoreButton(element);
   return element;
 }
@@ -497,7 +502,8 @@ function switchBox(settings: Settings, status: Status, hasAi: boolean): HTMLElem
         .finally(() => void redraw("toggle"));
     });
     cancel.dataset.focus = "toggle";
-    return h("div", { class: "row end" }, h("p", { class: "description", text: t("wishWaiting"), attrs: { role: "status" } }), cancel);
+    cancel.classList.add("small");
+    return h("div", { class: "switch waiting" }, h("p", { class: "description", text: t("wishWaiting"), attrs: { role: "status" } }), cancel);
   }
   const afterScan = !settings.protection && status.scan?.running === true && hasAi;
   const toggle = button(t(settings.protection ? "protectionSwitchOff" : "protectionSwitchOn"), () => {
@@ -508,7 +514,9 @@ function switchBox(settings: Settings, status: Status, hasAi: boolean): HTMLElem
       .finally(() => void redraw("toggle"));
   });
   toggle.dataset.focus = "toggle";
-  return h("div", { class: "row end" }, toggle);
+  // A rare and far-reaching action: a small button at the end of the footer, quieter than the buttons for the selected message.
+  toggle.classList.add("small");
+  return h("div", { class: "switch" }, toggle);
 }
 
 /** While protection waits for the scan the popup asks once a second whether the scan has ended, and then shows what came of it. */
@@ -545,7 +553,7 @@ async function draw(): Promise<void> {
   watchWish(status.wish.waiting);
   if (status.fatal !== null || settings === null) {
     // Stored data that failed validation is not read any further.
-    drawState(stateBox, "invalid", 0);
+    drawState(stateBox, "invalid", 0, true);
     replace(content, h("section", {}, h("p", { text: t("popupDataProblemText") }), h("div", { class: "row" }, button(t("popupOpenSettings"), () => void openSettings()))));
     return;
   }
@@ -566,7 +574,7 @@ async function draw(): Promise<void> {
     problems: problems.length,
     waiting: status.wish.waiting,
   });
-  drawState(stateBox, shown, problems.length);
+  drawState(stateBox, shown, problems.length, true);
   if (shown === "no-account") {
     // Without a mail account there is nothing to select, to scan or to protect. Setup is not pointed at: its first step cannot be done.
     replace(content, h("section", {}, h("p", { text: t("noAccounts") })));
@@ -615,7 +623,13 @@ async function draw(): Promise<void> {
           "section",
           { class: "notice" },
           icon("warning"),
-          h("span", { class: "notice-text", attrs: { role: "status" } }, ...addressed(t("popupProblemsNamed", problemNames(problems, accessPoints)))),
+          // One line that says what this is, then one cause per line.
+          h(
+            "div",
+            { class: "notice-text", attrs: { role: "status" } },
+            h("div", { class: "notice-title", text: t("popupProblemsTitle") }),
+            h("ul", { class: "causes" }, ...problemLines(problems, accessPoints, stringsLocale()).map((line) => h("li", {}, ...addressed(line)))),
+          ),
           button(t("popupShowProblems"), () => void openSettings({ pane: "overview", logKey: null }), "small"),
         );
   replace(content, notice, commandBox, selectionBox, recentBox, footer);

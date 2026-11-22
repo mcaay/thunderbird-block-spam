@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { entryKey } from "../../src/core/lists";
-import { expectsMove, fittingAction, isLogAction, logActionTarget } from "../../src/core/logAction";
+import { expectsMove, fittingAction, isLogAction, logOffer } from "../../src/core/logAction";
+import { logLabel, logResult } from "../../src/options/logLabels";
 import { ValidationError } from "../../src/core/settings";
 import { KEY_ENTRIES } from "../../src/core/state";
 import type { Entry, FolderRef, LogEntry } from "../../src/core/types";
@@ -75,8 +76,13 @@ describe("the action that fits a log entry", () => {
   });
 });
 
+/** What a row would offer, as the page computes it. */
+function offered(h: Harness, row: LogEntry, action: "trust" | "block") {
+  return logOffer({ entries: h.state.entries, publicDomains: h.state.publicDomains, newEntryScope: (accountId) => h.state.newEntryScope(accountId) }, row, action);
+}
+
 describe("trust from the log", () => {
-  it("whitelists the smart target, lifts the AI block and moves the message back to the Inbox", async () => {
+  it("moves the black entry that decided to the white list and moves the message back to the Inbox", async () => {
     const h = await harness();
     h.state.addEntry({ list: "black", kind: "domain", value: "leadgen.example", scope: "all", source: "ai" }, 5);
     const msg = h.mail.put(JUNK1, { author: "growth@mail.leadgen.example" });
@@ -85,7 +91,7 @@ describe("trust from the log", () => {
     expect(entry(h, "domain", "leadgen.example")).toMatchObject({ list: "white", source: "manual" });
     expect(h.state.entries.size).toBe(1);
     expect(h.mail.ids(INBOX1)).toEqual([msg.id]);
-    expect(outcome).toMatchObject({ list: "white", target: { kind: "domain", value: "leadgen.example" }, scope: "all", result: "moved", move: "moved", failure: "" });
+    expect(outcome).toMatchObject({ list: "white", change: "move", target: { kind: "domain", value: "leadgen.example" }, scope: "all", behind: null, move: "moved", failure: "" });
     expect((await reload(h.store)).entries.get(entryKey("domain", "leadgen.example", "all"))?.list).toBe("white");
   });
 
@@ -99,15 +105,40 @@ describe("trust from the log", () => {
     expect(h.state.entries.has(entryKey("domain", "gmail.com", "all"))).toBe(false);
   });
 
-  it("always takes effect: a blocked address inside the trusted domain is removed", async () => {
+  it("only removes a blocked address inside a trusted domain: the domain entry is not touched", async () => {
     const h = await harness();
     h.state.addEntry({ list: "white", kind: "domain", value: "partner.example", scope: "all", source: "sent" }, 1);
     h.state.addEntry({ list: "black", kind: "address", value: "news@partner.example", scope: "all", source: "manual" }, 2);
     const msg = h.mail.put(JUNK1, { author: "news@partner.example" });
-    await h.engine.runLogAction(logged(msg, { outcome: "blocked", reason: "black-address" }), "trust");
+    const outcome = await h.engine.runLogAction(logged(msg, { outcome: "blocked", reason: "black-address" }), "trust");
+    expect(outcome).toMatchObject({ change: "remove", target: { kind: "address", value: "news@partner.example" }, behind: { kind: "domain", value: "partner.example" } });
     expect(h.state.entries.has(entryKey("address", "news@partner.example", "all"))).toBe(false);
-    expect(entry(h, "domain", "partner.example")).toMatchObject({ list: "white", source: "manual" });
+    // The white entry of the domain is exactly as it was: its source is not made manual.
+    expect(entry(h, "domain", "partner.example")).toEqual({ list: "white", kind: "domain", value: "partner.example", scope: "all", source: "sent", addedAt: 1 });
     expect(h.mail.ids(INBOX1)).toEqual([msg.id]);
+    await h.engine.undoLogAction(outcome.undo);
+    expect(entry(h, "address", "news@partner.example")).toEqual({ list: "black", kind: "address", value: "news@partner.example", scope: "all", source: "manual", addedAt: 2 });
+  });
+
+  it("undoes the block of one address for that address, not by trusting its whole domain", async () => {
+    const h = await harness();
+    h.state.addEntry({ list: "black", kind: "address", value: "news@shop.example", scope: "all", source: "manual" }, 2);
+    const msg = h.mail.put(JUNK1, { author: "news@shop.example" });
+    const outcome = await h.engine.runLogAction(logged(msg, { outcome: "blocked", reason: "black-address" }), "trust");
+    expect(outcome).toMatchObject({ change: "move", target: { kind: "address", value: "news@shop.example" } });
+    expect(entry(h, "address", "news@shop.example")).toMatchObject({ list: "white", source: "manual" });
+    expect(h.state.entries.has(entryKey("domain", "shop.example", "all"))).toBe(false);
+    expect(h.state.entries.size).toBe(1);
+  });
+
+  it("keeps the scope of the entry that decided", async () => {
+    const h = await harness();
+    h.state.addEntry({ list: "black", kind: "domain", value: "leadgen.example", scope: "account1", source: "ai" }, 5);
+    const msg = h.mail.put(JUNK1, { author: "growth@leadgen.example" });
+    const outcome = await h.engine.runLogAction(logged(msg, {}), "trust");
+    expect(outcome.scope).toBe("account1");
+    expect(entry(h, "domain", "leadgen.example", "account1")?.list).toBe("white");
+    expect(h.state.entries.size).toBe(1);
   });
 
   it("moves the message back from a screening folder and releases the sender's other mail there", async () => {
@@ -187,7 +218,7 @@ describe("block from the log", () => {
     const outcome = await h.engine.runLogAction(logged(msg, { outcome: "passed", action: "none", reason: "ai-below" }), "block");
     expect(entry(h, "domain", "cold.example")).toMatchObject({ list: "black", source: "manual" });
     expect(h.mail.ids(JUNK1)).toEqual([msg.id]);
-    expect(outcome).toMatchObject({ list: "black", target: { kind: "domain", value: "cold.example" }, result: "added", move: "moved" });
+    expect(outcome).toMatchObject({ list: "black", change: "add", target: { kind: "domain", value: "cold.example" }, move: "moved" });
   });
 
   it("blacklists only the address of a trusted sender, so the domain keeps its trust", async () => {
@@ -205,22 +236,35 @@ describe("block from the log", () => {
     const h = await harness();
     const msg = h.mail.put(INBOX1, { author: "newsletter@partner.example" });
     const passed = logged(msg, { outcome: "passed", action: "none", reason: "ai-below" });
-    expect(logActionTarget(h.state, passed, "block")).toEqual({ kind: "domain", value: "partner.example" });
+    expect(offered(h, passed, "block")?.target).toEqual({ kind: "domain", value: "partner.example" });
     // The user wrote to the company in the meantime.
     h.state.addEntry({ list: "white", kind: "domain", value: "partner.example", scope: "all", source: "sent" }, 1);
-    expect(logActionTarget(h.state, passed, "block")).toEqual({ kind: "address", value: "newsletter@partner.example" });
+    expect(offered(h, passed, "block")?.target).toEqual({ kind: "address", value: "newsletter@partner.example" });
     await h.engine.runLogAction(passed, "block");
     expect(entry(h, "domain", "partner.example")?.list).toBe("white");
     expect(entry(h, "address", "newsletter@partner.example")?.list).toBe("black");
   });
 
-  it("always takes effect: a trusted address of the sender is removed", async () => {
+  it("moves the white address entry that decided to the black list, where it is", async () => {
     const h = await harness();
     h.state.addEntry({ list: "white", kind: "address", value: "sales@cold.example", scope: "account1", source: "manual" }, 1);
     const msg = h.mail.put(INBOX1, { author: "sales@cold.example" });
-    await h.engine.runLogAction(logged(msg, { outcome: "trusted", action: "none", reason: "white-address" }), "block");
-    expect(h.state.entries.has(entryKey("address", "sales@cold.example", "account1"))).toBe(false);
-    expect(entry(h, "address", "sales@cold.example")?.list).toBe("black");
+    const outcome = await h.engine.runLogAction(logged(msg, { outcome: "trusted", action: "none", reason: "white-address" }), "block");
+    expect(outcome).toMatchObject({ change: "move", scope: "account1", target: { kind: "address", value: "sales@cold.example" } });
+    expect(entry(h, "address", "sales@cold.example", "account1")?.list).toBe("black");
+    // Nothing else was added: the entry itself changed its list.
+    expect(h.state.entries.size).toBe(1);
+  });
+
+  it("changes nothing on the lists when a black entry decides already: only the message moves", async () => {
+    const h = await harness();
+    h.state.addEntry({ list: "black", kind: "address", value: "sales@cold.example", scope: "all", source: "manual" }, 1);
+    const before = structuredClone([...h.state.entries.values()]);
+    const msg = h.mail.put(INBOX1, { author: "sales@cold.example" });
+    const outcome = await h.engine.runLogAction(logged(msg, { outcome: "passed", action: "none", reason: "ai-below" }), "block");
+    expect(outcome).toMatchObject({ change: "none", move: "moved" });
+    expect([...h.state.entries.values()]).toEqual(before);
+    expect(h.mail.ids(JUNK1)).toEqual([msg.id]);
   });
 
   it("leaves a message alone that the user has filed elsewhere", async () => {
@@ -295,7 +339,8 @@ describe("undo of a log action", () => {
     const before = structuredClone([...h.state.entries.values()]);
     const msg = h.mail.put(INBOX1, { author: "sales@cold.example" });
     const outcome = await h.engine.runLogAction(logged(msg, { outcome: "trusted", action: "none" }), "block");
-    expect(outcome.undo.remove).toEqual([entryKey("address", "sales@cold.example", "all")]);
+    // The entry that decided was moved to the black list: Undo puts it back as it was, and has nothing to remove.
+    expect(outcome.undo.remove).toEqual([]);
     expect(outcome.undo.restore).toEqual(before);
 
     await h.engine.undoLogAction(outcome.undo);
@@ -303,15 +348,16 @@ describe("undo of a log action", () => {
     expect(h.mail.ids(INBOX1)).toEqual([msg.id]);
   });
 
-  it("restores the source of an entry that the action had only marked as manual", async () => {
+  it("leaves an entry that already trusts the sender exactly as it is: the action is called Move to Inbox and only moves", async () => {
     const h = await harness();
     h.state.addEntry({ list: "white", kind: "domain", value: "partner.example", scope: "all", source: "scan" }, 3);
     const msg = h.mail.put(JUNK1, { author: "anna@partner.example" });
     const outcome = await h.engine.runLogAction(logged(msg, { outcome: "no-verdict", action: "junk" }), "trust");
-    expect(outcome.result).toBe("source-updated");
-    expect(entry(h, "domain", "partner.example")?.source).toBe("manual");
-    await h.engine.undoLogAction(outcome.undo);
+    expect(outcome.change).toBe("none");
+    expect(outcome.undo).toMatchObject({ remove: [], restore: [] });
+    // Not even the source changes: a command never changes more than its label says.
     expect(entry(h, "domain", "partner.example")).toEqual({ list: "white", kind: "domain", value: "partner.example", scope: "all", source: "scan", addedAt: 3 });
+    expect(h.mail.ids(INBOX1)).toEqual([msg.id]);
   });
 
   it("changes nothing in the lists when the action had changed nothing", async () => {
@@ -319,7 +365,7 @@ describe("undo of a log action", () => {
     h.state.addEntry({ list: "white", kind: "domain", value: "partner.example", scope: "all", source: "manual" }, 3);
     const msg = h.mail.put(JUNK1, { author: "anna@partner.example" });
     const outcome = await h.engine.runLogAction(logged(msg, { outcome: "no-verdict", action: "junk" }), "trust");
-    expect(outcome.result).toBe("unchanged");
+    expect(outcome.change).toBe("none");
     expect(outcome.undo).toMatchObject({ remove: [], restore: [] });
     await h.engine.undoLogAction(outcome.undo);
     expect(entry(h, "domain", "partner.example")?.list).toBe("white");
@@ -352,6 +398,12 @@ describe("the sender a command would act on", () => {
       accountId: "account1",
       messageId: company.headerMessageId,
       unchanged: [],
+      effects: {
+        "block-address": { target: { kind: "address", value: "mike@mail.outreach.example" }, change: "added", lifted: [], moves: true },
+        "block-domain": { target: { kind: "domain", value: "outreach.example" }, change: "added", lifted: [], moves: true },
+        "trust-address": { target: { kind: "address", value: "mike@mail.outreach.example" }, change: "added", lifted: [], moves: false },
+        "trust-domain": { target: { kind: "domain", value: "outreach.example" }, change: "added", lifted: [], moves: false },
+      },
     });
     expect((await h.engine.describeSender(personal)).domainTarget).toEqual({ kind: "address", value: "friend@gmail.com" });
     expect((await h.engine.describeSender(own)).own).toBe(true);
@@ -375,6 +427,82 @@ describe("the sender a command would act on", () => {
       accountId: "account1",
       messageId: unknown.headerMessageId,
       unchanged: [],
+      effects: {},
     });
+  });
+});
+
+describe("the label of a log action names exactly what it changes", () => {
+  const sender = "news@partner.example";
+  const row = (partial: Partial<LogEntry>): LogEntry =>
+    logged({ accountId: "account1", author: sender, subject: "s", headerMessageId: "m@test" } as FakeMessage, { sender, ...partial });
+  const blocked = row({ outcome: "blocked", action: "junk", reason: "black-address" });
+  const spam = row({ outcome: "spam", action: "junk", reason: "ai-above" });
+  const observed = row({ outcome: "spam", action: "junk", reason: "ai-above", observed: true });
+  const passed = row({ outcome: "passed", action: "none", reason: "ai-below" });
+  const trusted = row({ outcome: "trusted", action: "none", reason: "white-domain" });
+  const add = (h: Harness, list: "white" | "black", kind: "address" | "domain", value: string, scope = "all"): void => {
+    h.state.addEntry({ list, kind, value, scope, source: "manual" }, 1);
+  };
+
+  /** One line per case: the lists before, the row, and what its button says and does. */
+  const cases: [name: string, setup: (h: Harness) => void, entry: LogEntry, label: string, title: string, change: string, target: string, result: string][] = [
+    ["black address decides", (h) => add(h, "black", "address", sender), blocked, "trust-address", "trust-move", "move", sender, "moved-white"],
+    ["black domain decides", (h) => add(h, "black", "domain", "partner.example"), spam, "trust-domain", "trust-move", "move", "partner.example", "moved-white"],
+    ["black address inside a white domain", (h) => (add(h, "white", "domain", "partner.example"), add(h, "black", "address", sender)), blocked, "unblock-address", "unblock-move", "remove", sender, "unblocked"],
+    ["black address of the account before a white address for all accounts", (h) => (add(h, "white", "address", sender), add(h, "black", "address", sender, "account1")), blocked, "unblock-address", "unblock-move", "remove", sender, "unblocked"],
+    ["black domain of the account before a white domain for all accounts", (h) => (add(h, "white", "domain", "partner.example"), add(h, "black", "domain", "partner.example", "account1")), blocked, "unblock-domain", "unblock-move", "remove", "partner.example", "unblocked"],
+    ["black address before a black domain", (h) => (add(h, "black", "domain", "partner.example"), add(h, "black", "address", sender)), blocked, "trust-address", "trust-move", "move", sender, "moved-white"],
+    ["nothing decides after an observed verdict", () => undefined, observed, "trust-domain", "trust", "add", "partner.example", "trusted"],
+    ["nothing decides any more after a move to Junk", () => undefined, spam, "trust-domain", "trust-move", "add", "partner.example", "trusted"],
+    ["white entry decides, the message was moved", (h) => add(h, "white", "domain", "partner.example"), spam, "move-inbox", "move-inbox", "none", "partner.example", "already-trusted"],
+    ["white entry decides, nothing was moved", (h) => add(h, "white", "domain", "partner.example"), observed, "trusted-now", "trusted-now", "none", "partner.example", "already-trusted"],
+    ["a sender that passed, on neither list", () => undefined, passed, "block-domain", "block", "add", "partner.example", "blocked"],
+    ["a sender that passed, black entry decides by now", (h) => add(h, "black", "domain", "partner.example"), passed, "move-junk", "move-junk", "none", "partner.example", "already-blocked"],
+    ["white domain decides", (h) => add(h, "white", "domain", "partner.example"), trusted, "block-address", "block", "add", sender, "blocked"],
+    ["white address decides", (h) => add(h, "white", "address", sender, "account1"), trusted, "block-address", "block", "move", sender, "moved-black"],
+    ["white address inside a black domain", (h) => (add(h, "black", "domain", "partner.example"), add(h, "white", "address", sender)), trusted, "block-address", "block", "move", sender, "moved-black"],
+    ["a trusted sender whose entry is gone", () => undefined, trusted, "block-address", "block", "add", sender, "blocked"],
+  ];
+
+  it.each(cases)("%s", async (_name, setup, logEntry, label, title, change, target, result) => {
+    const h = await harness();
+    setup(h);
+    const action = fittingAction(logEntry);
+    expect(action).not.toBeNull();
+    const offer = offered(h, logEntry, action as "trust" | "block");
+    expect(offer).not.toBeNull();
+    if (offer === null || action === null) {
+      return;
+    }
+    const said = logLabel(offer, expectsMove(logEntry, action));
+    expect({ label: said.label, title: said.title, change: offer.change, target: offer.target.value }).toEqual({ label, title, change, target });
+    // The label names the kind of entry it changes, and the tooltip its value.
+    if (offer.change !== "none") {
+      expect(said.label.endsWith(offer.target.kind)).toBe(true);
+      expect(said.titleArgs[0]).toBe(offer.target.value);
+    }
+
+    // What the action really does is what the label said, and nothing else.
+    const before = new Map([...h.state.entries].map(([key, value]) => [key, structuredClone(value)]));
+    const message = h.mail.put(logEntry.action === "junk" && !logEntry.observed ? JUNK1 : INBOX1, { author: sender });
+    const outcome = await h.engine.runLogAction({ ...logEntry, messageId: message.headerMessageId }, action);
+    expect(outcome.change).toBe(change);
+    expect(logResult(outcome).code).toBe(result);
+    const changed = [...new Set([...before.keys(), ...h.state.entries.keys()])].filter((key) => JSON.stringify(before.get(key)) !== JSON.stringify(h.state.entries.get(key)));
+    expect(changed).toEqual(change === "none" ? [] : [entryKey(offer.target.kind, offer.target.value, offer.scope)]);
+    const now = h.state.entries.get(entryKey(offer.target.kind, offer.target.value, offer.scope));
+    if (change === "remove") {
+      expect(now).toBeUndefined();
+    } else if (change !== "none") {
+      expect(now).toMatchObject({ list: offer.list, source: "manual" });
+    }
+    // The action takes effect: the sender is decided the way the label said.
+    const said2 = offered(h, logEntry, action);
+    expect(said2?.change).toBe("none");
+
+    // Undo restores the lists exactly.
+    await h.engine.undoLogAction(outcome.undo);
+    expect(new Map(h.state.entries)).toEqual(before);
   });
 });

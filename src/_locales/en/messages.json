@@ -6,7 +6,7 @@
     "message": "Block Spam"
   },
   "extensionDescription": {
-    "message": "Filters spam with local white and black lists learned from your sent mail. AI is asked only about mail from senders you have never written to."
+    "message": "Filters spam with local white and black lists learned from your sent mail. An AI service is asked only about mail from unknown senders, those on neither list."
   },
   "optionsTitle": {
     "message": "Block Spam settings"
@@ -80,8 +80,14 @@
   "editNamed": {
     "message": "Edit $1"
   },
+  "labelNamed": {
+    "message": "$1: $2"
+  },
   "checkAgain": {
     "message": "Check again"
+  },
+  "checkAgainStill": {
+    "message": "Checked at $1: the Spam folder is still missing."
   },
   "colActions": {
     "message": "Actions"
@@ -183,7 +189,7 @@
     "message": "Save the lists, the settings and the AI services to a file, or load them from one."
   },
   "overviewLead": {
-    "message": "Block Spam moves mail from blocked senders to Junk, never touches mail from people you write to, and can ask an AI about everyone else."
+    "message": "Block Spam moves mail from blocked senders to the Spam folder, never touches mail from people you write to, and can ask an AI service about everyone else."
   },
   "protectionTitle": {
     "message": "Protection"
@@ -192,10 +198,10 @@
     "message": "Protect incoming mail"
   },
   "protectionHint": {
-    "message": "New mail in monitored folders is checked against the lists, and mail from blocked senders goes to Junk. Mail that arrived before protection was switched on is never touched."
+    "message": "New mail in monitored folders is checked against the lists, and mail from blocked senders goes to the Spam folder. Mail that arrived before protection was switched on is never touched."
   },
   "protectionMore": {
-    "message": "Mail from senders on neither list is scored by an AI service when one is switched on. Otherwise it follows the setting under Incoming mail. Learning from sent mail, the shortcuts and the Block Spam button in the toolbar work whether protection is on or off."
+    "message": "Mail from unknown senders, those on neither list, is scored by an AI service when one is switched on. Otherwise it follows the setting under $1. Learning from sent mail, the shortcuts and the Block Spam button in the toolbar work whether protection is on or off."
   },
   "protectionSwitchOn": {
     "message": "Switch protection on"
@@ -221,6 +227,24 @@
   "state_invalid": {
     "message": "Data problem"
   },
+  "stateNamed_on": {
+    "message": "Protection on"
+  },
+  "stateNamed_off": {
+    "message": "Protection off"
+  },
+  "stateNamed_observing": {
+    "message": "Protection on, observing only"
+  },
+  "stateNamed_waiting": {
+    "message": "Protection switches on after the scan"
+  },
+  "stateNamed_no_account": {
+    "message": "No mail account"
+  },
+  "stateNamed_invalid": {
+    "message": "Data problem"
+  },
   "stateProblems_one": {
     "message": "On, $1 problem"
   },
@@ -230,8 +254,17 @@
   "stateProblems_many": {
     "message": "On, $1 problems"
   },
+  "stateNamedProblems_one": {
+    "message": "Protection on, $1 problem"
+  },
+  "stateNamedProblems_few": {
+    "message": "Protection on, $1 problems"
+  },
+  "stateNamedProblems_many": {
+    "message": "Protection on, $1 problems"
+  },
   "stateLinkLabel": {
-    "message": "$1: state of protection. Opens the Overview."
+    "message": "$1. Opens the Overview."
   },
   "statusLastCheck": {
     "message": "Last check: $1."
@@ -255,13 +288,13 @@
     "message": "$1 messages checked"
   },
   "statusJunk_one": {
-    "message": "$1 moved to Junk"
+    "message": "$1 moved to the Spam folder"
   },
   "statusJunk_few": {
-    "message": "$1 moved to Junk"
+    "message": "$1 moved to the Spam folder"
   },
   "statusJunk_many": {
-    "message": "$1 moved to Junk"
+    "message": "$1 moved to the Spam folder"
   },
   "statusScored_one": {
     "message": "$1 scored by AI"
@@ -273,22 +306,34 @@
     "message": "$1 scored by AI"
   },
   "statusAi": {
-    "message": "AI services working: $1 of $2."
+    "message": "AI services available: $1 of $2."
   },
   "statusAiOff": {
     "message": "All AI services are switched off."
   },
+  "statusAiWaiting_one": {
+    "message": "$1 AI service switches on after the scan."
+  },
+  "statusAiWaiting_few": {
+    "message": "$1 AI services switch on after the scan."
+  },
+  "statusAiWaiting_many": {
+    "message": "$1 AI services switch on after the scan."
+  },
   "warnAiBeforeScan": {
-    "message": "An AI service is switched on, but the white list holds only your own addresses. Mail from people you already write to would be sent to the AI."
+    "message": "An AI service is switched on, but the white list holds only your own addresses. Mail from people you already write to would be sent to it."
+  },
+  "warnAiBeforeScanOn": {
+    "message": "An AI service is switched on, but the white list holds only your own addresses. Mail from people you already write to is sent to it."
   },
   "warnAiBeforeScanFix": {
     "message": "Scan your sent mail first: step 1 of Setup below."
   },
   "warnNoJunk": {
-    "message": "$1 has no Junk folder, so spam in this account stays where it is. Enable junk handling for the account in Thunderbird, or create a Junk folder."
+    "message": "$1 has no Spam folder, so spam in this account stays where it is. In Thunderbird, open Account Settings, choose “Spam Settings” for this account, tick “Move new spam messages to:” and keep the “Spam” folder of this account selected."
   },
   "warnNoJunkMany": {
-    "message": "No Junk folder: $1. Spam in these accounts stays where it is. Enable junk handling for them in Thunderbird, or create a Junk folder."
+    "message": "No Spam folder: $1. Spam in these accounts stays where it is. In Thunderbird, open Account Settings, choose “Spam Settings” for each of them, tick “Move new spam messages to:” and keep the “Spam” folder of the account selected."
   },
   "warnNeedsAttention": {
     "message": "The AI service $1 is not used."
@@ -303,7 +348,7 @@
     "message": "Mail without an AI verdict goes to a screening folder, but these accounts have none: $1. Their mail stays where it is."
   },
   "warnAiDown": {
-    "message": "No AI service is working at the moment, so mail from unknown senders gets no AI verdict."
+    "message": "No AI service is available at the moment, so mail from unknown senders, those on neither list, gets no AI verdict."
   },
   "remedy_key_rejected": {
     "message": "The key was rejected. Edit this service and enter a valid key."
@@ -342,13 +387,13 @@
     "message": "sent mail not scanned yet"
   },
   "cause_no_junk": {
-    "message": "no Junk folder"
+    "message": "no Spam folder"
   },
   "cause_attention": {
-    "message": "AI service not used: $1"
+    "message": "AI service $1 is not used"
   },
   "cause_ai_down": {
-    "message": "no AI service is working"
+    "message": "no AI service is available"
   },
   "cause_no_screening": {
     "message": "no screening folder"
@@ -378,13 +423,13 @@
     "message": "Scan your sent mail"
   },
   "step1Text": {
-    "message": "Everyone you have written to goes on the white list, so their mail is never sent to an AI."
+    "message": "Everyone you have written to goes on the white list, so their mail is never sent to an AI service."
   },
   "step2Title": {
     "message": "Add an AI service (optional)"
   },
   "step2Text": {
-    "message": "It scores mail from senders you have never written to. Without one, such mail stays where it is, unless you choose otherwise under Incoming mail."
+    "message": "It scores mail from unknown senders, those on neither list. Without one, such mail stays where it is, unless you choose otherwise under $1."
   },
   "step2Add": {
     "message": "Add an AI service"
@@ -404,11 +449,23 @@
   "switchOnAnyway": {
     "message": "Switch on anyway"
   },
+  "useAnyway": {
+    "message": "Use it anyway"
+  },
+  "serviceScanFirstWarn": {
+    "message": "The white list holds only your own addresses. With this service switched on, mail from people you already write to is sent to it."
+  },
+  "serviceScanFirstText": {
+    "message": "The scan puts everyone you have written to on the white list. It reads only the recipients of your sent mail and uses no AI. The service switches on by itself when the scan has finished."
+  },
+  "serviceScanWaitText": {
+    "message": "The scan of your sent mail is still running. Until it has finished, mail from people you already write to could be sent to this service. If you wait, the service switches on by itself when the scan has finished."
+  },
   "scanWaitTitle": {
     "message": "Wait for the scan to finish?"
   },
   "scanWaitText": {
-    "message": "The scan of your sent mail is still running. Until it has finished, mail from people you already write to could be sent to the AI. If you wait, protection switches on by itself when the scan has finished."
+    "message": "The scan of your sent mail is still running. Until it has finished, mail from people you already write to could be sent to an AI service. If you wait, protection switches on by itself when the scan has finished."
   },
   "scanWait": {
     "message": "Wait for the scan"
@@ -431,6 +488,54 @@
   "wishErrors": {
     "message": "The scan ended with problems, so protection was not switched on."
   },
+  "servicesWishOn": {
+    "message": "The scan has finished and the AI service $1 is switched on."
+  },
+  "servicesWishOnMany": {
+    "message": "The scan has finished and these AI services are switched on: $1."
+  },
+  "servicesWishOnEmpty": {
+    "message": "The scan has finished without finding any sent mail. The AI service $1 is switched on."
+  },
+  "servicesWishOnEmptyMany": {
+    "message": "The scan has finished without finding any sent mail. These AI services are switched on: $1."
+  },
+  "servicesWishCancelled": {
+    "message": "The scan was cancelled, so the AI service $1 was not switched on."
+  },
+  "servicesWishCancelledMany": {
+    "message": "The scan was cancelled, so these AI services were not switched on: $1."
+  },
+  "servicesWishErrors": {
+    "message": "The scan ended with problems, so the AI service $1 was not switched on."
+  },
+  "servicesWishErrorsMany": {
+    "message": "The scan ended with problems, so these AI services were not switched on: $1."
+  },
+  "servicesAlsoOn": {
+    "message": "The AI service $1 is switched on."
+  },
+  "servicesAlsoOnMany": {
+    "message": "These AI services are switched on: $1."
+  },
+  "servicesAlsoNotOn": {
+    "message": "The AI service $1 was not switched on."
+  },
+  "servicesAlsoNotOnMany": {
+    "message": "These AI services were not switched on: $1."
+  },
+  "serviceRowOn": {
+    "message": "The scan has finished and this service is switched on."
+  },
+  "serviceRowOnEmpty": {
+    "message": "The scan has finished without finding any sent mail. This service is switched on."
+  },
+  "serviceRowCancelled": {
+    "message": "The scan was cancelled, so this service was not switched on."
+  },
+  "serviceRowErrors": {
+    "message": "The scan ended with problems, so this service was not switched on."
+  },
   "observationTitle": {
     "message": "Observation mode"
   },
@@ -438,7 +543,7 @@
     "message": "Only observe: decide and log, but move nothing"
   },
   "observationHint": {
-    "message": "Block Spam decides and logs, but moves no message by itself, and the AI adds nothing to the black list. The log shows what would have happened. Use it to try a model, a prompt or a cutoff before you trust them."
+    "message": "Block Spam decides and logs, but by itself moves no message and adds nothing to the black list. The log shows what would have happened. Use it to try a model, a prompt or a cutoff before you trust them."
   },
   "observationOff": {
     "message": "Protection is off, so nothing is observed yet."
@@ -573,7 +678,7 @@
     "message": "A sender is matched by address first, then by domain, so an address entry always beats a domain entry."
   },
   "listsMore": {
-    "message": "A blocked address stays blocked inside a trusted domain, and a trusted person passes inside a blocked domain. The white list is learned from your sent mail and also holds senders you trusted by hand. The black list holds senders you blocked and senders the AI scored as spam."
+    "message": "A blocked address stays blocked inside a trusted domain, and a trusted person passes inside a blocked domain. The white list is learned from your sent mail and also holds senders you trusted by hand. The black list holds senders you blocked and senders an AI service scored as spam."
   },
   "listsWhiteCount_one": {
     "message": "White list: $1 entry."
@@ -656,17 +761,20 @@
   "listsAlreadyThere": {
     "message": "$1 is already on that list."
   },
+  "listsNowManual": {
+    "message": "$1 is already on that list. Its source is now “Manual”."
+  },
   "listsRemoved": {
     "message": "Removed $1."
   },
   "listsRestored": {
-    "message": "Put back $1."
+    "message": "Restored $1."
   },
   "folderRemoved": {
     "message": "Removed $1 ($2)."
   },
   "folderRestored": {
-    "message": "Put back $1 ($2)."
+    "message": "Restored $1 ($2)."
   },
   "listsEmpty": {
     "message": "No entries yet."
@@ -721,9 +829,6 @@
   },
   "newEntriesHint": {
     "message": "Changing this affects future entries only. An entry you add with the form above uses its own “Applies to”."
-  },
-  "newEntriesSingle": {
-    "message": "This makes a difference only with two or more mail accounts."
   },
   "logHint": {
     "message": "The last 5,000 decisions and test scores of Block Spam, without the text of any message."
@@ -807,7 +912,7 @@
     "message": "No entry matches."
   },
   "logUnknownSender": {
-    "message": "unknown sender"
+    "message": "(sender not known)"
   },
   "logNoSubject": {
     "message": "(no subject)"
@@ -855,7 +960,7 @@
     "message": "Error"
   },
   "action_junk": {
-    "message": "moved to Junk"
+    "message": "moved to the Spam folder"
   },
   "action_screening": {
     "message": "moved to the screening folder"
@@ -864,7 +969,7 @@
     "message": "moved to the Inbox"
   },
   "actionObserved_junk": {
-    "message": "would go to Junk"
+    "message": "would go to the Spam folder"
   },
   "actionObserved_screening": {
     "message": "would go to the screening folder"
@@ -900,7 +1005,7 @@
     "message": "The sender could not be read"
   },
   "reason_no_junk_folder": {
-    "message": "The account has no Junk folder"
+    "message": "The account has no Spam folder"
   },
   "reason_no_screening_folder": {
     "message": "The account has no screening folder"
@@ -947,68 +1052,83 @@
   "scopeOnlyAccount": {
     "message": "only $1"
   },
-  "logTrustDomain": {
+  "logLabel_trust_domain": {
     "message": "Trust domain"
   },
-  "logTrustAddress": {
+  "logLabel_trust_address": {
     "message": "Trust address"
   },
-  "logBlockDomain": {
+  "logLabel_block_domain": {
     "message": "Block domain"
   },
-  "logBlockAddress": {
+  "logLabel_block_address": {
     "message": "Block address"
   },
-  "logMoveInbox": {
+  "logLabel_unblock_address": {
+    "message": "Unblock address"
+  },
+  "logLabel_unblock_domain": {
+    "message": "Unblock domain"
+  },
+  "logLabel_move_inbox": {
     "message": "Move to Inbox"
   },
-  "logMoveJunk": {
-    "message": "Move to Junk"
+  "logLabel_move_junk": {
+    "message": "Move to Spam"
   },
-  "logTrustedNow": {
+  "logLabel_trusted_now": {
     "message": "Trusted now"
   },
-  "logTrustedNowTitle": {
+  "logTitle_trusted_now": {
     "message": "$1 is on the white list. The message was never moved."
   },
-  "logTrustTitle": {
+  "logTitle_trust": {
     "message": "Trust $1"
   },
-  "logTrustMoveTitle": {
+  "logTitle_trust_move": {
     "message": "Trust $1 and move the message back to the Inbox"
   },
-  "logBlockTitle": {
-    "message": "Block $1 and move the message to Junk"
+  "logTitle_block": {
+    "message": "Block $1 and move the message to the Spam folder"
   },
-  "logMoveInboxTitle": {
+  "logTitle_unblock": {
+    "message": "Remove $1 from the black list: $2 is already on the white list"
+  },
+  "logTitle_unblock_move": {
+    "message": "Remove $1 from the black list and move the message back to the Inbox: $2 is already on the white list"
+  },
+  "logTitle_move_inbox": {
     "message": "Move to Inbox: $1 is already trusted, so only the message is moved back"
   },
-  "logMoveJunkTitle": {
-    "message": "Move to Junk: $1 is already blocked, so only the message is moved"
+  "logTitle_move_junk": {
+    "message": "Move to Spam: $1 is already blocked, so only the message is moved"
   },
-  "logDoneTrusted": {
+  "logResult_trusted": {
     "message": "$1 is on the white list now."
   },
-  "logDoneBlocked": {
+  "logResult_blocked": {
     "message": "$1 is on the black list now."
   },
-  "logAlreadyTrusted": {
+  "logResult_moved_white": {
+    "message": "Moved $1 from the black list to the white list."
+  },
+  "logResult_moved_black": {
+    "message": "Moved $1 from the white list to the black list."
+  },
+  "logResult_unblocked": {
+    "message": "Removed $1 from the black list. $2 is on the white list."
+  },
+  "logResult_already_trusted": {
     "message": "$1 was already on the white list."
   },
-  "logAlreadyBlocked": {
+  "logResult_already_blocked": {
     "message": "$1 was already on the black list."
-  },
-  "logRemovedFromBlack": {
-    "message": "Removed from the black list: $1."
-  },
-  "logRemovedFromWhite": {
-    "message": "Removed from the white list: $1."
   },
   "logMovedInbox": {
     "message": "The message is back in the Inbox."
   },
   "logMovedJunk": {
-    "message": "The message was moved to Junk."
+    "message": "The message was moved to the Spam folder."
   },
   "logMoveNotFound": {
     "message": "The message was not found, so nothing was moved."
@@ -1017,7 +1137,7 @@
     "message": "The account has no Inbox, so the message stays where it is."
   },
   "logMoveNoJunk": {
-    "message": "The account has no Junk folder, so the message stays where it is."
+    "message": "The account has no Spam folder, so the message stays where it is."
   },
   "logMoveFailed": {
     "message": "The message could not be moved: $1"
@@ -1082,17 +1202,20 @@
   "noVerdictTitle": {
     "message": "Mail without an AI verdict"
   },
+  "noVerdictScope": {
+    "message": "Mail from unknown senders, those on neither list, gets no AI verdict while no AI service is switched on or when all of them failed. Mail from senders on your lists is not affected."
+  },
   "noVerdictLabel": {
-    "message": "When no AI service is switched on or all of them failed:"
+    "message": "What to do with it:"
   },
   "noVerdictLeave": {
     "message": "Leave the message where it is"
   },
   "noVerdictJunk": {
-    "message": "Move it to Junk"
+    "message": "Move it to the Spam folder"
   },
   "noVerdictScreening": {
-    "message": "Move it to the screening folder"
+    "message": "Move it to a screening folder for you to review"
   },
   "noVerdictNoFolder": {
     "message": "Without a screening folder: $1. Mail of such an account stays where it is until you choose a folder below."
@@ -1101,7 +1224,7 @@
     "message": "Screening folders"
   },
   "screeningHint": {
-    "message": "The screening folder is a folder between the Inbox and Junk. When a sender is added to the white list, their messages move from there to the Inbox."
+    "message": "A screening folder holds such mail until you decide. When a sender is added to the white list, their messages move from there to the Inbox."
   },
   "screeningNone": {
     "message": "None"
@@ -1134,13 +1257,13 @@
     "message": "Screening"
   },
   "aiLead": {
-    "message": "Only mail from senders who are on neither list is sent to an AI service."
+    "message": "Only mail from unknown senders, those on neither list, is sent to an AI service."
   },
   "aiLeadTopic": {
     "message": "what is sent"
   },
   "aiHint": {
-    "message": "The AI receives the sender, the Reply-To address if there is one, the recipients, the subject, the date and the first 20,000 characters of the text, and can answer with nothing but a probability from 0.00 to 1.00."
+    "message": "An AI service receives the sender, the Reply-To address if there is one, the recipients, the subject, the date and the first 20,000 characters of the text, and can answer with nothing but a probability from 0.00 to 1.00."
   },
   "aiSecretsHint": {
     "message": "API keys and sign-in tokens are stored unencrypted in your Thunderbird profile. They are never written to the log and never exported."
@@ -1155,7 +1278,7 @@
     "message": "Services are tried from top to bottom and the first valid score is final. When one fails or runs out of quota, the next one takes over."
   },
   "servicesNone": {
-    "message": "No AI service yet. Without one, mail from unknown senders follows the setting under Incoming mail."
+    "message": "No AI service yet. Without one, mail from unknown senders follows the setting under $1."
   },
   "aiProtectionOff": {
     "message": "Protection is off, so no new mail is sent to an AI service yet."
@@ -1379,6 +1502,18 @@
   "editorEditTitle": {
     "message": "Edit: $1"
   },
+  "draftChanged": {
+    "message": "The changes to “$1” are not saved."
+  },
+  "draftNew": {
+    "message": "The new service is not saved."
+  },
+  "draftContinue": {
+    "message": "Continue editing"
+  },
+  "draftContinueNew": {
+    "message": "Continue editing: new service"
+  },
   "fieldName": {
     "message": "Name"
   },
@@ -1491,7 +1626,7 @@
     "message": "Send mail from unknown senders to this service?"
   },
   "consentText": {
-    "message": "Block Spam will send mail from senders who are on neither list to $1, in the background, to get a spam probability."
+    "message": "Block Spam will send mail from unknown senders, those on neither list, to $1, in the background, to get a spam probability."
   },
   "consentWhat": {
     "message": "What is sent: the sender, the Reply-To address if there is one, the recipients, the subject, the date and the first 20,000 characters of the text. Attachments, remote content and other headers are never sent."
@@ -1527,7 +1662,7 @@
     "message": "Prompt"
   },
   "promptHint": {
-    "message": "The question the AI answers about each email. Decision models get it as their instructions, chat models as their system prompt."
+    "message": "The question an AI service answers about each message. Decision models get it as their instructions, chat models as their system prompt."
   },
   "promptUnused": {
     "message": "The prompt is not used yet: no AI service is switched on."
@@ -1557,7 +1692,7 @@
     "message": "Use your ChatGPT plan"
   },
   "chatgptConsentText": {
-    "message": "Block Spam will send mail from senders who are on neither list to OpenAI, in the background, to get a spam probability. These requests use your ChatGPT plan."
+    "message": "Block Spam will send mail from unknown senders, those on neither list, to OpenAI, in the background, to get a spam probability. These requests use your ChatGPT plan."
   },
   "chatgptConsentManage": {
     "message": "You sign in on the page of OpenAI. Block Spam never sees your password. You can review and limit the usage in ChatGPT settings at any time."
@@ -1599,7 +1734,7 @@
     "message": "You’re using your ChatGPT plan"
   },
   "chatgptWelcomeText": {
-    "message": "Scoring mail from unknown senders in Block Spam now uses your ChatGPT plan. You can review and manage the usage in ChatGPT settings."
+    "message": "Scoring mail from unknown senders, those on neither list, in Block Spam now uses your ChatGPT plan. You can review and manage the usage in ChatGPT settings."
   },
   "chatgptWelcomeGotIt": {
     "message": "Got it"
@@ -1671,7 +1806,7 @@
     "message": "Permission to use your ChatGPT plan was not granted, so the service cannot be used. Start the sign-in again and allow plan use."
   },
   "shortcutsHint": {
-    "message": "The shortcuts act on the selected messages, or on the message shown in a tab or window. Block moves the messages to Junk. Trust moves them back to the Inbox from Junk or from a screening folder."
+    "message": "The shortcuts act on the selected messages, or on the message shown in a tab or window. Block moves the messages to the Spam folder. Trust moves them back to the Inbox from the Spam folder or from a screening folder."
   },
   "shortcutsTitle": {
     "message": "Keyboard shortcuts"
@@ -1707,13 +1842,13 @@
     "message": "Opens Thunderbird’s own list of shortcuts. You also find it under Add-ons and Themes, in the gear menu, as “Manage Extension Shortcuts”."
   },
   "smartTitle": {
-    "message": "Domain shortcuts"
+    "message": "Whole-domain commands"
   },
   "smartLabel": {
     "message": "Smart: use the address for senders at public mail providers"
   },
   "smartHint": {
-    "message": "With Smart on, the domain shortcuts block or trust a company as a whole domain and a sender at a provider such as gmail.com by address. With Smart off they always use the domain."
+    "message": "With Smart on, the domain commands (shortcuts, the “Whole domain” buttons of the panel and the context menu) block or trust a company as a whole domain and a sender at a provider such as gmail.com by address. With Smart off they always use the domain."
   },
   "otherWaysTitle": {
     "message": "Toolbar button, context menu and log"
@@ -1803,7 +1938,7 @@
     "message": "How to tell: if a forwarded message shows the original author as its sender, nothing needs to be configured. If it shows the mailbox that forwarded it, add that mailbox here once."
   },
   "forwardingMore": {
-    "message": "The trust of a forwarding mailbox is never passed on: a message whose original sender cannot be found counts as mail from an unknown sender."
+    "message": "The trust of a forwarding mailbox is never passed on: a message whose original sender cannot be found counts as mail from an unknown sender, one on neither list."
   },
   "forwardingMailboxLabel": {
     "message": "Mailbox address:"
@@ -1842,7 +1977,7 @@
     "message": "Import"
   },
   "importHint": {
-    "message": "“Merge lists” adds the entries of the file to your lists and leaves settings and AI services untouched. “Replace everything” overwrites lists, settings and AI services."
+    "message": "“Merge lists” adds the entries of the file to your lists. An entry that is on the other list here moves to the list the file names. Settings and AI services stay untouched. “Replace everything” overwrites lists, settings and AI services."
   },
   "importMore": {
     "message": "After “Replace everything”, keys must be entered again and the ChatGPT sign-in repeated. Importing never switches protection on. Items that belong to an account follow the account with the same email address here. The others are skipped and reported."
@@ -1872,7 +2007,7 @@
     "message": "Replace lists, settings and AI services?"
   },
   "importReplaceText": {
-    "message": "Your current lists, settings and AI services are replaced by the file. Keys and sign-ins are removed from this computer."
+    "message": "Your current lists, settings and AI services are replaced by the file. Keys and sign-ins are removed from this computer. This cannot be undone."
   },
   "importReplaceConfirm": {
     "message": "Replace"
@@ -1886,11 +2021,17 @@
   "importReplaced": {
     "message": "The settings were replaced. AI services imported: $1. Enter their keys again."
   },
+  "importServicesOff": {
+    "message": "AI services imported switched off: $1. Your sent mail is not scanned yet, so they would get mail from people you already write to. Scan it first, then switch them on under AI."
+  },
   "importSkippedAccount": {
     "message": "Skipped $1: no account with the address $2."
   },
   "importSkippedFolder": {
     "message": "Skipped the folder $1: it does not exist here."
+  },
+  "importUndone": {
+    "message": "Import undone. Entries removed again: $1. Entries moved back to the list they were on: $2."
   },
   "popupSettings": {
     "message": "Settings"
@@ -1905,7 +2046,7 @@
     "message": "Setup is not finished"
   },
   "popupSetupText": {
-    "message": "Scan your sent mail first, so that mail from people you write to is never blocked or sent to an AI."
+    "message": "Scan your sent mail first, so that mail from people you write to is never blocked or sent to an AI service."
   },
   "popupSetupScanning": {
     "message": "Your sent mail is being scanned. You can follow the scan in the settings."
@@ -1916,8 +2057,8 @@
   "popupOpenSetup": {
     "message": "Open setup"
   },
-  "popupProblemsNamed": {
-    "message": "Needs your attention: $1."
+  "popupProblemsTitle": {
+    "message": "Needs your attention"
   },
   "popupShowProblems": {
     "message": "Show in settings"
@@ -1942,6 +2083,24 @@
   },
   "popupNoChange": {
     "message": "Nothing to change: the sender is on this list already."
+  },
+  "tipBlock": {
+    "message": "Puts $1 on the black list."
+  },
+  "tipTrust": {
+    "message": "Puts $1 on the white list."
+  },
+  "tipLiftWhite": {
+    "message": "Removes $1 from the white list."
+  },
+  "tipLiftBlack": {
+    "message": "Removes $1 from the black list."
+  },
+  "tipMoveJunk": {
+    "message": "Moves the message to the Spam folder."
+  },
+  "tipMoveInbox": {
+    "message": "Moves the message back to the Inbox."
   },
   "popupLastCommand": {
     "message": "Last command ($1):"
@@ -2007,7 +2166,7 @@
     "message": "Test AI on selected messages…"
   },
   "popupScoreConfirm": {
-    "message": "Selected messages: $1. Their content will be sent to the configured AI, also for senders on your lists. Nothing is moved and no entry is created. The scores appear in the log."
+    "message": "Selected messages: $1. Their content will be sent to your AI services, also for senders on your lists. Nothing is moved and no entry is created. The scores appear in the log."
   },
   "popupScoreTooMany": {
     "message": "Select at most $1 messages to score them in one run."
@@ -2030,6 +2189,12 @@
   "notifyTrusted": {
     "message": "Trusted: $1"
   },
+  "notifyLiftedWhite": {
+    "message": "Removed from the white list: $1"
+  },
+  "notifyLiftedBlack": {
+    "message": "Removed from the black list: $1"
+  },
   "notifyMore": {
     "message": "$1 and $2 more"
   },
@@ -2037,7 +2202,7 @@
     "message": "Forwarded messages whose original sender is not known: $1. No entry was added for them."
   },
   "notifyMovedToJunk": {
-    "message": "Moved to Junk: $1"
+    "message": "Moved to the Spam folder: $1"
   },
   "notifyMovedToInbox": {
     "message": "Moved to the Inbox: $1"

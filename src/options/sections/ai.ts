@@ -30,11 +30,14 @@ import {
   isUnavailable,
   learnMore,
   option,
+  paneLink,
   reconcile,
   replace,
   setUnavailable,
+  statusSlot,
   tNodes,
   whileBusy,
+  withMore,
 } from "../dom";
 import type { Child, DialogResult, FieldError, Keyed } from "../dom";
 import { mayRedraw, sameNumber } from "../fields";
@@ -42,7 +45,9 @@ import { formatLogTime, formatScore } from "../format";
 import { icon } from "../icons";
 import { LOOPBACK_ORIGIN, requestAccess } from "../permissions";
 import type { Model } from "../model";
+import { nothingLearned } from "../problems";
 import type { Intent, Section, Shell } from "../section";
+import { scanStatusView } from "./scanStatus";
 
 function hostOf(endpoint: string): string {
   const checked = validateEndpoint(endpoint);
@@ -73,8 +78,22 @@ interface Editor {
   /** Changes with every editor that is opened, so that the row is built once per editor. */
   serial: number;
   element: HTMLElement;
+  /** The name of the service as it was when the editor was opened, for the line that says its changes are not saved. */
+  name: string;
   focus(): void;
+  /** True while a field differs from the value the editor opened with. */
+  dirty(): boolean;
 }
+
+/** An editor that was left with changes: it is kept as it is, with everything that was typed, and can be opened again. */
+interface Draft {
+  editor: Editor;
+  /** The field that had the keyboard focus when the editor was left. */
+  focus: HTMLElement | null;
+}
+
+/** The key of the draft of a service that is not saved yet. No service has this id. */
+const NEW_SERVICE = "\u0000new";
 
 interface TestState {
   text: string;
@@ -95,6 +114,8 @@ export function aiSection(shell: Shell): Section {
   const tests = new Map<string, TestState>();
   let editor: Editor | null = null;
   let editorSerial = 0;
+  /** Editors that were left with changes, by the id of their service. Nothing typed is lost without the user knowing. */
+  const drafts = new Map<string, Draft>();
   let welcomeOpen = false;
   let signInDrawn = "";
   /** The field for the pasted redirect address. It keeps its text while the panel is redrawn. */
@@ -114,7 +135,16 @@ export function aiSection(shell: Shell): Section {
   drawFinish();
 
   const list = h("ol", { class: "services" });
-  const empty = description(t("servicesNone"));
+  // The pane the sentence names is a link to the setting it means.
+  const empty = h(
+    "div",
+    { class: "description" },
+    ...tNodes("servicesNone", paneLink("incoming", t("catIncoming"), () => shell.go("incoming", { kind: "no-verdict" }))),
+  );
+  /** Said under the list while the editor of a new service was left with changes. */
+  const newDraft = h("div", { class: "draft-line", hidden: true });
+  /** The scan as it runs, under the warning that offers it. */
+  const scanStatus = scanStatusView();
   /**
    * Said under the list while a service is switched on and protection is not: a tested service is not a working
    * filter yet. The button leads to the step that is left.
@@ -156,17 +186,29 @@ export function aiSection(shell: Shell): Section {
   const signInPanel = h("div", { class: "sign-in" });
   const signInFailed = h("div", { class: "sign-in-failed" });
 
+  // A plain field without spin buttons: the arrow keys step the value by 0.01, as the buttons of a number field would.
   const cutoff = h("input", {
-    type: "number",
+    type: "text",
     id: "cutoff",
-    min: "0",
-    max: "1",
-    step: "0.01",
+    class: "number",
     oninput: () => {
       cutoffError.set(null);
       cutoffStatus.clear();
     },
     onchange: () => saveCutoff(),
+    onkeydown: (event) => {
+      if ((event.key !== "ArrowUp" && event.key !== "ArrowDown") || event.altKey || event.ctrlKey || event.metaKey) {
+        return;
+      }
+      event.preventDefault();
+      const now = Number(cutoff.value.trim().replace(",", "."));
+      const base = cutoff.value.trim() === "" || !Number.isFinite(now) ? 0 : now;
+      const next = Math.min(1, Math.max(0, Math.round((base + (event.key === "ArrowUp" ? 0.01 : -0.01)) * 100) / 100));
+      cutoff.value = next.toFixed(2);
+      cutoffError.set(null);
+      cutoffStatus.clear();
+    },
+    attrs: { inputmode: "decimal", autocomplete: "off", spellcheck: "false", role: "spinbutton", "aria-valuemin": "0", "aria-valuemax": "1" },
   });
   const cutoffError = fieldError(cutoff, "cutoff-error");
   const cutoffStatus = inlineStatus();
@@ -200,11 +242,12 @@ export function aiSection(shell: Shell): Section {
   replace(
     root,
     h("h1", { text: t("catAi"), tabIndex: -1 }),
-    h("p", { class: "lead" }, t("aiLead"), " ", learnMore(t("aiLeadTopic"), t("aiHint"), t("aiSecretsHint"), t("privacyText"))),
+    h("p", { class: "lead" }, ...withMore(t("aiLead"), learnMore(t("aiLeadTopic"), t("aiHint"), t("aiSecretsHint"), t("privacyText")))),
     h("h2", { text: t("servicesTitle") }),
     description(t("servicesHint")),
     empty,
     list,
+    newDraft,
     notProtecting,
     h(
       "div",
@@ -215,7 +258,13 @@ export function aiSection(shell: Shell): Section {
       button(t("serviceAdd"), () => {
         const preset = PRESETS.find((item) => item.id === presetSelect.value) ?? null;
         if (preset?.type === "chatgpt") {
-          startChatGpt(null);
+          void guard(async () => {
+            // The sign-in creates the service switched on: "scan first" is asked before it starts.
+            const asked = await askScanFirst(false);
+            if (asked.answer !== "cancel") {
+              startChatGpt(null, asked.asked ? asked.answer === "after-scan" : null);
+            }
+          });
         } else if (preset !== null) {
           openEditor(null, preset);
         }
@@ -237,8 +286,8 @@ export function aiSection(shell: Shell): Section {
     description(t("promptLanguage")),
     description(t("outputLineLabel")),
     h("pre", { class: "code-block", text: OUTPUT_LINE }),
-    // "Unsaved changes" stands right after the button that saves them.
-    h("div", { class: "row" }, savePromptButton, promptStatus.element, discardPromptButton, restorePromptButton),
+    // "Unsaved changes" stands right after the button that saves them, in a place that is kept free: the buttons after it never move.
+    h("div", { class: "row" }, savePromptButton, statusSlot(promptStatus, t("unsavedChanges"), t("saved")), discardPromptButton, restorePromptButton),
     // Where a prompt or a cutoff is tried: the two tools for it live elsewhere, and this is the place that says so.
     // The names in these sentences are the labels themselves, so they cannot drift apart.
     description(t("tryOnMail", t("popupScoreSelected"))),
@@ -282,7 +331,8 @@ export function aiSection(shell: Shell): Section {
 
   /** The cutoff is saved when the field is left or Enter is pressed, like every other setting. */
   function saveCutoff(): void {
-    const value = Number(cutoff.value);
+    // A comma is the decimal sign of many languages: it is read as one.
+    const value = Number(cutoff.value.trim().replace(",", "."));
     if (cutoff.value.trim() === "" || !Number.isFinite(value) || value < 0 || value > 1) {
       cutoffError.set(tCode("invalid", "cutoff-range"));
       cutoffStatus.clear();
@@ -307,7 +357,8 @@ export function aiSection(shell: Shell): Section {
     savePromptButton.disabled = !dirty;
     // Save stands out only while there is something to save.
     savePromptButton.classList.toggle("primary", dirty);
-    discardPromptButton.hidden = !dirty;
+    // Nothing to discard without a change: the button stays where it is and is unavailable until there is.
+    discardPromptButton.disabled = !dirty;
     restorePromptButton.disabled = prompt.value === DEFAULT_PROMPT;
     if (dirty) {
       promptStatus.set(t("unsavedChanges"));
@@ -338,10 +389,45 @@ export function aiSection(shell: Shell): Section {
   }
 
   // -------------------------------------------------------------------------
+  // "Scan first", asked by whichever comes second: protection (on the Overview) or the first AI service (here).
+
+  type ScanAnswer = "on" | "after-scan" | "cancel";
+
+  /**
+   * Asked before an AI service is switched on while protection is on and the sent mail was not scanned: mail from
+   * people the user already writes to would be sent to it. `asked` is false when nothing had to be asked.
+   * - "after-scan": the service stays off and is switched on by the background when the scan has finished.
+   * - "on": the user said "use it anyway", or there was nothing to ask.
+   * While a service is switched on already (the user said "use it anyway"), further services switch on without a
+   * second question. While a service waits for the scan, further services wait with it. `waiting` is true for the
+   * service that waits itself: ticking it by hand asks again.
+   */
+  async function askScanFirst(waiting: boolean): Promise<{ answer: ScanAnswer; asked: boolean }> {
+    const current = model;
+    const settings = current?.settings;
+    if (current === null || settings === null || settings === undefined || !settings.protection || current.accessPoints.some((point) => point.enabled)) {
+      return { answer: "on", asked: false };
+    }
+    const scanning = current.status.scan?.running === true;
+    if (!scanning && !nothingLearned(current)) {
+      return { answer: "on", asked: false };
+    }
+    if (!waiting && current.status.wish.services.length > 0) {
+      return { answer: "after-scan", asked: false };
+    }
+    const choice = await dialog(
+      scanning
+        ? { title: t("scanWaitTitle"), body: [t("serviceScanWaitText")], confirmLabel: t("scanWait"), extraLabel: t("useAnyway"), focus: "confirm" }
+        : { title: t("scanFirstTitle"), body: [t("serviceScanFirstWarn"), t("serviceScanFirstText")], confirmLabel: t("scanFirst"), extraLabel: t("useAnyway"), focus: "confirm" },
+    );
+    return { answer: choice === "confirm" ? "after-scan" : choice === "extra" ? "on" : "cancel", asked: true };
+  }
+
+  // -------------------------------------------------------------------------
   // ChatGPT plan sign-in.
 
   /** Explains what is sent and asks for consent before sign-in. The terms of the programme require it. */
-  function startChatGpt(accessPointId: string | null): void {
+  function startChatGpt(accessPointId: string | null, afterScan: boolean | null = null): void {
     void dialog({
       title: t("chatgptConsentTitle"),
       body: [t("chatgptConsentText"), t("consentWhat"), t("consentNever"), t("chatgptConsentManage")],
@@ -353,7 +439,11 @@ export function aiSection(shell: Shell): Section {
         if (!granted) {
           throw new Error(t("permissionDeclined"));
         }
-        await send("startSignIn", { accessPointId, openTab: true });
+        await send("startSignIn", { accessPointId, openTab: true, afterScan });
+        // The sign-in opens in its own row: an editor in another row closes, and keeps what was typed.
+        if (editor !== null && editor.id !== accessPointId) {
+          leaveEditor();
+        }
         shell.startPolling();
         return true;
       },
@@ -419,17 +509,76 @@ export function aiSection(shell: Shell): Section {
   // -------------------------------------------------------------------------
   // The editor, shown inside the row that is being edited.
 
+  /** Puts the keyboard where the editor stood: on Edit of its row, or on the menu that adds a service. */
+  function focusRow(focusId: string | null, kind = "edit"): void {
+    const target =
+      focusId === null
+        ? (newDraft.querySelector<HTMLElement>("button") ?? presetSelect)
+        : [...list.querySelectorAll<HTMLElement>("li")].find((item) => item.dataset.key === focusId)?.querySelector<HTMLElement>(`[data-focus="${kind}"]`);
+    (target ?? presetSelect).focus();
+  }
+
+  /** Closes the editor after its service was saved: nothing of it is kept. */
   function closeEditor(focusId: string | null): void {
+    if (editor !== null) {
+      drafts.delete(editor.id ?? NEW_SERVICE);
+    }
     editor = null;
     drawList();
-    if (focusId === null) {
-      presetSelect.focus();
-    } else {
-      [...list.querySelectorAll<HTMLElement>("li")]
-        .find((item) => item.dataset.key === focusId)
-        ?.querySelector<HTMLElement>('[data-focus="edit"]')
-        ?.focus();
+    focusRow(focusId);
+  }
+
+  /**
+   * Leaves the editor without saving (Escape, Cancel, another editor, a sign-in in another row). An editor with
+   * changes is kept as it is: a line where it stood says that the changes are not saved and offers the way back.
+   */
+  function leaveEditor(focus = false): void {
+    const left = editor;
+    if (left === null) {
+      return;
     }
+    const key = left.id ?? NEW_SERVICE;
+    if (left.dirty()) {
+      const active = document.activeElement;
+      drafts.set(key, { editor: left, focus: active instanceof HTMLElement && left.element.contains(active) ? active : null });
+    } else {
+      drafts.delete(key);
+    }
+    editor = null;
+    drawList();
+    if (focus) {
+      // With a draft the keyboard lands on "Continue editing", else on Edit of the row or on the menu for adding.
+      focusRow(left.id, drafts.has(key) ? "continue" : "edit");
+    }
+  }
+
+  /** Opens an editor that was left with changes again, with everything that was typed and the focus where it was. */
+  function continueEditing(key: string): void {
+    const draft = drafts.get(key);
+    if (draft === undefined) {
+      return;
+    }
+    if (editor !== null && editor !== draft.editor) {
+      leaveEditor();
+    }
+    drafts.delete(key);
+    editor = draft.editor;
+    drawList();
+    draft.editor.element.scrollIntoView({ block: "nearest" });
+    if (draft.focus !== null && draft.focus.isConnected && !draft.focus.hidden) {
+      draft.focus.focus();
+    } else {
+      draft.editor.focus();
+    }
+  }
+
+  /** The line that stands where an editor was left with changes. */
+  function draftLine(key: string, name: string | null): HTMLElement {
+    const again = button(t("draftContinue"), () => continueEditing(key), "small");
+    again.dataset.focus = "continue";
+    // The name is the label and its object, so that the lines of several services can be told apart.
+    again.setAttribute("aria-label", name === null ? t("draftContinueNew") : t("labelNamed", t("draftContinue"), name));
+    return h("div", { class: "option-note plain draft", attrs: { role: "status" } }, icon("info"), h("span", {}, ...addressed(name === null ? t("draftNew") : t("draftChanged", name))), again);
   }
 
   function openEditor(id: string | null, preset: Preset | null, focus: "name" | "key" = "name"): void {
@@ -441,6 +590,9 @@ export function aiSection(shell: Shell): Section {
     if (type === undefined) {
       return;
     }
+    // Another editor that is open closes, and keeps what was typed. This one opens afresh: a draft of the same service is replaced by it.
+    leaveEditor();
+    drafts.delete(id ?? NEW_SERVICE);
     editorSerial += 1;
     const serial = editorSerial;
     const prefix = `editor-${serial}`;
@@ -503,8 +655,21 @@ export function aiSection(shell: Shell): Section {
       key: fieldError(key, `${prefix}-key-error`),
     };
     const fields = { name, endpoint, key };
-    const modelStatus = inlineStatus();
+    const modelStatus = inlineStatus("block");
     const saveStatus = inlineStatus();
+    /** "Unsaved changes", right after the button that saves them, while a field differs from what the editor opened with. */
+    const unsavedNote = inlineStatus();
+    const opened = { name: name.value, endpoint: endpoint.value, model: modelInput.value };
+    const dirty = (): boolean => name.value !== opened.name || endpoint.value !== opened.endpoint || modelInput.value !== opened.model || key.value !== "";
+    const drawDirty = (): void => {
+      if (dirty()) {
+        if (unsavedNote.element.textContent !== t("unsavedChanges")) {
+          unsavedNote.set(t("unsavedChanges"));
+        }
+      } else {
+        unsavedNote.clear();
+      }
+    };
     const localNote = h("div", { class: "local-note" });
     /** What the address field expects. The sentence about the placeholder is shown only while the address holds one. */
     const endpointHint = h("div", { class: "description" });
@@ -654,18 +819,36 @@ export function aiSection(shell: Shell): Section {
         return;
       }
       saveStatus.clear();
-      withConsent(
-        definition,
-        t("consentAgree"),
-        // Unavailable while the request runs: a second click cannot save the service twice.
-        () =>
-          whileBusy(saveButton, async () => {
-            const { id: savedId } = await send("saveAccessPoint", { id: existing?.id ?? null, definition, apiKey: newKey });
-            await shell.refresh();
-            closeEditor(savedId);
-            // One test right away, so the row says at once whether the service works.
-            runTest(savedId);
-          }),
+      void guard(
+        async () => {
+          // A new service is saved switched on. While protection is on and the sent mail was not scanned, that asks
+          // first. Cancel leaves the editor open with everything that was typed.
+          const asked = existing === null ? await askScanFirst(false) : { answer: "on" as const, asked: false };
+          if (asked.answer === "cancel") {
+            return;
+          }
+          const waits = asked.answer === "after-scan";
+          const saved = waits ? { ...definition, enabled: false } : definition;
+          withConsent(
+            saved,
+            t("consentAgree"),
+            // Unavailable while the request runs: a second click cannot save the service twice.
+            () =>
+              whileBusy(saveButton, async () => {
+                const { id: savedId } = await send("saveAccessPoint", { id: existing?.id ?? null, definition: saved, apiKey: newKey });
+                if (waits) {
+                  // Saved switched off: the background switches it on when the scan has finished.
+                  await send("enableAfterScan", { id: savedId });
+                  shell.startPolling();
+                }
+                await shell.refresh();
+                closeEditor(savedId);
+                // One test right away, so the row says at once whether the service works. It sends no mail.
+                runTest(savedId);
+              }),
+            (message) => saveStatus.set(message, "error"),
+          );
+        },
         (message) => saveStatus.set(message, "error"),
       );
     };
@@ -786,21 +969,24 @@ export function aiSection(shell: Shell): Section {
         onkeydown: (event) => {
           if (event.key === "Escape") {
             event.preventDefault();
-            closeEditor(existing?.id ?? null);
+            leaveEditor(true);
           }
         },
+        oninput: () => drawDirty(),
+        onchange: () => drawDirty(),
       },
       h("h3", { id: titleId, text: existing === null ? t("editorAddTitle", presetName) : t("editorEditTitle", existing.name) }),
       field(t("fieldName"), name, errors.name, []),
       type === "chatgpt" ? null : h("div", { class: "field" }, h("label", { for: endpoint.id, text: t("fieldEndpoint") }), endpoint, errors.endpoint.element, endpointHint),
-      field(
+      // The status of "Load models" stands on a line of its own under the row, so that nothing in the row moves when it appears.
+      h(
+        "div",
+        { class: "field" },
         modelLabel,
-        modelInput,
-        errors.model,
-        [tCode("modelHint", type)],
-        modelMenu,
-        canLoadModels ? loadButton : null,
+        canLoadModels ? h("div", { class: "row tight" }, modelInput, modelMenu, loadButton) : modelInput,
         canLoadModels ? modelStatus.element : null,
+        errors.model.element,
+        h("div", { class: "description", text: tCode("modelHint", type) }),
       ),
       type === "chatgpt" ? null : field(t("fieldKey"), key, errors.key, [t("keyHint"), keyLocalHint, keyLink === null ? null : "\u00a0", keyLink]),
       localNote,
@@ -808,7 +994,8 @@ export function aiSection(shell: Shell): Section {
         "div",
         { class: "row" },
         saveButton,
-        button(t("cancel"), () => closeEditor(existing?.id ?? null)),
+        statusSlot(unsavedNote, t("unsavedChanges")),
+        button(t("cancel"), () => leaveEditor(true)),
         saveStatus.element,
       ),
     );
@@ -816,7 +1003,7 @@ export function aiSection(shell: Shell): Section {
     drawEndpointHint();
     drawKeyHint();
     lookUp();
-    editor = { id: existing?.id ?? null, serial, element, focus: () => name.focus() };
+    editor = { id: existing?.id ?? null, serial, element, name: existing?.name ?? presetName, focus: () => name.focus(), dirty };
     drawList();
     element.scrollIntoView({ block: "nearest" });
     if (focus === "key" && type !== "chatgpt") {
@@ -869,8 +1056,32 @@ export function aiSection(shell: Shell): Section {
 
   function statusLines(point: AccessPoint, now: number): HTMLElement[] {
     const lines: HTMLElement[] = [];
-    if (!point.enabled) {
+    const wish = model?.status.wish;
+    const outcome = wish?.servicesOutcome?.ids.includes(point.id) === true ? wish.servicesOutcome : null;
+    if (wish?.services.includes(point.id) === true) {
+      // The service waits for the scan: said in the words the state of protection uses, with the way to call it off.
+      const cancel = button(
+        t("wishCancel"),
+        () =>
+          void guard(async () => {
+            await send("clearServiceWish", { id: point.id });
+            await shell.refresh();
+            // The note goes away with the wish: the keyboard goes back to the box of the service.
+            focusRow(point.id, "enabled");
+          }),
+        "small",
+      );
+      cancel.dataset.focus = "wish-cancel";
+      cancel.setAttribute("aria-label", t("labelNamed", t("wishCancel"), point.name));
+      lines.push(h("div", { class: "service-state waiting", attrs: { role: "status" } }, icon("clock"), h("span", { text: tCode("state", "waiting") }), cancel));
+    } else if (outcome !== null && outcome.kind !== "on") {
+      // The scan it waited for did not run to its end: the service was not switched on, and the row says why.
+      lines.push(h("div", { class: "service-state attention", text: t(outcome.kind === "cancelled" ? "serviceRowCancelled" : "serviceRowErrors"), attrs: { role: "status" } }));
+    } else if (!point.enabled) {
       lines.push(h("div", { class: "service-state off", text: t("apDisabled") }));
+    }
+    if (outcome !== null && outcome.kind === "on" && point.enabled) {
+      lines.push(h("div", { class: "service-state ok", text: t(outcome.scanned === 0 ? "serviceRowOnEmpty" : "serviceRowOn"), attrs: { role: "status" } }));
     }
     const remedy = point.needsAttention ? remedyOf(point) : null;
     // A missing sign-in is said once: by the line that needs attention when there is one, which also says what to do.
@@ -928,7 +1139,25 @@ export function aiSection(shell: Shell): Section {
       id: enabledId,
       checked: point.enabled,
       attrs: { "aria-label": t("apUseNamed", point.name), "data-focus": "enabled" },
-      onchange: () => void guard(() => send("saveAccessPoint", { id: point.id, definition: definitionOf(point, { enabled: enabled.checked }), apiKey: null })),
+      onchange: () =>
+        void guard(async () => {
+          if (enabled.checked) {
+            // Nothing is switched on before the answer, and the box says so while the question is open.
+            enabled.checked = false;
+            const { answer } = await askScanFirst(model?.status.wish.services.includes(point.id) === true);
+            if (answer === "cancel") {
+              return;
+            }
+            if (answer === "after-scan") {
+              await send("enableAfterScan", { id: point.id });
+              shell.startPolling();
+              await shell.refresh();
+              return;
+            }
+            enabled.checked = true;
+          }
+          await send("saveAccessPoint", { id: point.id, definition: definitionOf(point, { enabled: enabled.checked }), apiKey: null });
+        }),
     });
     const withFocus = <T extends HTMLElement>(element: T, focus: string): T => {
       element.dataset.focus = focus;
@@ -1019,7 +1248,8 @@ export function aiSection(shell: Shell): Section {
         editing === null ? h("div", { class: "service-actions" }, test, edit, up, down, remove) : null,
       ),
       ...chatgpt,
-      editing?.element ?? null,
+      // An editor that was left with changes: the line stands where it stood.
+      editing?.element ?? (drafts.has(point.id) ? draftLine(point.id, drafts.get(point.id)?.editor.name ?? point.name) : null),
       signingIn ? signInPanel : null,
     );
   }
@@ -1034,6 +1264,13 @@ export function aiSection(shell: Shell): Section {
     if (editor !== null && editor.id !== null && !points.some((point) => point.id === editor?.id)) {
       editor = null;
     }
+    // A draft goes with its service when that is removed.
+    for (const key of [...drafts.keys()]) {
+      if (key !== NEW_SERVICE && !points.some((point) => point.id === key)) {
+        drafts.delete(key);
+      }
+    }
+    const wish = model.status.wish;
     const current = editor;
     // A sign-in in progress belongs to the service it signs in again, or is a new row of its own.
     const signIn = model.status.signIn;
@@ -1048,7 +1285,19 @@ export function aiSection(shell: Shell): Section {
         signature:
           editing !== null
             ? `editing:${editing.serial}:${index}:${points.length}:${signingIn}`
-            : JSON.stringify([point, index, points.length, tests.get(point.id) ?? null, point.cooldownUntil > now, hostGranted(point), signingIn, answering]),
+            : JSON.stringify([
+                point,
+                index,
+                points.length,
+                tests.get(point.id) ?? null,
+                point.cooldownUntil > now,
+                hostGranted(point),
+                signingIn,
+                answering,
+                drafts.has(point.id),
+                wish.services.includes(point.id),
+                wish.servicesOutcome?.ids.includes(point.id) === true ? wish.servicesOutcome : null,
+              ]),
         build: () => serviceRow(point, index, points.length, editing, signingIn),
       };
     });
@@ -1061,6 +1310,14 @@ export function aiSection(shell: Shell): Section {
     reconcile(list, items);
     list.hidden = items.length === 0;
     empty.hidden = items.length > 0;
+    // The editor of a new service that was left with changes: its line stands under the list, where the editor stood.
+    const pending = current?.id === null ? undefined : drafts.get(NEW_SERVICE);
+    const pendingSignature = pending === undefined ? "" : String(pending.editor.serial);
+    if (newDraft.dataset.signature !== pendingSignature) {
+      newDraft.dataset.signature = pendingSignature;
+      replace(newDraft, pending === undefined ? null : draftLine(NEW_SERVICE, null));
+    }
+    newDraft.hidden = pending === undefined;
     drawDependents();
   }
 
@@ -1072,17 +1329,43 @@ export function aiSection(shell: Shell): Section {
     }
     const inUse = model.accessPoints.some((point) => point.enabled);
     const waiting = model.status.wish.waiting;
-    const kind = !inUse || settings.protection ? "" : waiting ? "waiting" : "off";
+    const scanning = model.status.scan?.running === true;
+    // With protection on and nobody learned, mail from people the user writes to is sent to the service: the warning
+    // of the Overview stands here too, with the button that starts the scan.
+    const kind = !inUse ? "" : !settings.protection ? (waiting ? "waiting" : "off") : nothingLearned(model) ? (scanning ? "scanning" : "before-scan") : "";
+    scanStatus.update(model);
     if (notProtecting.dataset.kind !== kind) {
+      const held = notProtecting.contains(document.activeElement);
       notProtecting.dataset.kind = kind;
+      const scanButton: HTMLButtonElement = button(t("scanStart"), () =>
+        void whileBusy(scanButton, () =>
+          guard(async () => {
+            await send("startScan", { from: null, to: null });
+            shell.startPolling();
+            await shell.refresh();
+          }),
+        ),
+      );
+      scanButton.dataset.focus = "scan";
+      if (kind === "scanning") {
+        // The scan is running: its progress stands under the warning, and the button has nothing to start.
+        setUnavailable(scanButton, true, t("errorScanRunning"));
+      }
       replace(
         notProtecting,
         kind === ""
           ? null
-          : bar("information", [kind === "waiting" ? `${t("wishWaiting")} ${t("aiWaitingNoMail")}` : t("aiProtectionOff")], [
-              button(t("aiShowSetup"), () => shell.go("overview", { kind: "protect" })),
-            ]),
+          : kind === "before-scan" || kind === "scanning"
+            ? bar("warning", [t("warnAiBeforeScanOn")], [scanButton])
+            : bar("information", [kind === "waiting" ? `${t("wishWaiting")} ${t("aiWaitingNoMail")}` : t("aiProtectionOff")], [
+                button(t("aiShowSetup"), () => shell.go("overview", { kind: "protect" })),
+              ]),
+        kind === "before-scan" || kind === "scanning" ? scanStatus.element : null,
       );
+      if (held && !notProtecting.contains(document.activeElement)) {
+        // The warning went away with the scan, and its button with it: the keyboard goes on with the first service.
+        (notProtecting.querySelector<HTMLElement>("button") ?? list.querySelector<HTMLElement>('[data-focus="enabled"]') ?? presetSelect).focus();
+      }
     }
     cutoffUnused.hidden = inUse;
     promptUnused.hidden = inUse;
@@ -1169,7 +1452,16 @@ export function aiSection(shell: Shell): Section {
       }
     },
     unsaved() {
-      return promptDirty();
+      // The prompt, an open editor with changes, and an editor that was left with changes: all of it is lost with the page.
+      return promptDirty() || editor?.dirty() === true || drafts.size > 0;
+    },
+    leave() {
+      // What became of services that waited for the scan was said here and is history once the pane is left.
+      if (model?.status.wish.servicesOutcome !== null && model?.status.wish.servicesOutcome !== undefined) {
+        void send("clearServiceWish", { id: null })
+          .then(() => shell.refresh())
+          .catch(() => undefined);
+      }
     },
   };
 }

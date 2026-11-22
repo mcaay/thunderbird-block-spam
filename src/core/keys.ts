@@ -12,6 +12,8 @@ export const KEY_LAST_COMMAND = "lastCommand";
 export const KEY_ATTENTION_NOTIFIED = "attentionNotified";
 /** "Switch protection on" that waits for the scan of the sent mail, and what became of it. See core/protectionWish. */
 export const KEY_PROTECTION_WISH = "protectionWish";
+/** The last merge of an import, with what is needed to take it back. */
+export const KEY_LAST_IMPORT = "lastImport";
 export const PREFIX_PROCESSED_IN = "processed:in:";
 export const PREFIX_PROCESSED_SENT = "processed:sent:";
 export const PREFIX_LOG = "log:";

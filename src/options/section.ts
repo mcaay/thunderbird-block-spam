@@ -26,6 +26,8 @@ export type Intent =
   /** The control that switches protection on: setup step 3, or else the switch itself. */
   | { kind: "protect" }
   | { kind: "screening"; accountId: string }
+  /** The menu that says what happens to mail without an AI verdict. */
+  | { kind: "no-verdict" }
   | { kind: "log-entry"; key: string };
 
 /** One pane of the settings page. It builds its fixed elements once and fills them on render. */

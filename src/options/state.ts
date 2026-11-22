@@ -19,14 +19,21 @@ const STATE_ICONS: Record<ProtectionState, IconName> = {
   off: "off",
 };
 
-/** The state in words. Problems are counted: "On, 2 problems". */
-export function stateText(kind: ProtectionState, problems: number): string {
+/**
+ * The state in words. Problems are counted: "On, 2 problems". `named` is for the places that have no heading
+ * "Protection" above them (under the name of the add-on in the category list, the header of the popup): there
+ * the state names what it is the state of, "Protection on, 2 problems".
+ */
+export function stateText(kind: ProtectionState, problems: number, named = false): string {
+  if (named) {
+    return kind === "problems" ? tn("stateNamedProblems", problems) : tCode("stateNamed", kind);
+  }
   return kind === "problems" ? tn("stateProblems", problems) : tCode("state", kind);
 }
 
 /** Fills the element with the icon and the words of the state, only when they changed. Returns the words. */
-export function drawState(element: HTMLElement, kind: ProtectionState, problems: number): string {
-  const text = stateText(kind, problems);
+export function drawState(element: HTMLElement, kind: ProtectionState, problems: number, named = false): string {
+  const text = stateText(kind, problems, named);
   const signature = `${kind}|${text}`;
   if (element.dataset.state !== signature) {
     element.dataset.state = signature;

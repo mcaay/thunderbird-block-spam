@@ -58,6 +58,8 @@ export function folderEditors(accounts: readonly AccountView[], options: FolderE
         });
         select.addEventListener("input", () => {
           add.disabled = select.value === "";
+          // The menus of one column share one width: a longer name is shortened, and the tooltip has all of it.
+          select.title = select.value === "" ? "" : (select.selectedOptions[0]?.textContent ?? "");
         });
         const rows = chosen.map((folder) => {
           const removable = options.removable(account, folder);

@@ -1,16 +1,20 @@
 // Export and import: one file with the lists, the settings and the AI services
 // without their secrets.
 
-import type { ImportMode, ImportReport } from "../../core/exportImport";
+import type { ImportMode } from "../../core/exportImport";
 import { t } from "../../tb/i18n";
 import { RequestError, send } from "../../tb/protocol";
+import type { ImportReply } from "../../tb/protocol";
 import { addressed, bar, button, byId, description, dialog, download, errorText, guard, h, inlineStatus, learnMore, option, replace, whileBusy } from "../dom";
 import type { Section } from "../section";
 
-function reportLines(report: ImportReport): string[] {
+function reportLines(report: ImportReply): string[] {
   const lines = [t("importEntries", report.entriesAdded, report.entriesReplaced, report.entriesUnchanged)];
   if (report.mode === "replace") {
     lines.push(t("importReplaced", report.accessPoints));
+  }
+  if (report.servicesOff > 0) {
+    lines.push(t("importServicesOff", report.servicesOff));
   }
   for (const item of report.skipped) {
     lines.push(item.account === "" ? t("importSkippedFolder", item.item) : t("importSkippedAccount", item.item, item.account));
@@ -28,7 +32,10 @@ export function backupSection(): Section {
   choose.setAttribute("aria-describedby", "import-file-name");
   const mode = h("select", { id: "import-mode" }, option("merge", t("importMerge")), option("replace", t("importReplace")));
   const problem = h("div", { class: "field-error", hidden: true, attrs: { role: "alert" } });
-  const report = h("div", { class: "import-report" });
+  // It can take the focus, for when the Undo button that was pressed is gone: then it reads what was restored.
+  const report = h("div", { class: "import-report notice", tabIndex: -1, attrs: { role: "group" } });
+  /** Set while the last merge can still be taken back. */
+  let undoable = false;
   const exportStatus = inlineStatus();
 
   // Nothing to import before a file is chosen: the button is unavailable until then.
@@ -75,9 +82,34 @@ export function backupSection(): Section {
     const apply = async (): Promise<void> => {
       const result = await send("importData", { file: parsed, mode: selected });
       showProblem(null);
+      const undoId = result.undoId;
+      undoable = undoId !== null;
+      // A merge that added or moved entries can be taken back, exactly.
+      const undo: HTMLButtonElement | null =
+        undoId === null
+          ? null
+          : button(t("undo"), () =>
+              void whileBusy(undo as HTMLButtonElement, () =>
+                guard(
+                  async () => {
+                    const undone = await send("undoImport", { id: undoId });
+                    undoable = false;
+                    const text = t("importUndone", undone.removed, undone.restored);
+                    const box = bar("information", [text]);
+                    box.setAttribute("role", "status");
+                    report.setAttribute("aria-label", text);
+                    replace(report, box);
+                    // The button that was pressed is gone: the confirmation takes the focus, so that the keyboard stays here.
+                    report.focus({ preventScroll: true });
+                  },
+                  (message) => showProblem(message),
+                ),
+              ),
+            );
+      report.removeAttribute("aria-label");
       replace(
         report,
-        bar("success", [h("strong", { text: t("importDone") }), h("ul", {}, ...reportLines(result).map((line) => h("li", {}, ...addressed(line))))]),
+        bar("success", [h("strong", { text: t("importDone") }), h("ul", {}, ...reportLines(result).map((line) => h("li", {}, ...addressed(line))))], [undo]),
       );
       report.firstElementChild?.setAttribute("role", "status");
       file.value = "";
@@ -134,6 +166,16 @@ export function backupSection(): Section {
   return {
     render() {
       // Nothing here depends on stored data.
+    },
+    leave() {
+      // What the last import did was said here and is history once the pane is left, like every confirmation in place.
+      report.removeAttribute("aria-label");
+      replace(report);
+      exportStatus.clear();
+      if (undoable) {
+        undoable = false;
+        void send("forgetImport", {}).catch(() => undefined);
+      }
     },
   };
 }

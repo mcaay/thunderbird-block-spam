@@ -2,10 +2,10 @@
 
 import { parseSender, smartTarget } from "./address";
 import { entryKey, keyOf, matchSender } from "./lists";
-import type { AddResult } from "./lists";
+import type { EntryMap } from "./lists";
 import { ValidationError } from "./settings";
 import type { AppState } from "./state";
-import type { Entry, ListName, LogEntry, Scope, Target } from "./types";
+import type { Entry, ListName, LogEntry, Scope, Sender, Target } from "./types";
 
 export const LOG_ACTIONS = ["trust", "block"] as const;
 export type LogAction = (typeof LOG_ACTIONS)[number];
@@ -48,46 +48,88 @@ export function expectsMove(entry: Pick<LogEntry, "action" | "observed" | "test"
 }
 
 /**
- * What the action adds to the lists.
- * - trust: the smart target of the sender, the exact inverse of what the AI does when
- *   it blocks. A wrongly blocked company is trusted as a whole, an address at a public
- *   provider alone.
- * - block: the smart target, but only the address while a white list entry decides the
- *   sender or the decision was "trusted": a blocked address stays blocked inside a
- *   trusted domain, and the domain keeps its trust.
+ * What an action changes on the lists.
+ * - add: an entry is added, and nothing else changes.
+ * - move: the entry that decides the sender moves to the other list, with its kind, value and scope.
+ * - remove: the black entry that decides the sender is removed, and the white entry behind it decides from then on.
+ * - none: the lists already say what the action wants. Only the message may still move.
  */
-export function logActionTarget(
-  state: Pick<AppState, "entries" | "publicDomains">,
+export type LogChange = "add" | "move" | "remove" | "none";
+
+export interface LogOffer {
+  action: LogAction;
+  change: LogChange;
+  list: ListName;
+  /** The entry that is added, moved or removed, or for "none" the entry that already decides. */
+  target: Target;
+  scope: Scope;
+  /** For "remove": the white entry that decides once the black one is gone. */
+  behind: Entry | null;
+}
+
+/** The entry that decides the sender when the given entry is left out. */
+function decidingWithout(entries: EntryMap, sender: Sender, accountId: string, without: Entry): Entry | null {
+  const rest: EntryMap = new Map(entries);
+  rest.delete(keyOf(without));
+  return matchSender(rest, sender, accountId);
+}
+
+/**
+ * What an action of a log row would change, given the lists as they are now. A command never changes more than its
+ * label says, so the action works on the entry that decided:
+ * - The lists already say it (trust while a white entry decides, block while a black one does): nothing changes.
+ * - trust while a black entry decides: that entry moves to the white list, as an address or as a domain, whichever it
+ *   is. A block of one address is undone for that address, not by trusting its whole domain. When a white entry
+ *   decides the sender once the black one is gone (a blocked address inside a trusted domain), the black entry is
+ *   only removed.
+ * - block while a white address entry decides: that entry moves to the black list.
+ * - block while a white domain entry decides, or after a decision that trusted the sender: only the address is added
+ *   to the black list. A blocked address stays blocked inside a trusted domain, and the domain keeps its trust.
+ * - No entry decides (an observed AI verdict, a move without a verdict, a sender that passed): the smart target is
+ *   added, the exact inverse of what the AI does when it blocks. A company goes on the list as a whole, an address
+ *   at a public provider alone.
+ * Null when the entry has no sender to act on.
+ */
+export function logOffer(
+  state: { entries: EntryMap; publicDomains: ReadonlySet<string>; newEntryScope: (accountId: string) => Scope },
   entry: Pick<LogEntry, "accountId" | "sender" | "outcome">,
   action: LogAction,
-): Target | null {
+): LogOffer | null {
   const sender = parseSender(entry.sender);
   if (sender === null) {
     return null;
   }
-  if (action === "block") {
-    const deciding = matchSender(state.entries, sender, entry.accountId);
-    if (entry.outcome === "trusted" || entry.outcome === "released" || deciding?.list === "white") {
-      return { kind: "address", value: sender.address };
-    }
+  const list: ListName = action === "trust" ? "white" : "black";
+  const deciding = matchSender(state.entries, sender, entry.accountId);
+  const of = (found: Entry): Target => ({ kind: found.kind, value: found.value });
+  if (deciding !== null && deciding.list === list) {
+    return { action, change: "none", list, target: of(deciding), scope: deciding.scope, behind: null };
   }
-  return smartTarget(sender, state.publicDomains);
+  if (deciding !== null && action === "trust") {
+    const behind = decidingWithout(state.entries, sender, entry.accountId, deciding);
+    return behind?.list === "white"
+      ? { action, change: "remove", list, target: of(deciding), scope: deciding.scope, behind }
+      : { action, change: "move", list, target: of(deciding), scope: deciding.scope, behind: null };
+  }
+  if (deciding !== null && deciding.kind === "address") {
+    return { action, change: "move", list, target: of(deciding), scope: deciding.scope, behind: null };
+  }
+  const scope = state.newEntryScope(entry.accountId);
+  if (action === "block" && (deciding !== null || entry.outcome === "trusted" || entry.outcome === "released")) {
+    return { action, change: "add", list, target: { kind: "address", value: sender.address }, scope, behind: null };
+  }
+  return { action, change: "add", list, target: smartTarget(sender, state.publicDomains), scope, behind: null };
 }
 
-export interface LogActionPlan {
-  list: ListName;
-  target: Target;
-  scope: Scope;
-  result: AddResult;
+export interface LogActionPlan extends LogOffer {
   /** How to take the list change back: keys to remove, and entries to put back exactly as they were. */
   undo: { remove: string[]; restore: Entry[] };
 }
 
 /**
  * Applies the list change of an action in memory; the caller stores the entries and
- * then moves the message. The entry has the source manual, and as with a shortcut the
- * action always takes effect: an older entry of the other list that would still decide
- * this sender is removed.
+ * then moves the message. An entry that is added or moved has the source manual. What
+ * changes is exactly what logOffer says, and Undo takes exactly that back.
  */
 export function applyLogAction(
   state: AppState,
@@ -97,34 +139,30 @@ export function applyLogAction(
   now: number,
 ): LogActionPlan {
   const sender = parseSender(entry.sender);
-  const target = logActionTarget(state, entry, action);
-  if (sender === null || target === null) {
+  const offer = logOffer({ entries: state.entries, publicDomains: state.publicDomains, newEntryScope: (accountId) => state.newEntryScope(accountId) }, entry, action);
+  if (sender === null || offer === null) {
     throw new ValidationError("entry.sender: not an address", "no-sender");
   }
   if (ownAddresses.has(sender.address)) {
     throw new ValidationError("entry.sender: one of the user's own addresses", "own-address");
   }
-  const list: ListName = action === "trust" ? "white" : "black";
-  const scope = state.newEntryScope(entry.accountId);
-  const key = entryKey(target.kind, target.value, scope);
+  const key = entryKey(offer.target.kind, offer.target.value, offer.scope);
   const previous = state.entries.get(key);
   const undo: LogActionPlan["undo"] = { remove: [], restore: [] };
-
-  const result = state.addEntry({ list, kind: target.kind, value: target.value, scope, source: "manual" }, now);
-  if (result !== "unchanged") {
+  if (offer.change === "remove") {
+    if (previous !== undefined) {
+      undo.restore.push(previous);
+      state.removeEntry(key);
+      // The white entry behind it decides now: the sender's mail in a screening folder is released.
+      state.whiteAdded = true;
+    }
+  } else if (offer.change !== "none") {
+    state.addEntry({ list: offer.list, kind: offer.target.kind, value: offer.target.value, scope: offer.scope, source: "manual" }, now);
     if (previous === undefined) {
       undo.remove.push(key);
     } else {
       undo.restore.push(previous);
     }
   }
-  for (;;) {
-    const deciding = matchSender(state.entries, sender, entry.accountId);
-    if (deciding === null || deciding.list === list) {
-      break;
-    }
-    undo.restore.push(deciding);
-    state.removeEntry(keyOf(deciding));
-  }
-  return { list, target, scope, result, undo };
+  return { ...offer, undo };
 }

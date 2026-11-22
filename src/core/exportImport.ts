@@ -169,6 +169,16 @@ export interface ImportReport {
   entriesUnchanged: number;
   skipped: SkippedItem[];
   accessPoints: number;
+  /**
+   * For a merge that changed the lists: how to take it back exactly. The keys of the entries it added, and the
+   * entries it replaced (they were on the other list) as they were before.
+   */
+  undo: ImportUndo | null;
+}
+
+export interface ImportUndo {
+  remove: string[];
+  restore: Entry[];
 }
 
 export interface ImportTarget {
@@ -298,6 +308,7 @@ export function applyImport(
     entriesUnchanged: 0,
     skipped: [],
     accessPoints: 0,
+    undo: null,
   };
 
   const imported: Entry[] = [];
@@ -315,18 +326,23 @@ export function applyImport(
   }
 
   if (mode === "merge") {
+    const undo: ImportUndo = { remove: [], restore: [] };
     for (const entry of imported) {
-      const existing = target.entries.get(keyOf(entry));
+      const key = keyOf(entry);
+      const existing = target.entries.get(key);
       if (existing === undefined) {
-        target.entries.set(keyOf(entry), entry);
+        target.entries.set(key, entry);
         report.entriesAdded += 1;
+        undo.remove.push(key);
       } else if (existing.list !== entry.list) {
-        target.entries.set(keyOf(entry), entry);
+        target.entries.set(key, entry);
         report.entriesReplaced += 1;
+        undo.restore.push(existing);
       } else {
         report.entriesUnchanged += 1;
       }
     }
+    report.undo = undo.remove.length > 0 || undo.restore.length > 0 ? undo : null;
     return report;
   }
 

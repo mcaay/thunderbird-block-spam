@@ -3,16 +3,15 @@
 
 import { normalizeAddress } from "./address";
 import { AccessPointError } from "./chain";
-import { applyCommand, COMMANDS, commandTarget } from "./commands";
+import { applyCommand, commandEffect, COMMANDS, commandTarget } from "./commands";
 import type { CommandMessage, CommandName, CommandPlan } from "./commands";
 import { decideMessage, errorText, MessageReader, REASONS, scorePayload } from "./decision";
 import type { DecisionDeps } from "./decision";
 import { resolveMonitoredFolders, resolveSentFolders } from "./folders";
 import { learnRecipients, syncIdentities } from "./learning";
 import { entryKey, matchSender } from "./lists";
-import type { AddResult } from "./lists";
 import { applyLogAction, expectsMove } from "./logAction";
-import type { LogAction } from "./logAction";
+import type { LogAction, LogChange } from "./logAction";
 import { SAMPLE_PAYLOAD } from "./payload";
 import type { AiPort, MailPort } from "./ports";
 import { folderKey, sameFolder } from "./ports";
@@ -129,6 +128,18 @@ export interface SenderInfo {
    * the message is where the command would put it.
    */
   unchanged: CommandName[];
+  /**
+   * What each command would do, for the tooltips of the buttons: the entry it puts on its list, the entries of the
+   * other list it removes because they would still decide the sender, and whether it moves the message.
+   */
+  effects: Partial<Record<CommandName, CommandPreview>>;
+}
+
+export interface CommandPreview {
+  target: Target;
+  change: "added" | "moved" | "none";
+  lifted: Target[];
+  moves: boolean;
 }
 
 /**
@@ -153,9 +164,13 @@ export interface LogActionUndo {
 
 export interface LogActionOutcome {
   list: ListName;
+  /** What changed on the lists, see LogChange. */
+  change: LogChange;
+  /** The entry that was added, moved or removed, or for "none" the entry that already decided. */
   target: Target;
   scope: Scope;
-  result: AddResult;
+  /** For "remove": the white entry that decides the sender from then on. */
+  behind: Target | null;
   move: MoveResult;
   /** Why the move failed, for "failed". */
   failure: string;
@@ -731,7 +746,7 @@ export class Engine {
     const sender = effective.sender;
     const where = { accountId: message.accountId, messageId: message.headerMessageId };
     if (sender === null) {
-      return { address: "", via: effective.forwarder ?? "", own: false, domainTarget: null, deciding: null, ...where, unchanged: [] };
+      return { address: "", via: effective.forwarder ?? "", own: false, domainTarget: null, deciding: null, ...where, unchanged: [], effects: {} };
     }
     const deciding = matchSender(state.entries, sender, message.accountId);
     const inJunk = context.isJunk(message.folder);
@@ -750,6 +765,16 @@ export class Engine {
       const target = commandTarget(state, command, sender);
       return state.entries.get(entryKey(target.kind, target.value, scope))?.list === list;
     });
+    const effects: Partial<Record<CommandName, CommandPreview>> = {};
+    for (const command of COMMANDS) {
+      const effect = commandEffect(state, command, sender, message.accountId);
+      effects[command] = {
+        target: effect.target,
+        change: effect.change,
+        lifted: effect.lifted.map((entry) => ({ kind: entry.kind, value: entry.value })),
+        moves: command.startsWith("block") ? !inJunk : held,
+      };
+    }
     return {
       address: sender.address,
       via: effective.forwarder ?? "",
@@ -758,6 +783,7 @@ export class Engine {
       deciding,
       ...where,
       unchanged,
+      effects,
     };
   }
 
@@ -815,7 +841,7 @@ export class Engine {
     const { state, now } = this.deps;
     const context = await this.context();
     const plan = applyLogAction(state, entry, action, context.own, now());
-    if (plan.result !== "unchanged" || plan.undo.restore.length > 0) {
+    if (plan.change !== "none") {
       await state.saveEntries();
     }
 
@@ -848,9 +874,10 @@ export class Engine {
     }
     return {
       list: plan.list,
+      change: plan.change,
       target: plan.target,
       scope: plan.scope,
-      result: plan.result,
+      behind: plan.behind === null ? null : { kind: plan.behind.kind, value: plan.behind.value },
       move: moved.move,
       failure: moved.failure,
       undo: {

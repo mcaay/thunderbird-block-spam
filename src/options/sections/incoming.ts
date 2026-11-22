@@ -49,6 +49,8 @@ export function incomingSection(shell: Shell): Section {
     "div",
     { class: "sub-option screening-folders", hidden: true },
     h("h3", { text: t("screeningTitle"), id: "screening-title" }),
+    // What a screening folder is stands with the folders, where the option that uses them is chosen.
+    description(t("screeningHint")),
     noVerdictNote,
     screening,
   );
@@ -67,8 +69,8 @@ export function incomingSection(shell: Shell): Section {
     noAccounts,
     monitored,
     h("h2", { text: t("noVerdictTitle") }),
-    // What a screening folder is stands with the heading, in every state: one of the options names it.
-    h("div", { class: "description", id: "no-verdict-hint", text: t("screeningHint") }),
+    // First which mail this is, then the question, then what the chosen answer needs.
+    h("div", { class: "description", id: "no-verdict-hint", text: t("noVerdictScope") }),
     h("div", { class: "row" }, h("label", { for: "no-verdict", text: t("noVerdictLabel") }), noVerdict),
     // Directly under the menu, and only while the option that uses them is chosen.
     dependent,
@@ -247,6 +249,10 @@ export function incomingSection(shell: Shell): Section {
       if (intent.kind === "screening") {
         // The menu of the account the warning was about, or else the option the folders depend on.
         (document.getElementById(`screening-${intent.accountId}`) ?? noVerdict).focus();
+      } else if (intent.kind === "no-verdict") {
+        // A sentence elsewhere named this setting: the menu takes the focus.
+        noVerdict.scrollIntoView({ block: "center" });
+        noVerdict.focus();
       }
     },
     leave() {

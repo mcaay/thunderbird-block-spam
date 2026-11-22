@@ -26,14 +26,14 @@ import type { FolderFacts } from "./core/folders";
 import { Engine } from "./core/engine";
 import type { CommandOutcome, CommandUndo, LogActionUndo, ScanProgress } from "./core/engine";
 import { applyImport, buildExport } from "./core/exportImport";
-import { KEY_ACCESS_POINTS, KEY_ATTENTION_NOTIFIED, KEY_LAST_COMMAND, KEY_PROTECTION_WISH, KEY_SETTINGS } from "./core/keys";
+import { KEY_ACCESS_POINTS, KEY_ATTENTION_NOTIFIED, KEY_LAST_COMMAND, KEY_LAST_IMPORT, KEY_PROTECTION_WISH, KEY_SETTINGS } from "./core/keys";
 import { whiteListIsOnlyIdentities } from "./core/lists";
 import { validateLogEntry } from "./core/log";
 import { isLogAction } from "./core/logAction";
 import { folderKey } from "./core/ports";
 import { findProblems, protectionState, remedyFor, scanIsComplete } from "./core/problems";
 import type { Remedy } from "./core/problems";
-import { NO_WISH, outcomeOfScan, readWish } from "./core/protectionWish";
+import { isNoWish, NO_WISH, outcomeOfScan, outcomeWithoutService, readWish, withoutService } from "./core/protectionWish";
 import type { ProtectionWish } from "./core/protectionWish";
 import { SerialQueue } from "./core/queue";
 import { asArray, asBoolean, asNumber, asRecord, asString, invalidSettings, isSettingName, validateEntry, ValidationError, withDefaults } from "./core/settings";
@@ -43,7 +43,8 @@ import { BUNDLED_PUBLIC_DOMAINS } from "./data/publicDomains";
 import { t, tCode, tn } from "./tb/i18n";
 import { hold, withKeepAlive } from "./tb/keepAlive";
 import { collect, messagePages, messagesOfTab, ThunderbirdMail } from "./tb/mail";
-import { problemNames, wishOutcomeText } from "./tb/stateText";
+import { commandLines } from "./tb/commandText";
+import { problemNames, servicesOutcomeText, wishOutcomeText } from "./tb/stateText";
 import { COMPANION_ID, KEY_PENDING_SIGN_IN } from "./tb/protocol";
 import type {
   CommandRecord,
@@ -61,7 +62,6 @@ import { BrowserStore } from "./tb/store";
 
 const TICK_ALARM = "tick";
 const TICK_MINUTES = 5;
-const NOTIFICATION_TARGETS = 5;
 /** "Score selected messages" sends at most this many messages in one run, also from listed senders. */
 const SCORE_SELECTED_LIMIT = 50;
 
@@ -71,7 +71,8 @@ interface App {
   ai: Ai;
 }
 
-type StoredSignIn = PendingSignIn & { url: string };
+/** `afterScan`: the answer to "scan first" for a new service. True waits for the scan, false uses the service anyway, null was not asked. */
+type StoredSignIn = PendingSignIn & { url: string; afterScan?: boolean | null };
 
 const store = new BrowserStore();
 const mail = new ThunderbirdMail();
@@ -90,7 +91,7 @@ interface RunningScan {
   range: { from: number | null; to: number | null };
 }
 let scan: RunningScan | null = null;
-/** "Switch protection on" that waits for the scan, as stored. See core/protectionWish. */
+/** What waits for the scan, as stored: "switch protection on", and AI services to be switched on. See core/protectionWish. */
 let wish: ProtectionWish = NO_WISH;
 let scoring = false;
 let signIn: StoredSignIn | null = null;
@@ -142,10 +143,19 @@ async function start(): Promise<void> {
     wish = readWish(raw[KEY_PROTECTION_WISH]);
     if (wish.waiting !== null && state.settings.protection) {
       // Protection was switched on some other way since: there is nothing left to wait for.
-      await saveWish({ waiting: null, outcome: wish.outcome });
-    } else if (wish.waiting !== null && scan?.progress.running !== true) {
-      // Thunderbird was closed while the scan ran. The wish is kept, so the scan starts again and protection follows it.
-      beginScan(engine, wish.waiting.from, wish.waiting.to);
+      await saveWish({ ...wish, waiting: null });
+    }
+    if (wish.services !== null) {
+      // A service that is gone or was switched on some other way since has nothing left to wait for.
+      const ids = wish.services.ids.filter((id) => state.accessPoints.some((point) => point.id === id && !point.enabled));
+      if (ids.length !== wish.services.ids.length) {
+        await saveWish({ ...wish, services: ids.length === 0 ? null : { ...wish.services, ids } });
+      }
+    }
+    const waitingFor = wish.waiting ?? wish.services;
+    if (waitingFor !== null && scan?.progress.running !== true) {
+      // Thunderbird was closed while the scan ran. The wish is kept, so the scan starts again and what waits follows it.
+      beginScan(engine, waitingFor.from, waitingFor.to);
     }
     const pending = raw[KEY_PENDING_SIGN_IN] as StoredSignIn | undefined;
     signIn =
@@ -442,7 +452,7 @@ async function switchProtection(state: AppState, on: boolean): Promise<void> {
 
 async function saveWish(next: ProtectionWish): Promise<void> {
   wish = next;
-  if (next.waiting === null && next.outcome === null) {
+  if (isNoWish(next)) {
     await store.remove([KEY_PROTECTION_WISH]);
   } else {
     await store.set({ [KEY_PROTECTION_WISH]: next });
@@ -456,24 +466,89 @@ async function settingsInFront(): Promise<boolean> {
   return tabs.some((tab) => tab.active === true && tab.url?.startsWith(address) === true);
 }
 
+/** True while mail from people the user writes to could reach an AI service: nobody was learned and no scan ran to its end, or a scan is still running. */
+function scanStillNeeded(state: AppState): boolean {
+  return scan?.progress.running === true || (whiteListIsOnlyIdentities(state.entries) && !scanIsComplete(scan?.progress ?? null));
+}
+
+/** The dates of the running scan, for a wish that joins it. */
+function runningRange(): { from: number | null; to: number | null } | null {
+  return scan?.progress.running === true ? scan.range : null;
+}
+
 /**
- * A scan has ended while protection waited for it. A scan that ran to its end switches
- * protection on, also when it read no message. A cancelled scan and one that could
- * not read a folder drop the wish. Either way the outcome is kept for the page to say.
+ * An AI service is to be switched on when the scan has finished. The scan that is running is waited for, or else a
+ * scan of everything is started. When nothing is left to wait for, the service is switched on at once.
  */
-async function settleWish(ended: RunningScan): Promise<void> {
-  if (wish.waiting === null || app === null) {
+async function serviceAfterScan(state: AppState, engine: Engine, point: AccessPoint): Promise<void> {
+  if (point.enabled) {
     return;
   }
-  const outcome = outcomeOfScan(ended.progress, Date.now());
-  if (outcome.kind === "on") {
-    await switchProtection(app.state, true);
+  if (!scanStillNeeded(state)) {
+    point.enabled = true;
+    await state.saveAccessPoints();
+    return;
   }
-  await saveWish({ waiting: null, outcome });
+  const running = runningRange();
+  const ids = [...new Set([...(wish.services?.ids ?? []), point.id])];
+  // Stored before the scan starts: a scan of an empty mailbox can end at once.
+  await saveWish({
+    ...wish,
+    services: { since: wish.services?.since ?? Date.now(), from: running?.from ?? wish.services?.from ?? null, to: running?.to ?? wish.services?.to ?? null, ids },
+    servicesOutcome: outcomeWithoutService(wish.servicesOutcome, point.id),
+  });
+  if (running === null) {
+    beginScan(engine, null, null);
+  }
+}
+
+/**
+ * A scan has ended while something waited for it: protection, AI services, or both. A scan that ran to its end
+ * switches on what waited, also when it read no message. A cancelled scan and one that could not read a folder
+ * drop the wish. Either way the outcome is kept for the page to say, and one notification covers everything.
+ */
+async function settleWish(ended: RunningScan): Promise<void> {
+  if ((wish.waiting === null && wish.services === null) || app === null) {
+    return;
+  }
+  const { state } = app;
+  const outcome = outcomeOfScan(ended.progress, Date.now());
+  const protectionWaited = wish.waiting !== null;
+  const waited = (wish.services?.ids ?? []).map((id) => state.accessPoints.find((point) => point.id === id)).filter((point): point is AccessPoint => point !== undefined && !point.enabled);
+  if (outcome.kind === "on") {
+    if (waited.length > 0) {
+      for (const point of waited) {
+        point.enabled = true;
+      }
+      await state.saveAccessPoints();
+    }
+    if (protectionWaited) {
+      await switchProtection(state, true);
+    }
+  }
+  await saveWish({
+    waiting: null,
+    outcome: protectionWaited ? outcome : wish.outcome,
+    services: null,
+    servicesOutcome: waited.length > 0 ? { ...outcome, ids: waited.map((point) => point.id) } : wish.servicesOutcome,
+  });
   // Cancel was pressed on the page, which says what follows. The other two ends can come while nobody looks.
-  if (outcome.kind !== "cancelled" && !(await settingsInFront())) {
+  if (outcome.kind !== "cancelled" && (protectionWaited || waited.length > 0) && !(await settingsInFront())) {
+    const lines = [
+      ...(protectionWaited ? [wishOutcomeText(outcome)] : []),
+      ...(waited.length > 0
+        ? [
+            servicesOutcomeText(
+              outcome,
+              waited.map((point) => point.name),
+              // After the sentence about protection the scan is not announced a second time.
+              protectionWaited,
+            ),
+          ]
+        : []),
+    ];
     await browser.notifications
-      .create(WISH_NOTIFICATION, { type: "basic", title: t("extensionName"), message: wishOutcomeText(outcome), iconUrl: browser.runtime.getURL("icons/icon.svg") })
+      .create(WISH_NOTIFICATION, { type: "basic", title: t("extensionName"), message: lines.join(" "), iconUrl: browser.runtime.getURL("icons/icon.svg") })
       .catch((error: unknown) => console.warn("Block Spam: the notification could not be shown", error));
   }
 }
@@ -546,40 +621,6 @@ browser.compose.onAfterSend.addListener((_tab, sendInfo) => {
 // ---------------------------------------------------------------------------
 // The four commands: shortcuts, the context menu of the message list, the buttons of
 // the toolbar popup, and the optional companion add-on all run the same code.
-
-function listTargets(outcome: CommandOutcome): string {
-  const values = outcome.plan.targets.map((target) => target.value);
-  const shown = values.slice(0, NOTIFICATION_TARGETS).join(", ");
-  return values.length > NOTIFICATION_TARGETS ? t("notifyMore", shown, values.length - NOTIFICATION_TARGETS) : shown;
-}
-
-/** What a command did, one fact per line. */
-function commandLines(outcome: CommandOutcome): string[] {
-  const { plan } = outcome;
-  const lines: string[] = [];
-  if (plan.targets.length > 0) {
-    lines.push(t(plan.list === "black" ? "notifyBlocked" : "notifyTrusted", listTargets(outcome)));
-  }
-  if (plan.unknownSenders > 0) {
-    lines.push(t("notifyUnknownSender", plan.unknownSenders));
-  }
-  if (outcome.moved > 0) {
-    lines.push(t(plan.list === "black" ? "notifyMovedToJunk" : "notifyMovedToInbox", outcome.moved));
-  }
-  if (plan.ignoredOwn > 0) {
-    lines.push(t("notifyOwnIgnored", plan.ignoredOwn));
-  }
-  const failure = outcome.failures[0];
-  if (failure !== undefined) {
-    const text =
-      failure === "no-junk-folder" ? tCode("reason", failure) : failure === "no-inbox-folder" ? t("notifyNoInbox") : failure;
-    lines.push(t("notifyMoveFailed", text));
-  }
-  if (lines.length === 0) {
-    lines.push(t("notifyNothingChanged"));
-  }
-  return lines;
-}
 
 async function notifyCommand(record: CommandRecord): Promise<void> {
   // The notification cannot carry a button on every platform: it says where Undo is.
@@ -825,13 +866,17 @@ async function completeAttempt(pending: StoredSignIn, callbackUrl: string): Prom
     const ended = clearSignIn(true);
     ended.catch(() => undefined); // awaited below; this only keeps an early failure from going unhandled
     let point = pending.accessPointId === null ? undefined : state.accessPoints.find((item) => item.id === pending.accessPointId);
+    /** A new service that has to wait for the scan of the sent mail before it is switched on. */
+    let waits = false;
     if (point === undefined) {
+      // Protection is on and nobody was learned yet: unless the user said "use it anyway", the service waits for the scan.
+      waits = state.settings.protection && scanStillNeeded(state) && pending.afterScan !== false && !state.accessPoints.some((item) => item.enabled);
       point = newAccessPoint(
         crypto.randomUUID(),
         {
           type: "chatgpt",
           name: auth.email === "" ? t("chatgptDefaultName") : t("chatgptNamedAccount", auth.email),
-          enabled: true,
+          enabled: !waits,
           endpoint: CHATGPT_RESPONSES_URL,
           model: "",
         },
@@ -844,6 +889,9 @@ async function completeAttempt(pending: StoredSignIn, callbackUrl: string): Prom
     point.cooldownUntil = 0;
     point.lastError = "";
     await state.saveAccessPoints();
+    if (waits) {
+      await serviceAfterScan(state, need().engine, point);
+    }
     await ended;
     if (point.model === "") {
       // The user picks the model later. Start with the first one the account offers.
@@ -974,7 +1022,7 @@ const handlers: Handlers = {
         accessPointId: signIn?.accessPointId ?? null,
       },
       scoring,
-      wish: { waiting: wish.waiting !== null, outcome: wish.outcome },
+      wish: { waiting: wish.waiting !== null, outcome: wish.outcome, services: wish.services?.ids ?? [], servicesOutcome: wish.servicesOutcome },
     };
   },
 
@@ -982,7 +1030,8 @@ const handlers: Handlers = {
     const { state } = need();
     await switchProtection(state, on === true);
     // Switched by hand: a wish that waited for the scan is settled by this, and what the last one came to is history.
-    await saveWish(NO_WISH);
+    // AI services that wait for the scan go on waiting.
+    await saveWish({ ...wish, waiting: null, outcome: null });
     return null;
   },
 
@@ -991,9 +1040,9 @@ const handlers: Handlers = {
     if (state.settings.protection) {
       return null;
     }
-    const running = scan?.progress.running === true ? scan : null;
+    const running = runningRange();
     // Stored before the scan starts: a scan of an empty mailbox can end at once.
-    await saveWish({ waiting: { since: Date.now(), from: running?.range.from ?? null, to: running?.range.to ?? null }, outcome: null });
+    await saveWish({ ...wish, waiting: { since: Date.now(), from: running?.from ?? null, to: running?.to ?? null }, outcome: null });
     if (running === null) {
       beginScan(engine, null, null);
     }
@@ -1001,7 +1050,23 @@ const handlers: Handlers = {
   },
 
   async clearProtectionWish() {
-    await saveWish(NO_WISH);
+    await saveWish({ ...wish, waiting: null, outcome: null });
+    return null;
+  },
+
+  async enableAfterScan({ id }) {
+    const { state, engine } = need();
+    await serviceAfterScan(state, engine, findPoint(state, asString(id, "id")));
+    return null;
+  },
+
+  async clearServiceWish({ id }) {
+    // With a service: "Don't switch on", or its outcome was dismissed. Without one: what the last wish came to was seen.
+    await saveWish(
+      id === null
+        ? { ...wish, servicesOutcome: null }
+        : { ...wish, services: withoutService(wish.services, asString(id, "id")), servicesOutcome: outcomeWithoutService(wish.servicesOutcome, asString(id, "id")) },
+    );
     return null;
   },
 
@@ -1087,9 +1152,9 @@ const handlers: Handlers = {
     if (scan?.progress.running === true) {
       throw new Error(t("errorScanRunning"));
     }
-    if (wish.outcome !== null) {
+    if (wish.outcome !== null || wish.servicesOutcome !== null) {
       // What the last wish came to is history once the next scan starts.
-      await saveWish({ waiting: wish.waiting, outcome: null });
+      await saveWish({ ...wish, outcome: null, servicesOutcome: null });
     }
     beginScan(engine, from, to);
     return null;
@@ -1168,8 +1233,13 @@ const handlers: Handlers = {
       return { id: point.id };
     }
     // Editing an access point clears "needs attention" and the cool-down.
+    const switched = existing.enabled !== definition.enabled;
     Object.assign(existing, definition, { apiKey, needsAttention: false, cooldownUntil: 0, lastError: "" });
     await state.saveAccessPoints();
+    if (switched && (wish.services?.ids.includes(existing.id) === true || wish.servicesOutcome?.ids.includes(existing.id) === true)) {
+      // Switched by hand: a service that waited for the scan is settled by this, and what its wish came to is history.
+      await saveWish({ ...wish, services: withoutService(wish.services, existing.id), servicesOutcome: outcomeWithoutService(wish.servicesOutcome, existing.id) });
+    }
     return { id: existing.id };
   },
 
@@ -1181,6 +1251,9 @@ const handlers: Handlers = {
     point.auth = null;
     state.accessPoints = state.accessPoints.filter((item) => item.id !== id);
     await state.saveAccessPoints();
+    if (wish.services?.ids.includes(id) === true || wish.servicesOutcome?.ids.includes(id) === true) {
+      await saveWish({ ...wish, services: withoutService(wish.services, id), servicesOutcome: outcomeWithoutService(wish.servicesOutcome, id) });
+    }
     const revocationConfirmed = await revoke(auth);
     return { revocationConfirmed };
   },
@@ -1230,7 +1303,7 @@ const handlers: Handlers = {
     return withKeepAlive(() => ai.listModels(point));
   },
 
-  async startSignIn({ accessPointId, openTab }, sender) {
+  async startSignIn({ accessPointId, openTab, afterScan }, sender) {
     const { state } = need();
     const point = accessPointId === null ? null : findPoint(state, accessPointId);
     if (point !== null && point.type !== "chatgpt") {
@@ -1258,7 +1331,11 @@ const handlers: Handlers = {
         console.warn("Block Spam: the sign-in tab could not be opened", error);
       }
     }
-    signIn = { ...pending, url };
+    signIn = { ...pending, url, afterScan: afterScan === true ? true : afterScan === false ? false : null };
+    if (afterScan === true && accessPointId === null && scanStillNeeded(state) && scan?.progress.running !== true) {
+      // "Scan first" was the answer: the scan starts now, and the new service follows it when the sign-in is complete.
+      beginScan(need().engine, null, null);
+    }
     signInError = "";
     await store.set({ [KEY_PENDING_SIGN_IN]: signIn });
     ensureRedirectListener();
@@ -1332,10 +1409,33 @@ const handlers: Handlers = {
       // The page says in the user's language that the file is not valid, and adds the detail.
       throw error instanceof ValidationError && error.code === "" ? new ValidationError(error.message, "import-invalid") : error;
     }
+    let servicesOff = 0;
+    if (report.mode === "replace") {
+      // The services that waited for the scan are gone with the replaced ones.
+      if (wish.services !== null || wish.servicesOutcome !== null) {
+        await saveWish({ ...wish, services: null, servicesOutcome: null });
+      }
+      if (state.settings.protection && scanStillNeeded(state)) {
+        // Protection is on and nobody was learned: an imported service that is switched on would get mail from
+        // people the user writes to without having been asked. It arrives switched off, and the report says so.
+        for (const point of state.accessPoints.filter((item) => item.enabled)) {
+          point.enabled = false;
+          servicesOff += 1;
+        }
+      }
+    }
     state.whiteAdded = true;
     await state.saveSettings();
     await state.saveEntries();
     await state.saveAccessPoints();
+    // A merge can be taken back: what it added and what it moved is kept until the next import.
+    const { undo, ...summary } = report;
+    const undoId = undo === null ? null : crypto.randomUUID();
+    if (undo === null) {
+      await store.remove([KEY_LAST_IMPORT]);
+    } else {
+      await store.set({ [KEY_LAST_IMPORT]: { id: undoId, ...undo } });
+    }
     if (report.mode === "replace") {
       // The replaced ChatGPT sign-ins are gone: end their sessions. Their tokens are
       // cleared first, so that a token refresh still running is not installed.
@@ -1347,7 +1447,41 @@ const handlers: Handlers = {
     }
     mail.resetCache();
     await withKeepAlive(() => engine.sweepIfNeeded());
-    return report;
+    return { ...summary, undoId, servicesOff };
+  },
+
+  async undoImport({ id }) {
+    const { state, engine } = need();
+    const raw = (await browser.storage.local.get(KEY_LAST_IMPORT))[KEY_LAST_IMPORT];
+    let stored: { id: string; remove: string[]; restore: ReturnType<typeof validateEntry>[] };
+    try {
+      const record = asRecord(raw, "lastImport");
+      stored = { id: asString(record.id, "lastImport.id"), remove: asArray(record.remove, "lastImport.remove", asString), restore: asArray(record.restore, "lastImport.restore", validateEntry) };
+    } catch {
+      throw new ValidationError("undo: there is no import to take back", "undo-gone");
+    }
+    if (stored.id !== id) {
+      throw new ValidationError("undo: another import was made since", "undo-gone");
+    }
+    await store.remove([KEY_LAST_IMPORT]);
+    let removed = 0;
+    for (const key of stored.remove) {
+      if (state.removeEntry(key)) {
+        removed += 1;
+      }
+    }
+    for (const entry of stored.restore) {
+      state.restoreEntry(entry);
+    }
+    await state.saveEntries();
+    mail.resetCache();
+    await withKeepAlive(() => engine.sweepIfNeeded());
+    return { removed, restored: stored.restore.length };
+  },
+
+  async forgetImport() {
+    await store.remove([KEY_LAST_IMPORT]);
+    return null;
   },
 
   async resetData() {

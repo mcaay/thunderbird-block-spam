@@ -164,7 +164,7 @@ stateLink.addEventListener("click", (event) => {
 
 function renderState(current: Model): void {
   const shown = stateOf(current);
-  const text = drawState(stateLink, shown.kind, shown.problems);
+  const text = drawState(stateLink, shown.kind, shown.problems, true);
   // The name starts with the words that are seen, then says what they are and where the link leads.
   stateLink.setAttribute("aria-label", t("stateLinkLabel", text));
 }

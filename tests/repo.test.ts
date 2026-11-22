@@ -11,6 +11,7 @@ import { REASONS } from "../src/core/decision";
 import { DIAGNOSTIC_CODES } from "../src/core/diagnostics";
 import { PROBLEM_KINDS, PROTECTION_STATES } from "../src/core/problems";
 import { ACCESS_POINT_TYPES, DEFAULT_PROMPT } from "../src/core/settings";
+import { LOG_LABELS, LOG_RESULTS, LOG_TITLES } from "../src/options/logLabels";
 // @ts-expect-error The build scripts are plain JavaScript modules.
 import { crc32, createZip } from "../scripts/zip.mjs";
 
@@ -77,6 +78,12 @@ describe("strings", () => {
     // The state of protection on the page and in the popup, and as the tooltip of the toolbar button. Problems are counted with a string of their own.
     state: PROTECTION_STATES.filter((state) => state !== "problems"),
     tooltip: PROTECTION_STATES.filter((state) => state !== "problems"),
+    // The same state with its noun, where no heading "Protection" stands above it.
+    stateNamed: PROTECTION_STATES.filter((state) => state !== "problems"),
+    // What the action of a log row is called, what its tooltip says and what the line about its result says.
+    logLabel: LOG_LABELS,
+    logTitle: LOG_TITLES,
+    logResult: LOG_RESULTS,
     // The short names of the problems.
     cause: PROBLEM_KINDS,
     // The times the log is looked through by.

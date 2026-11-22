@@ -12,7 +12,9 @@
   --description: color-mix(in srgb, var(--text) 60%, transparent);
   --deemphasized: color-mix(in srgb, var(--text) 69%, transparent);
   --border: color-mix(in srgb, var(--text) 46%, transparent);
-  --separator: light-dark(#d4d4d8, #3f3f46);
+  /* The lines of Thunderbird's Settings as its pixels show them: its horizontal rule, and the lighter line under a table header. */
+  --separator: light-dark(#c5c5c5, #484849);
+  --header-line: light-dark(#d9d9de, #4c4d58);
   --hover: color-mix(in srgb, var(--text) 10%, transparent);
   --selected: light-dark(#e4e4e7, #52525b);
   --button: light-dark(#e4e4e7, #52525b);
@@ -41,9 +43,24 @@
   --destructive: light-dark(#dc2626, #fca5a5);
   --destructive-text: light-dark(#ffffff, #15141a);
   --destructive-hover: light-dark(#b91c1c, oklch(83% 0.14 15));
-  --field: light-dark(#ffffff, #42414d);
-  --checkbox: light-dark(#e4e4e7, #52525b);
-  --checkbox-border: light-dark(#52525b, #71717a);
+  /* Text fields as Thunderbird's Settings draw them. Its search field alone has the lighter dark fill. */
+  --field: light-dark(#ffffff, #27272a);
+  --search-field: light-dark(#ffffff, #42414d);
+  /*
+   * The checkbox of Thunderbird's Settings is drawn by the platform: its computed style is empty and the
+   * checkbox tokens do not show it. These values are read from its pixels in every state, in both themes.
+   * Under the pointer and while pressed only the border of the empty box changes, never its fill.
+   */
+  --checkbox: light-dark(#ffffff, #2b2a33);
+  --checkbox-border: #8f8f9d;
+  --checkbox-border-hover: light-dark(#676774, #b1b1b1);
+  --checkbox-border-active: light-dark(#484851, #d0d0d7);
+  --checkbox-off: light-dark(#ffffff, #222128);
+  --checkbox-off-border: light-dark(#c7c7ce, #8f8f9d);
+  --checkbox-off-checked: light-dark(#c7c7ce, #8f8f9d);
+  --checkbox-checked-hover: hsl(from AccentColor h s calc(l * 0.87));
+  --checkbox-checked-active: hsl(from AccentColor h s calc(l * 0.745));
+  --checkbox-gap: light-dark(transparent, #ffffff);
   --link: light-dark(#1373d9, #4cb1f9);
   --link-active: light-dark(#105bbc, #2493ef);
   --success: light-dark(#1d783b, #55d37e);
@@ -66,12 +83,14 @@
   --search: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M7 2.8a4.2 4.2 0 1 1 0 8.4 4.2 4.2 0 0 1 0-8.4zM10.2 10.2l3.2 3.2' fill='none' stroke='%2315141a' stroke-opacity='.6' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   --chevron-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='black' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   --check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.4 6.9 11.2 12 5.2' fill='none' stroke='%23ffffff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --check-off: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.4 6.9 11.2 12 5.2' fill='none' stroke='%23f4f4f5' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%23f4f4f5' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     --search: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M7 2.8a4.2 4.2 0 1 1 0 8.4 4.2 4.2 0 0 1 0-8.4zM10.2 10.2l3.2 3.2' fill='none' stroke='%23fbfbfe' stroke-opacity='.6' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    --check-off: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.4 6.9 11.2 12 5.2' fill='none' stroke='%23bcbcc4' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   }
 }
 
@@ -122,8 +141,9 @@ h1 {
   line-height: 1.3;
 }
 
+/* A group label: 32px after the group before it, as in Thunderbird's Settings. */
 h2 {
-  margin: 28px 0 4px;
+  margin: 32px 0 6.5px;
   font-size: 1.1em;
   font-weight: 600;
   line-height: 1.4;
@@ -153,6 +173,7 @@ a {
 
 a:active {
   color: var(--link-active);
+  text-decoration: none;
 }
 
 code,
@@ -208,10 +229,14 @@ button:active:not(:disabled, [aria-disabled="true"]) {
 }
 
 button:disabled,
-select:disabled,
+select:disabled {
+  opacity: 0.5;
+}
+
+/* An unavailable field is a little paler than an unavailable button, as in Thunderbird's Settings. */
 input:disabled,
 textarea:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
 }
 
 button.primary {
@@ -255,7 +280,11 @@ button[aria-disabled="true"] {
   background-color: color-mix(in srgb, var(--button) 50%, transparent);
 }
 
-button.primary[aria-disabled="true"] {
+/*
+ * A button that cannot act is never filled: an unavailable filled button is drawn as an unavailable neutral one
+ * (the rule above). Only a button whose own action is running keeps its fill, dimmed, until the action has ended.
+ */
+button.primary[aria-disabled="true"][aria-busy="true"] {
   color: color-mix(in srgb, var(--primary-text) 50%, transparent);
   border-color: color-mix(in srgb, var(--primary-border) 50%, transparent);
   background-color: color-mix(in srgb, var(--primary) 50%, transparent);
@@ -327,9 +356,22 @@ textarea {
   padding: 6px;
 }
 
+/* A field that has the focus: its border becomes two pixels in the accent color, one of them outside the field, as in Thunderbird's Settings. */
+input[type="text"]:focus-visible,
+input[type="search"]:focus-visible,
+input[type="email"]:focus-visible,
+input[type="url"]:focus-visible,
+input[type="password"]:focus-visible,
+input[type="number"]:focus-visible,
+input[type="date"]:focus-visible,
+textarea:focus-visible {
+  outline-offset: -1px;
+}
+
 /* A search field carries a magnifier, as the search fields of Thunderbird do. */
 input[type="search"] {
   padding-inline-start: 26px;
+  background-color: var(--search-field);
   background-image: var(--search);
   background-repeat: no-repeat;
   background-position: 7px center;
@@ -358,7 +400,7 @@ input[type="checkbox"] {
   appearance: none;
   vertical-align: middle;
   border: 1px solid var(--checkbox-border);
-  border-radius: 4px;
+  border-radius: 2px;
   background-color: var(--checkbox);
   background-repeat: no-repeat;
   background-position: center;
@@ -366,7 +408,11 @@ input[type="checkbox"] {
 }
 
 input[type="checkbox"]:hover:not(:disabled) {
-  background-color: var(--button-hover);
+  border-color: var(--checkbox-border-hover);
+}
+
+input[type="checkbox"]:hover:active:not(:disabled) {
+  border-color: var(--checkbox-border-active);
 }
 
 input[type="checkbox"]:checked {
@@ -376,8 +422,32 @@ input[type="checkbox"]:checked {
 }
 
 input[type="checkbox"]:checked:hover:not(:disabled) {
-  border-color: var(--primary-hover);
-  background-color: var(--primary-hover);
+  border-color: var(--checkbox-checked-hover);
+  background-color: var(--checkbox-checked-hover);
+}
+
+input[type="checkbox"]:checked:hover:active:not(:disabled) {
+  border-color: var(--checkbox-checked-active);
+  background-color: var(--checkbox-checked-active);
+}
+
+/* An unavailable box is not dimmed as a whole: it has colors of its own. */
+input[type="checkbox"]:disabled {
+  opacity: 1;
+  border-color: var(--checkbox-off-border);
+  background-color: var(--checkbox-off);
+}
+
+input[type="checkbox"]:checked:disabled {
+  border-color: var(--checkbox-off-checked);
+  background-color: var(--checkbox-off-checked);
+  background-image: var(--check-off);
+}
+
+/* The ring of a focused box stands one pixel from it. In the dark theme that pixel is white. */
+input[type="checkbox"]:focus-visible {
+  outline-offset: 1px;
+  box-shadow: 0 0 0 1px var(--checkbox-gap);
 }
 
 /* Progress: a thin bar in the accent color, as Thunderbird draws its own. */
@@ -495,8 +565,9 @@ details[open] > summary::before {
   background-color: var(--bar-information);
 }
 
+/* The icon, the first line of the text and the label of the button share one center line. */
 .bar > .icon {
-  margin-top: 1px;
+  margin-top: 4px;
   color: var(--icon-information);
 }
 
@@ -524,10 +595,17 @@ details[open] > summary::before {
   color: var(--icon-critical);
 }
 
+/* A line of text is as high as the button next to it, so a bar with one line has one height, with or without a button. */
 .bar-text {
   flex: 1;
   min-width: 0;
+  padding-block: 3.5px;
   overflow-wrap: anywhere;
+}
+
+/* What an action of the bar found, on a line of its own under the sentence. */
+.bar-status:empty {
+  display: none;
 }
 
 .bar-text ul {
@@ -539,7 +617,7 @@ details[open] > summary::before {
   display: flex;
   flex: none;
   gap: 6px;
-  align-self: center;
+  align-self: flex-start;
 }
 
 /* Inside a bar the buttons are the small ones, so that the bar stays one line high. */
@@ -578,6 +656,11 @@ details[open] > summary::before {
 
 .inline-status.error {
   color: var(--error);
+}
+
+/* A status that stands on a line of its own, so that nothing next to it moves when it appears. */
+.inline-status.block {
+  display: block;
 }
 
 .badge {

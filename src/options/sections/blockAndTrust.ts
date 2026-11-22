@@ -6,7 +6,7 @@ import { COMMANDS } from "../../core/commandNames";
 import type { CommandName } from "../../core/commandNames";
 import { t } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
-import { button, byId, checkRow, description, guard, h, inlineStatus, learnMore, replace, savePackaged } from "../dom";
+import { button, byId, checkRow, description, guard, h, inlineStatus, learnMore, replace, savePackaged, withMore } from "../dom";
 import { formatShortcut } from "../format";
 import type { Model } from "../model";
 import type { Section, Shell } from "../section";
@@ -48,7 +48,7 @@ export function blockAndTrustSection(shell: Shell): Section {
   replace(
     root,
     h("h1", { text: t("catBlockAndTrust"), tabIndex: -1 }),
-    h("p", { class: "lead" }, t("blockAndTrustLead"), " ", learnMore(t("catBlockAndTrust"), t("shortcutsMore"))),
+    h("p", { class: "lead" }, ...withMore(t("blockAndTrustLead"), learnMore(t("catBlockAndTrust"), t("shortcutsMore")))),
     h("h2", { text: t("shortcutsTitle") }),
     description(t("shortcutsHint")),
     h(

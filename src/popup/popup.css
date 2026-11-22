@@ -119,19 +119,34 @@ section > p:last-child {
 /* Protection is on but something needs the user: one line that leads to the warnings in the settings. */
 .notice {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   background-color: var(--bar-warning);
 }
 
+/* The icon, the first line and the label of the button share one center line. */
 .notice > .icon {
   flex: none;
+  margin-top: 4px;
   color: var(--icon-warning);
 }
 
 .notice-text {
   flex: 1;
   min-width: 0;
+  padding-block: 3.5px;
+}
+
+.notice-title {
+  font-weight: 600;
+}
+
+/* One cause per line. */
+.notice .causes {
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+  overflow-wrap: anywhere;
 }
 
 .notice button {
@@ -165,34 +180,52 @@ section > p:last-child {
   color: inherit;
 }
 
-.selection > .row {
+/*
+ * The buttons that block and trust are the main controls of the panel: two columns of equal width that fill it.
+ * The address row, the line that names the domain, the domain row: Block under Block and Trust under Trust.
+ */
+.selection > .commands {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 6px 8px;
   margin-top: 8px;
 }
 
-.selection button {
-  display: inline-flex;
+/* The label stands at the start of the button and its key at the end. */
+.commands > button {
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
+  min-width: 0;
+  padding: 0 10px;
+  text-align: start;
+}
+
+.commands > button > .label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* The key of a button: smaller than its label, in the color of the label, which keeps it readable on the button fill in both themes. */
-.selection .key {
+.commands .key {
+  flex: none;
   font-size: 0.9em;
+  white-space: nowrap;
 }
 
-/* The whole-domain variant: quieter, under the two main buttons. */
-.selection .domain {
-  margin-top: 8px;
-}
-
-.selection .domain .description {
-  margin: 0 0 3px;
+/* The line between the two rows, and the note that stands in for the domain row, take the whole width. */
+.commands > .domain-line,
+.commands > .public-note {
+  grid-column: 1 / -1;
+  margin: 2px 0 -2px;
   overflow-wrap: anywhere;
 }
 
-.selection .domain .row {
-  gap: 6px;
-  margin: 0;
+.commands > .public-note {
+  margin: 2px 0 0;
 }
 
 .result {
@@ -211,9 +244,11 @@ section > p:last-child {
   margin: 0;
 }
 
+/* A line of text is as high as the button next to it: the first line and the label of the button share one center line. */
 .result-text {
   flex: 1;
   min-width: 0;
+  padding-block: 3.5px;
   overflow-wrap: anywhere;
 }
 
@@ -226,10 +261,11 @@ section > p:last-child {
   flex: none;
   gap: 4px;
   align-items: center;
+  align-self: flex-start;
 }
 
 .result > .icon {
-  margin-top: 1px;
+  margin-top: 4px;
   color: var(--icon-success);
 }
 
@@ -348,27 +384,25 @@ p.result {
 }
 
 /*
- * The footer: the AI test and the protection switch. They share one row when their
- * labels fit, and take a row each when they do not, as in the longer languages. Either
- * way the buttons fill their row, so the footer has straight edges.
+ * The footer is quieter than the buttons for the selected message: small buttons as wide as their text, in one
+ * row, the AI test at the start and the switch of protection at the end. Where the two do not fit into one row,
+ * as in the longer languages, they take a row each and both start at the same edge.
  */
 .footer {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
+  justify-content: space-between;
   gap: 6px 8px;
 }
 
 .footer .score,
-.footer .row.end {
-  flex: 1 1 auto;
+.footer .switch {
   min-width: 0;
   margin: 0;
 }
 
-.footer .score > button,
-.footer .row.end > button {
-  width: 100%;
+.footer button {
   white-space: nowrap;
 }
 
@@ -376,19 +410,18 @@ p.result {
   margin: 0 0 6px;
 }
 
-/* While the score box asks or answers, it takes the whole width and the switch moves below it. The buttons keep filling their rows. */
+/* While the score box asks or answers, it takes the whole width and the switch moves below it. */
 .footer .score:has(p) {
   flex-basis: 100%;
 }
 
 /* While protection waits for the scan, the switch says so above its button and takes a row of its own. */
-.footer .row.end:has(p) {
+.footer .switch.waiting {
   flex-basis: 100%;
 }
 
-.footer .row.end > p {
-  flex-basis: 100%;
-  margin: 0;
+.footer .switch > p {
+  margin: 0 0 6px;
 }
 
 /* High contrast (forced colors): the colors of the dots are gone, the difference between filled and hollow stays. */

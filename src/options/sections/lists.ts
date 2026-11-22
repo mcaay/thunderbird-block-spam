@@ -24,6 +24,7 @@ import {
   reconcile,
   removeButton,
   replace,
+  withMore,
 } from "../dom";
 import { formatDate, formatFullTime } from "../format";
 import { accountName } from "../model";
@@ -88,6 +89,14 @@ export function listsSection(): Section {
   const addScope = h("select", { id: "entry-scope" });
   const addStatus = inlineStatus();
   const addButton = h("button", { type: "submit", text: t("add"), disabled: true });
+  /** The "Applies to" menu of the form. With fewer than two accounts it could change nothing, and is not shown. */
+  const scopeField = h("div", { class: "field" }, h("label", { for: "entry-scope", text: t("listsScopeLabel") }), addScope);
+  /**
+   * Whether the table shows to which account an entry applies: with two or more accounts, and with fewer as long
+   * as an entry is limited to an account that is not the one that is left (an account that was removed), so that
+   * nothing that decides is hidden.
+   */
+  let showScope = true;
   const addForm = h(
     "form",
     {
@@ -103,7 +112,7 @@ export function listsSection(): Section {
         removed.clear();
         void (async () => {
           try {
-            const reply = await send("addEntry", { list: addList.value, value: addValue.value, scope: addScope.value });
+            const reply = await send("addEntry", { list: addList.value, value: addValue.value, scope: scopeField.hidden ? SCOPE_ALL : addScope.value });
             valueError.set(null);
             addValue.value = "";
             addButton.disabled = true;
@@ -113,7 +122,10 @@ export function listsSection(): Section {
                 ? t(white ? "listsAddedWhite" : "listsAddedBlack", reply.value)
                 : reply.result === "moved"
                   ? t(white ? "listsMovedWhite" : "listsMovedBlack", reply.value)
-                  : t("listsAlreadyThere", reply.value),
+                  : reply.result === "source-updated"
+                    ? // The entry was there, made by learning or by an AI score: it is now one made by hand, and the line says so.
+                      t("listsNowManual", reply.value)
+                    : t("listsAlreadyThere", reply.value),
               "ok",
             );
           } catch (error) {
@@ -127,7 +139,7 @@ export function listsSection(): Section {
     },
     h("div", { class: "field grow" }, h("label", { for: "entry-value", text: t("listsValueLabel") }), addValue),
     h("div", { class: "field" }, h("label", { for: "entry-list", text: t("listsListLabel") }), addList),
-    h("div", { class: "field" }, h("label", { for: "entry-scope", text: t("listsScopeLabel") }), addScope),
+    scopeField,
     addButton,
   );
 
@@ -153,8 +165,7 @@ export function listsSection(): Section {
     return cell;
   }
 
-  /** Said while Thunderbird has fewer than two accounts: the choice then makes no difference yet. */
-  const sharingNote = description(t("newEntriesSingle"));
+  const scopeColumn = h("col", { class: "col-scope" });
 
   const newScope = h(
     "select",
@@ -166,20 +177,27 @@ export function listsSection(): Section {
     option("account", t("scopePerAccount")),
   );
 
+  /** "Sharing between accounts": whether entries the add-on makes by itself are shared by all accounts. */
+  const sharing = h(
+    "div",
+    { class: "group", hidden: true },
+    h("h2", { text: t("newEntriesTitle") }),
+    h("div", { class: "row" }, h("label", { for: "new-scope", text: t("newEntriesLabel") }), newScope),
+    description(t("newEntriesHint")),
+  );
+
   replace(
     root,
     h("h1", { text: t("catLists"), tabIndex: -1 }),
-    h("p", { class: "lead" }, t("listsHint"), " ", learnMore(t("catLists"), t("listsMore"))),
+    h("p", { class: "lead" }, ...withMore(t("listsHint"), learnMore(t("catLists"), t("listsMore")))),
     counts,
     h("h2", { text: t("listsAddTitle") }),
     addForm,
     valueError.element,
     addStatus.element,
-    // What applies to every future entry stands before the table, which can be hundreds of rows long.
-    h("h2", { text: t("newEntriesTitle") }),
-    h("div", { class: "row" }, h("label", { for: "new-scope", text: t("newEntriesLabel") }), newScope),
-    description(t("newEntriesHint")),
-    sharingNote,
+    // What applies to every future entry stands before the table, which can be hundreds of rows long. It means something
+    // only with several mail accounts, and is not shown with one.
+    sharing,
     h("h2", { text: t("listsEntriesTitle") }),
     h(
       "div",
@@ -200,7 +218,7 @@ export function listsSection(): Section {
         {},
         h("col", {}),
         h("col", { class: "col-list" }),
-        h("col", { class: "col-scope" }),
+        scopeColumn,
         h("col", { class: "col-source" }),
         h("col", { class: "col-date" }),
         h("col", { class: "col-action" }),
@@ -227,6 +245,14 @@ export function listsSection(): Section {
   function reset(): void {
     limit = PAGE;
     draw();
+  }
+
+  // The form lays its fields out in one line, and the address field takes what the others leave.
+  addScope.addEventListener("change", () => drawScopeTitle());
+
+  /** The whole name of the chosen account, for when the menu is too narrow for it. */
+  function drawScopeTitle(): void {
+    addScope.title = addScope.value === SCOPE_ALL ? "" : (addScope.selectedOptions[0]?.textContent ?? "");
   }
 
   function scopeLabel(entry: Entry): string {
@@ -279,7 +305,7 @@ export function listsSection(): Section {
       { tabIndex: -1 },
       h("td", { class: "value" }, address(entry.value)),
       h("td", { class: "nowrap", text: listLabel(entry) }),
-      h("td", { class: "nowrap ellipsis", text: scopeLabel(entry), title: scopeLabel(entry) }),
+      showScope ? h("td", { class: "nowrap ellipsis", text: scopeLabel(entry), title: scopeLabel(entry) }) : null,
       h("td", { class: "nowrap", text: tCode("source", entry.source) }),
       h("td", { class: "nowrap ellipsis", text: formatDate(entry.addedAt), title: formatFullTime(entry.addedAt) }),
       h("td", { class: "action" }),
@@ -321,14 +347,14 @@ export function listsSection(): Section {
         ? [
             {
               key: "empty",
-              signature: String(model.entries.length === 0),
+              signature: `${model.entries.length === 0}|${showScope}`,
               build: () =>
-                h("tr", { class: "empty-row" }, h("td", { colSpan: 6, class: "empty", text: t(model?.entries.length === 0 ? "listsEmpty" : "listsNoMatch") })),
+                h("tr", { class: "empty-row" }, h("td", { colSpan: showScope ? 6 : 5, class: "empty", text: t(model?.entries.length === 0 ? "listsEmpty" : "listsNoMatch") })),
             },
           ]
         : matching.slice(0, limit).map((entry) => ({
             key: keyOf(entry),
-            signature: JSON.stringify([entry.list, entry.source, entry.addedAt, scopeLabel(entry)]),
+            signature: JSON.stringify([entry.list, entry.source, entry.addedAt, scopeLabel(entry), showScope]),
             build: () => row(entry),
           })),
     );
@@ -356,7 +382,21 @@ export function listsSection(): Section {
       const black = next.entries.length - white;
       counts.textContent = `${tn("listsWhiteCount", white)} ${tn("listsBlackCount", black)}`;
       newScope.value = next.settings.newEntryScope;
-      sharingNote.hidden = next.accounts.length > 1;
+      // With fewer than two mail accounts nothing here could make a difference: the group, the menu of the form and
+      // the column are not shown. Entries then apply as they would have: to all accounts, or to the one account.
+      const several = next.accounts.length > 1;
+      const only = next.accounts[0]?.id;
+      sharing.hidden = !several;
+      scopeField.hidden = !several;
+      showScope = several || next.entries.some((entry) => entry.scope !== SCOPE_ALL && entry.scope !== only);
+      scopeColumn.hidden = !showScope;
+      const scopeHeader = headers.get("scope");
+      if (scopeHeader !== undefined) {
+        scopeHeader.hidden = !showScope;
+      }
+      if (!showScope && sort.key === "scope") {
+        sort = { key: "date", descending: true };
+      }
 
       const scopeSignature = JSON.stringify(next.accounts.map((account) => [account.id, account.name]));
       if (addScope.dataset.signature !== scopeSignature) {
@@ -367,6 +407,7 @@ export function listsSection(): Section {
           option(SCOPE_ALL, t("scopeAll"), chosen === SCOPE_ALL),
           ...next.accounts.map((account) => option(account.id, t("scopeAccount", account.name), chosen === account.id)),
         );
+        drawScopeTitle();
       }
       draw();
     },

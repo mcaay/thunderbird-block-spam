@@ -64,8 +64,8 @@ async function fakeOpenAi() {
   return { http, release: () => tokens.resolve(), handlers, revoked, session };
 }
 
-async function startSignIn(background: Background, session: { nonce: string }): Promise<string> {
-  const started = await background.send("startSignIn", { accessPointId: null, openTab: true });
+async function startSignIn(background: Background, session: { nonce: string }, afterScan: boolean | null = null): Promise<string> {
+  const started = await background.send("startSignIn", { accessPointId: null, openTab: true, afterScan });
   if (!started.ok) {
     throw new Error(started.error);
   }
@@ -234,6 +234,13 @@ describe("block and trust without shortcuts", () => {
           accountId: "account1",
           messageId: "msg-1@test",
           unchanged: [],
+          // What each button would do, for its tooltip.
+          effects: {
+            "block-address": { target: { kind: "address", value: "mike@mail.outreach.example" }, change: "added", lifted: [], moves: true },
+            "block-domain": { target: { kind: "domain", value: "outreach.example" }, change: "added", lifted: [], moves: true },
+            "trust-address": { target: { kind: "address", value: "mike@mail.outreach.example" }, change: "added", lifted: [], moves: false },
+            "trust-domain": { target: { kind: "domain", value: "outreach.example" }, change: "added", lifted: [], moves: false },
+          },
         },
       },
     });
@@ -491,6 +498,9 @@ describe("problems on the toolbar button", () => {
   });
 });
 
+/** The wish as the status reports it while nothing waits and nothing is left to say. */
+const NOTHING_WAITS = { waiting: false, outcome: null, services: [], servicesOutcome: null };
+
 describe("protection that waits for the scan of the sent mail", () => {
   type Settings = ReturnType<typeof defaultSettings>;
   const settingsOf = (fake: FakeBrowser): Settings => fake.storage[KEY_SETTINGS] as Settings;
@@ -603,7 +613,7 @@ describe("protection that waits for the scan of the sent mail", () => {
     await settle();
     expect(settingsOf(called.fake).protection).toBe(false);
     expect(called.fake.storage[KEY_PROTECTION_WISH]).toBeUndefined();
-    expect((await status(called.background)).wish).toEqual({ waiting: false, outcome: null });
+    expect((await status(called.background)).wish).toEqual(NOTHING_WAITS);
 
     // "Switch on anyway" while the wish waits: protection is on now, and the scan that ends later changes nothing.
     const byHand = await setup();
@@ -613,7 +623,7 @@ describe("protection that waits for the scan of the sent mail", () => {
     await settle();
     expect(settingsOf(byHand.fake).protection).toBe(true);
     expect(settingsOf(byHand.fake).protectionOnAt).toBe(onAt);
-    expect((await status(byHand.background)).wish).toEqual({ waiting: false, outcome: null });
+    expect((await status(byHand.background)).wish).toEqual(NOTHING_WAITS);
     expect(byHand.fake.notifications).toEqual([]);
   });
 
@@ -646,9 +656,252 @@ describe("protection that waits for the scan of the sent mail", () => {
     expect(on.fake.storage[KEY_PROTECTION_WISH]).toBeUndefined();
 
     const broken = await setup({ [KEY_PROTECTION_WISH]: { waiting: "yes" } });
-    expect((await status(broken.background)).wish).toEqual({ waiting: false, outcome: null });
+    expect((await status(broken.background)).wish).toEqual(NOTHING_WAITS);
     expect((await status(broken.background)).scan).toBeNull();
     expect(settingsOf(broken.fake).protection).toBe(false);
+  });
+});
+
+describe("an AI service that waits for the scan of the sent mail", () => {
+  type Settings = ReturnType<typeof defaultSettings>;
+  const sent = (id: number): tb.MessageHeader => ({ ...FakeBrowser.header(id, "Me <me@mycompany.example>", "f-sent"), recipients: [`person${id}@customer${id}.example`] });
+  const on = (): Settings => ({ ...defaultSettings(Date.now()), protection: true, protectionOnAt: 1 });
+
+  /** Protection is on, nobody was learned, and the service is saved switched off: the state in which "scan first" is asked. */
+  async function setup(extra: Record<string, unknown> = {}, messages = 3, points: AccessPoint[] = [accessPoint({ id: "jev", name: "Jev", enabled: false })]) {
+    const fake = new FakeBrowser({ [KEY_SETTINGS]: on(), [KEY_ACCESS_POINTS]: points, ...extra });
+    fake.folderMessages.set(
+      "f-sent",
+      Array.from({ length: messages }, (_, index) => sent(index + 1)),
+    );
+    const background = await loadBackground(fake, fakeFetch({}).fetch);
+    await settle();
+    return { fake, background };
+  }
+
+  const status = async (background: Background) => {
+    const reply = await background.send("getStatus", {});
+    if (!reply.ok) {
+      throw new Error(reply.error);
+    }
+    return reply.result;
+  };
+  const enabled = (fake: FakeBrowser, id = "jev"): boolean => stored(fake).find((point) => point.id === id)?.enabled === true;
+
+  it("scans first and then switches the service on by itself", async () => {
+    const { fake, background } = await setup();
+    expect(await background.send("enableAfterScan", { id: "jev" })).toEqual({ ok: true, result: null });
+    // Stored at once, so the wish survives a closed settings page and a restart.
+    expect(fake.storage[KEY_PROTECTION_WISH]).toMatchObject({ services: { ids: ["jev"], from: null, to: null } });
+    expect((await status(background)).wish).toMatchObject({ waiting: false, services: ["jev"] });
+    expect(enabled(fake)).toBe(false);
+
+    await settle();
+    const after = await status(background);
+    expect(after.scan).toMatchObject({ running: false, scanned: 3 });
+    expect(after.wish).toMatchObject({ services: [], servicesOutcome: { kind: "on", scanned: 3, ids: ["jev"] } });
+    expect(enabled(fake)).toBe(true);
+    // The settings page is not in front: one notification says what happened.
+    expect(fake.notifications).toEqual(["servicesWishOn(Jev)"]);
+  });
+
+  it("waits for a scan that is already running, with its dates, instead of starting a second one", async () => {
+    const { fake, background } = await setup();
+    const from = Date.UTC(2020, 0, 1);
+    await background.send("startScan", { from, to: null });
+    await background.send("enableAfterScan", { id: "jev" });
+    expect(fake.storage[KEY_PROTECTION_WISH]).toMatchObject({ services: { ids: ["jev"], from, to: null } });
+    await settle();
+    expect(enabled(fake)).toBe(true);
+  });
+
+  it("lets a second service wait with the first, and names both in one notification", async () => {
+    const { fake, background } = await setup({}, 3, [accessPoint({ id: "jev", name: "Jev", enabled: false }), accessPoint({ id: "openai", name: "OpenAI", enabled: false })]);
+    await background.send("enableAfterScan", { id: "jev" });
+    await background.send("enableAfterScan", { id: "openai" });
+    expect((await status(background)).wish.services).toEqual(["jev", "openai"]);
+    await settle();
+    expect(enabled(fake, "jev")).toBe(true);
+    expect(enabled(fake, "openai")).toBe(true);
+    expect(fake.notifications).toEqual(["servicesWishOnMany(Jev, OpenAI)"]);
+  });
+
+  it("switches the service on after a scan that read no message, and says that it found none", async () => {
+    const { fake, background } = await setup({}, 0);
+    await background.send("enableAfterScan", { id: "jev" });
+    await settle();
+    expect(enabled(fake)).toBe(true);
+    expect(fake.notifications).toEqual(["servicesWishOnEmpty(Jev)"]);
+  });
+
+  it("drops the wish when the scan is cancelled or fails: the service stays off and the reason is kept for its row", async () => {
+    const cancelled = await setup();
+    await cancelled.background.send("enableAfterScan", { id: "jev" });
+    await cancelled.background.send("cancelScan", {});
+    await settle();
+    expect(enabled(cancelled.fake)).toBe(false);
+    expect((await status(cancelled.background)).wish).toMatchObject({ services: [], servicesOutcome: { kind: "cancelled", ids: ["jev"] } });
+    // Cancel was pressed on the page, which says what follows: no notification.
+    expect(cancelled.fake.notifications).toEqual([]);
+
+    const failed = await setup();
+    (failed.fake.api.messages as unknown as { list: () => Promise<never> }).list = async () => {
+      throw new Error("the server went away");
+    };
+    await failed.background.send("enableAfterScan", { id: "jev" });
+    await settle();
+    expect(enabled(failed.fake)).toBe(false);
+    expect((await status(failed.background)).wish.servicesOutcome).toMatchObject({ kind: "errors", ids: ["jev"] });
+    expect(failed.fake.notifications).toEqual(["servicesWishErrors(Jev)"]);
+  });
+
+  it("lets the user call the wish off, and settles it when the service is switched by hand", async () => {
+    const called = await setup();
+    await called.background.send("enableAfterScan", { id: "jev" });
+    await called.background.send("clearServiceWish", { id: "jev" });
+    await settle();
+    expect(enabled(called.fake)).toBe(false);
+    expect(called.fake.storage[KEY_PROTECTION_WISH]).toBeUndefined();
+    expect((await status(called.background)).wish).toEqual(NOTHING_WAITS);
+
+    // "Use it anyway" while the wish waits: the service is on now, and the scan that ends later says nothing about it.
+    const byHand = await setup();
+    await byHand.background.send("enableAfterScan", { id: "jev" });
+    const jev = stored(byHand.fake)[0] as AccessPoint;
+    await byHand.background.send("saveAccessPoint", { id: "jev", definition: { type: jev.type, name: jev.name, enabled: true, endpoint: jev.endpoint, model: jev.model }, apiKey: null });
+    expect((await status(byHand.background)).wish.services).toEqual([]);
+    await settle();
+    expect(enabled(byHand.fake)).toBe(true);
+    expect((await status(byHand.background)).wish).toEqual(NOTHING_WAITS);
+    expect(byHand.fake.notifications).toEqual([]);
+  });
+
+  it("keeps the wish across a restart of Thunderbird: the scan starts again and the service follows it", async () => {
+    const { fake, background } = await setup({ [KEY_PROTECTION_WISH]: { waiting: null, outcome: null, services: { since: 5, from: null, to: null, ids: ["jev"] }, servicesOutcome: null } });
+    const after = await status(background);
+    expect(after.scan).toMatchObject({ running: false, scanned: 3 });
+    expect(after.wish).toMatchObject({ services: [], servicesOutcome: { kind: "on", ids: ["jev"] } });
+    expect(enabled(fake)).toBe(true);
+  });
+
+  it("forgets a stored wish for a service that is gone, and what the last wish came to when the next scan starts", async () => {
+    const gone = await setup({ [KEY_PROTECTION_WISH]: { waiting: null, outcome: null, services: { since: 5, from: null, to: null, ids: ["removed"] }, servicesOutcome: null } });
+    expect((await status(gone.background)).wish).toEqual(NOTHING_WAITS);
+    expect((await status(gone.background)).scan).toBeNull();
+
+    const outcome = { kind: "cancelled", at: 5, scanned: 2, ids: ["jev"] };
+    const scanned = await setup({ [KEY_PROTECTION_WISH]: { waiting: null, outcome: null, services: null, servicesOutcome: outcome } });
+    expect((await status(scanned.background)).wish.servicesOutcome).toEqual(outcome);
+    await scanned.background.send("startScan", { from: null, to: null });
+    expect((await status(scanned.background)).wish.servicesOutcome).toBeNull();
+
+    const seen = await setup({ [KEY_PROTECTION_WISH]: { waiting: null, outcome: null, services: null, servicesOutcome: outcome } });
+    await seen.background.send("clearServiceWish", { id: null });
+    expect(seen.fake.storage[KEY_PROTECTION_WISH]).toBeUndefined();
+  });
+
+  it("switches the service on at once when nothing is left to wait for", async () => {
+    const learned = { list: "white", kind: "domain", value: "customer.example", scope: "all", source: "sent", addedAt: 5 };
+    const { fake, background } = await setup({ [KEY_ENTRIES]: [learned] });
+    await background.send("enableAfterScan", { id: "jev" });
+    expect(enabled(fake)).toBe(true);
+    expect((await status(background)).scan).toBeNull();
+    expect((await status(background)).wish).toEqual(NOTHING_WAITS);
+  });
+
+  it("keeps services waiting when protection is switched, and takes a removed service off the wish", async () => {
+    const { fake, background } = await setup({}, 3, [accessPoint({ id: "jev", name: "Jev", enabled: false }), accessPoint({ id: "openai", name: "OpenAI", enabled: false })]);
+    // The scan is held back until the test lets it go on.
+    const held = deferred<void>();
+    const messages = fake.api.messages as unknown as { list: (...args: unknown[]) => Promise<unknown> };
+    const list = messages.list.bind(messages);
+    messages.list = async (...args) => {
+      await held.promise;
+      return list(...args);
+    };
+    await background.send("enableAfterScan", { id: "jev" });
+    await background.send("enableAfterScan", { id: "openai" });
+    await background.send("setProtection", { on: false });
+    expect((await status(background)).wish.services).toEqual(["jev", "openai"]);
+    await background.send("removeAccessPoint", { id: "openai" });
+    expect((await status(background)).wish.services).toEqual(["jev"]);
+    held.resolve();
+    await settle();
+    expect(enabled(fake, "jev")).toBe(true);
+  });
+
+  it("says in one notification what became of protection and of the service when both waited", async () => {
+    const { fake, background } = await setup({ [KEY_SETTINGS]: defaultSettings(Date.now()) });
+    await background.send("startScan", { from: null, to: null });
+    await background.send("enableAfterScan", { id: "jev" });
+    await background.send("protectAfterScan", {});
+    await settle();
+    expect((fake.storage[KEY_SETTINGS] as Settings).protection).toBe(true);
+    expect(enabled(fake)).toBe(true);
+    expect(fake.notifications).toEqual(["wishOn servicesAlsoOn(Jev)"]);
+  });
+});
+
+describe("import while protection is on and the sent mail was not scanned", () => {
+  it("imports AI services switched off and says how many, so that none gets mail from people the user writes to unasked", async () => {
+    const fake = new FakeBrowser({ [KEY_SETTINGS]: { ...defaultSettings(Date.now()), protection: true, protectionOnAt: 1 } });
+    const background = await loadBackground(fake, fakeFetch({}).fetch);
+    const exported = await background.send("exportData", {});
+    if (!exported.ok) {
+      throw new Error(exported.error);
+    }
+    const file = { ...(exported.result.file as unknown as Record<string, unknown>), accessPoints: [{ type: "systemone", name: "Local", enabled: true, endpoint: "http://127.0.0.1:8765/v1/decisions", model: "" }] };
+    const reply = await background.send("importData", { file, mode: "replace" });
+    expect(reply).toMatchObject({ ok: true, result: { mode: "replace", accessPoints: 1, servicesOff: 1, undoId: null } });
+    expect(stored(fake)).toMatchObject([{ name: "Local", enabled: false }]);
+  });
+});
+
+describe("undoing a merge of an import", () => {
+  const white = (value: string, addedAt = 5) => ({ list: "white", kind: "domain", value, scope: "all", source: "manual", addedAt });
+  const black = (value: string, addedAt = 5) => ({ list: "black", kind: "domain", value, scope: "all", source: "manual", addedAt });
+
+  async function setup(entries: unknown[]) {
+    const fake = new FakeBrowser({ [KEY_SETTINGS]: defaultSettings(Date.now()), [KEY_ENTRIES]: entries });
+    const background = await loadBackground(fake, fakeFetch({}).fetch);
+    const exported = await background.send("exportData", {});
+    if (!exported.ok) {
+      throw new Error(exported.error);
+    }
+    return { fake, background, file: exported.result.file as unknown as Record<string, unknown> };
+  }
+
+  it("removes what the merge added and puts back what it moved, exactly, also with thousands of entries", async () => {
+    const mine = [black("blocked-here.example", 7), white("kept.example", 8)];
+    const { fake, background, file } = await setup(mine);
+    const many = Array.from({ length: 3000 }, (_, index) => ({ list: "white", kind: "domain", value: `new${index}.example`, scope: "all", source: "scan", addedAt: 9 }));
+    const incoming = { ...file, entries: [{ list: "white", kind: "domain", value: "blocked-here.example", scope: "all", source: "sent", addedAt: 9 }, { list: "white", kind: "domain", value: "kept.example", scope: "all", source: "sent", addedAt: 9 }, ...many] };
+    const reply = await background.send("importData", { file: incoming, mode: "merge" });
+    expect(reply).toMatchObject({ ok: true, result: { entriesAdded: 3000, entriesReplaced: 1, entriesUnchanged: 1 } });
+    if (!reply.ok || reply.result.undoId === null) {
+      throw new Error("the merge offered no Undo");
+    }
+    // The page gets a name for the Undo, not the thousands of entries it covers.
+    expect(reply.result).not.toHaveProperty("undo");
+    expect((fake.storage[KEY_ENTRIES] as unknown[]).length).toBe(3002);
+
+    expect(await background.send("undoImport", { id: reply.result.undoId })).toEqual({ ok: true, result: { removed: 3000, restored: 1 } });
+    expect(fake.storage[KEY_ENTRIES]).toEqual(mine);
+    // It can be taken back once.
+    expect(await background.send("undoImport", { id: reply.result.undoId })).toMatchObject({ ok: false, code: "undo-gone" });
+  });
+
+  it("offers no Undo for a merge that changed nothing, and forgets the last one when asked or when the next import comes", async () => {
+    const { fake, background, file } = await setup([white("kept.example")]);
+    expect(await background.send("importData", { file, mode: "merge" })).toMatchObject({ ok: true, result: { entriesAdded: 0, entriesReplaced: 0, undoId: null } });
+
+    const added = await background.send("importData", { file: { ...file, entries: [{ list: "white", kind: "domain", value: "more.example", scope: "all", source: "sent", addedAt: 9 }] }, mode: "merge" });
+    if (!added.ok || added.result.undoId === null) {
+      throw new Error("the merge offered no Undo");
+    }
+    await background.send("forgetImport", {});
+    expect(await background.send("undoImport", { id: added.result.undoId })).toMatchObject({ ok: false, code: "undo-gone" });
+    expect((fake.storage[KEY_ENTRIES] as unknown[]).length).toBe(2);
   });
 });
 
@@ -833,7 +1086,7 @@ describe("undoing a decision from the log", () => {
     const done = await background.send("logAction", { entry: spam, action: "trust" });
     expect(done).toMatchObject({
       ok: true,
-      result: { list: "white", target: { kind: "domain", value: "leadgen.example" }, scope: "all", result: "moved", move: "moved" },
+      result: { list: "white", change: "move", target: { kind: "domain", value: "leadgen.example" }, scope: "all", move: "moved" },
     });
     expect(fake.storage[KEY_ENTRIES]).toMatchObject([{ list: "white", kind: "domain", value: "leadgen.example", source: "manual" }]);
     expect(fake.moves).toEqual([{ ids: [7], folderId: "f-inbox" }]);
@@ -849,7 +1102,7 @@ describe("undoing a decision from the log", () => {
   it("still changes the lists when the message is gone, and says that it was not found", async () => {
     const { fake, background } = await setup();
     fake.folderMessages.clear();
-    expect(await background.send("logAction", { entry: spam, action: "trust" })).toMatchObject({ ok: true, result: { result: "moved", move: "not-found" } });
+    expect(await background.send("logAction", { entry: spam, action: "trust" })).toMatchObject({ ok: true, result: { change: "move", move: "not-found" } });
     expect(fake.storage[KEY_ENTRIES]).toMatchObject([{ list: "white", value: "leadgen.example" }]);
     expect(fake.moves).toEqual([]);
   });
@@ -976,6 +1229,56 @@ describe("ChatGPT sign-in", () => {
     expect(openai.http.requests.filter((request) => request.url === TOKEN_URL)).toHaveLength(1);
     expect(chatgptPoints(fake)).toHaveLength(1);
     expect(chatgptPoints(fake)[0]).toMatchObject({ enabled: true, model: "gpt-6-luna", auth: { refreshToken: "refresh-new" } });
+  });
+
+  it("lets a new service wait for the scan while protection is on and nobody was learned, unless the user said to use it anyway", async () => {
+    const protectedSetup = async () => {
+      const fake = new FakeBrowser({ [KEY_SETTINGS]: { ...defaultSettings(Date.now()), protection: true, protectionOnAt: 1 } });
+      for (const origin of CHATGPT_ORIGINS) {
+        fake.granted.add(origin);
+      }
+      // The scan of the sent mail is held back until the test lets it go on.
+      const held = deferred<void>();
+      const messages = fake.api.messages as unknown as { list: (...args: unknown[]) => Promise<unknown> };
+      const list = messages.list.bind(messages);
+      messages.list = async (...args) => {
+        await held.promise;
+        return list(...args);
+      };
+      const openai = await fakeOpenAi();
+      const background = await loadBackground(fake, openai.http.fetch);
+      return { fake, openai, background, held };
+    };
+    const finish = async (run: Awaited<ReturnType<typeof protectedSetup>>, afterScan: boolean | null) => {
+      const callback = await startSignIn(run.background, run.openai.session, afterScan);
+      const finishing = run.background.send("finishSignIn", { url: callback });
+      await settle();
+      run.openai.release();
+      expect(await finishing).toEqual({ ok: true, result: null });
+    };
+
+    // "Scan first": the scan starts with the sign-in, the service arrives switched off and follows the scan.
+    const first = await protectedSetup();
+    await finish(first, true);
+    expect(chatgptPoints(first.fake)[0]).toMatchObject({ enabled: false });
+    expect(first.fake.storage[KEY_PROTECTION_WISH]).toMatchObject({ services: { ids: [chatgptPoints(first.fake)[0]?.id] } });
+    first.held.resolve();
+    await settle();
+    expect(chatgptPoints(first.fake)[0]).toMatchObject({ enabled: true });
+
+    // "Use it anyway": the service is on at once.
+    const anyway = await protectedSetup();
+    await finish(anyway, false);
+    expect(chatgptPoints(anyway.fake)[0]).toMatchObject({ enabled: true });
+    expect(anyway.fake.storage[KEY_PROTECTION_WISH]).toBeUndefined();
+
+    // Not asked, because protection was switched on only after the sign-in had started: the safe answer is taken.
+    const unasked = await protectedSetup();
+    await finish(unasked, null);
+    expect(chatgptPoints(unasked.fake)[0]).toMatchObject({ enabled: false });
+    unasked.held.resolve();
+    await settle();
+    expect(chatgptPoints(unasked.fake)[0]).toMatchObject({ enabled: true });
   });
 
   it("creates nothing and ends the new session when the sign-in is cancelled during the exchange", async () => {

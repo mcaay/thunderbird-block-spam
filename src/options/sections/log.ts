@@ -3,13 +3,13 @@
 
 import { buildPublicDomains, parseSender } from "../../core/address";
 import type { LogActionOutcome, LogActionUndo } from "../../core/engine";
-import { entriesFromArray, matchSender } from "../../core/lists";
+import { entriesFromArray } from "../../core/lists";
 import type { EntryMap } from "../../core/lists";
 import { logEntryKey } from "../../core/log";
-import { expectsMove, fittingAction, logActionTarget } from "../../core/logAction";
+import { expectsMove, fittingAction, logOffer } from "../../core/logAction";
 import type { LogAction } from "../../core/logAction";
 import { SCOPE_ALL } from "../../core/types";
-import type { LogEntry, Outcome } from "../../core/types";
+import type { LogEntry, Outcome, Settings } from "../../core/types";
 import { BUNDLED_PUBLIC_DOMAINS } from "../../data/publicDomains";
 import { stringsLocale, t, tCode } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
@@ -18,6 +18,7 @@ import { address, addressed, button, byId, dialog, errorText, guard, h, option, 
 import type { Child } from "../dom";
 import { formatFullTime, formatScore, logTimeParts, matchesSearch, parseEntryDetail } from "../format";
 import { logReader } from "../logData";
+import { logLabel, logResult } from "../logLabels";
 import { accountName, ownAddresses } from "../model";
 import type { Model } from "../model";
 import type { Intent, Section } from "../section";
@@ -63,6 +64,7 @@ interface Lists {
   entries: EntryMap;
   publicDomains: Set<string>;
   own: Set<string>;
+  newEntryScope: (accountId: string) => string;
 }
 
 export function logSection(): Section {
@@ -152,8 +154,8 @@ export function logSection(): Section {
       filter,
       period,
       account,
-      search,
-      clear,
+      // The search field and the button move to the next line together when the row is too narrow for both.
+      h("div", { class: "search-group" }, search, clear),
     ),
     summary,
     h(
@@ -203,17 +205,9 @@ export function logSection(): Section {
 
   function outcomeText(outcome: LogActionOutcome): string {
     const white = outcome.list === "white";
-    const value = outcome.target.value;
-    const parts = [
-      outcome.result === "unchanged"
-        ? t(white ? "logAlreadyTrusted" : "logAlreadyBlocked", value)
-        : t(white ? "logDoneTrusted" : "logDoneBlocked", value),
-    ];
-    // Entries of the other list that still decided this sender were removed, as after a shortcut. Say so.
-    const lifted = outcome.undo.restore.filter((entry) => entry.list !== outcome.list && entry.value !== value).map((entry) => entry.value);
-    if (lifted.length > 0) {
-      parts.push(t(white ? "logRemovedFromBlack" : "logRemovedFromWhite", lifted.join(", ")));
-    }
+    // The line names exactly what changed on the lists: the entry that was added, moved or removed.
+    const said = logResult(outcome);
+    const parts = [tCode("logResult", said.code, ...said.args)];
     if (outcome.move === "moved") {
       parts.push(t(white ? "logMovedInbox" : "logMovedJunk"));
     } else if (outcome.move === "not-found") {
@@ -270,40 +264,27 @@ export function logSection(): Section {
     /** What the cell shows: a button for an action, or a note that nothing is left to do. */
     label: string;
     title: string;
+    /** The accessible name: the label and what it acts on. */
+    name: string;
     action: LogAction | null;
   }
 
-  /** The one action that fits a row, given the decision and the lists as they are now. */
+  /** The one action that fits a row, given the decision and the lists as they are now. Its label names exactly what it changes. */
   function offer(entry: LogEntry): Offer | null {
     const fitting = fittingAction(entry);
     const sender = parseSender(entry.sender);
     if (fitting === null || sender === null || lists === null || lists.own.has(sender.address)) {
       return null;
     }
-    const deciding = matchSender(lists.entries, sender, entry.accountId);
-    const target = logActionTarget(lists, entry, fitting);
-    if (target === null) {
+    const offered = logOffer(lists, entry, fitting);
+    if (offered === null) {
       return null;
     }
-    if (fitting === "trust") {
-      const moves = expectsMove(entry, "trust");
-      if (deciding?.list === "white") {
-        // Already trusted: only the message may still be where the decision put it.
-        return moves
-          ? { label: t("logMoveInbox"), title: t("logMoveInboxTitle", deciding.value), action: "trust" }
-          : { label: t("logTrustedNow"), title: t("logTrustedNowTitle", deciding.value), action: null };
-      }
-      // The label says what goes on the list: a whole domain, or one address.
-      return {
-        label: t(target.kind === "domain" ? "logTrustDomain" : "logTrustAddress"),
-        title: t(moves ? "logTrustMoveTitle" : "logTrustTitle", target.value),
-        action: "trust",
-      };
-    }
-    if (deciding?.list === "black") {
-      return { label: t("logMoveJunk"), title: t("logMoveJunkTitle", deciding.value), action: "block" };
-    }
-    return { label: t(target.kind === "domain" ? "logBlockDomain" : "logBlockAddress"), title: t("logBlockTitle", target.value), action: "block" };
+    const said = logLabel(offered, expectsMove(entry, fitting));
+    const label = tCode("logLabel", said.label);
+    // An action that changes the lists is named by the entry it changes, one that only moves the message by the message.
+    const object = offered.change === "none" ? (entry.subject === "" ? t("logNoSubject") : entry.subject) : offered.target.value;
+    return { label, title: tCode("logTitle", said.title, ...said.titleArgs), name: t("labelNamed", label, object), action: said.acts ? fitting : null };
   }
 
   /**
@@ -337,8 +318,8 @@ export function logSection(): Section {
     }
     const actButton = setUnavailable(button(current.label, () => act(entry, key, action), "small"), working);
     actButton.title = current.title;
-    // The name starts with the words on the button, then says exactly what it does.
-    actButton.setAttribute("aria-label", `${current.label}. ${current.title}`);
+    // The name is the label and its object. The whole sentence is the tooltip, so that a screen reader does not say it twice.
+    actButton.setAttribute("aria-label", current.name);
     actButton.dataset.focus = "act";
     return { control: actButton, feedback };
   }
@@ -378,15 +359,15 @@ export function logSection(): Section {
     if (entry.test) {
       badges.push(" ", h("span", { class: "badge", text: t("logTestBadge") }));
     }
-    const lastSpace = actionText.lastIndexOf(" ");
     const outcomeLabel = h("span", { class: `outcome outcome-${entry.outcome}`, text: tCode("outcome", entry.outcome) });
     const outcomeParts: Child[] =
       actionText === ""
         ? [badges.length === 0 ? outcomeLabel : h("span", { class: "keep" }, outcomeLabel, ...badges)]
         : [
-            outcomeLabel,
-            h("span", { class: "outcome-action", text: `, ${actionText.slice(0, lastSpace + 1)}` }),
-            h("span", { class: "keep" }, h("span", { class: "outcome-action", text: actionText.slice(lastSpace + 1) }), ...badges),
+            // What was done stays together with its badges: it moves to the next line whole, after the comma.
+            h("span", { class: "keep" }, outcomeLabel, h("span", { class: "outcome-action", text: "," })),
+            " ",
+            h("span", { class: "keep" }, h("span", { class: "outcome-action", text: actionText }), ...badges),
           ];
     const showAccount = (model?.accounts.length ?? 0) > 1;
     const cell = (cls: string, ...children: Child[]): HTMLElement => h("td", { class: cls, attrs: { role: "cell" } }, ...children);
@@ -405,8 +386,6 @@ export function logSection(): Section {
           when.date === null ? null : " ",
           h("span", { class: "clock", text: when.clock }),
         ),
-        // With several accounts, the account stands under the time: when and where. In the stacked layout it has a line of its own.
-        showAccount ? h("div", { class: "account description", title: entry.account }, ...addressed(entry.account)) : null,
       ),
       cell(
         "col-message",
@@ -416,8 +395,10 @@ export function logSection(): Section {
           entry.sender === "" ? sender : address(sender),
           entry.via === "" ? null : h("span", { class: "via" }, " ", t("logForwardedBy"), " ", address(entry.via)),
         ),
-        // One line: a long subject is cut, and the tooltip has all of it.
+        // Up to two lines: a longer subject is cut, and the tooltip has all of it.
         h("div", { class: "subject", text: subject, title: subject }),
+        // With several accounts, the account has a line of its own under the subject, where its whole name has room.
+        showAccount ? h("div", { class: "account description" }, ...addressed(entry.account)) : null,
       ),
       cell(
         "col-outcome",
@@ -436,8 +417,8 @@ export function logSection(): Section {
       cell(
         "col-score",
         entry.score === null ? null : h("span", { text: score, title: t("logScoreTitle", score) }),
-        // Who scored, under the number.
-        entry.score === null || entry.accessPoint === "" ? null : h("div", { class: "scorer description", text: entry.accessPoint, title: t("logScoredBy", entry.accessPoint) }),
+        // Who scored, under the number. A long name wraps, and the tooltip has all of it.
+        entry.score === null || entry.accessPoint === "" ? null : h("div", { class: "scorer description", title: t("logScoredBy", entry.accessPoint) }, ...addressed(entry.accessPoint)),
       ),
       // What can be done with the row: the action that undoes the decision, and under it the way to the message itself.
       cell("col-action", controls.control, h("div", { class: "show-message-line" }, messageLink(entry, key))),
@@ -564,10 +545,12 @@ export function logSection(): Section {
       if (next.status.fatal !== null || settings === null) {
         return;
       }
+      const scopeSetting: Settings["newEntryScope"] = settings.newEntryScope;
       lists = {
         entries: entriesFromArray(next.entries),
         publicDomains: buildPublicDomains(BUNDLED_PUBLIC_DOMAINS, settings.publicDomainsAdded, settings.publicDomainsRemoved),
         own: ownAddresses(next),
+        newEntryScope: (accountId) => (scopeSetting === "shared" ? SCOPE_ALL : accountId),
       };
       void guard(load);
     },

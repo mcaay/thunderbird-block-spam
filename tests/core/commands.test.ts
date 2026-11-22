@@ -146,6 +146,16 @@ describe("block", () => {
     // Entries about other senders are not touched.
     expect(h.state.entries.get(entryKey("address", "other@outreach.example", "all"))?.list).toBe("white");
   });
+
+  it("names the entry it removed, so that nothing changes that the result does not say", async () => {
+    const h = await harness();
+    h.state.addEntry({ list: "white", kind: "address", value: "a@outreach.example", scope: "all", source: "sent" }, 1);
+    const msg = h.mail.put(INBOX1, { author: "a@outreach.example" });
+    const outcome = await h.engine.runCommand("block-domain", [msg, h.mail.put(INBOX1, { author: "a@outreach.example" })]);
+    expect(outcome.plan.targets).toEqual([{ kind: "domain", value: "outreach.example" }]);
+    // Named once, also when several messages of the sender were selected.
+    expect(outcome.plan.lifted).toMatchObject([{ list: "white", kind: "address", value: "a@outreach.example" }]);
+  });
 });
 
 describe("trust", () => {

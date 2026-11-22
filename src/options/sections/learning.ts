@@ -6,7 +6,7 @@ import type { FolderRef, Settings } from "../../core/types";
 import { t } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
 import { wishOutcomeText } from "../../tb/stateText";
-import { button, byId, description, fieldError, guard, h, learnMore, notice, reconcile, replace, setUnavailable } from "../dom";
+import { button, byId, description, fieldError, guard, h, learnMore, notice, reconcile, replace, setUnavailable, withMore } from "../dom";
 import { endOfLocalDay } from "../fields";
 import { chosenIn, hasFolder, sentFolders, withoutFolder } from "../model";
 import type { AccountView, Model } from "../model";
@@ -102,7 +102,7 @@ export function learningSection(shell: Shell): Section {
   replace(
     root,
     h("h1", { text: t("catLearning"), tabIndex: -1 }),
-    h("p", { class: "lead" }, t("learningHint"), " ", learnMore(t("catLearning"), t("learningMore"))),
+    h("p", { class: "lead" }, ...withMore(t("learningHint"), learnMore(t("catLearning"), t("learningMore")))),
     h("h2", { text: t("sentFoldersTitle") }),
     description(t("sentFoldersHint")),
     changed.element,

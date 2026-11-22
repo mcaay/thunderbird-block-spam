@@ -17,7 +17,7 @@ import type {
 } from "../core/engine";
 import type { ExportResult, ImportMode, ImportReport } from "../core/exportImport";
 import type { LogAction } from "../core/logAction";
-import type { WishOutcome } from "../core/protectionWish";
+import type { ServicesOutcome, WishOutcome } from "../core/protectionWish";
 import type { Entry, EntryKind, ListName, LogEntry } from "../core/types";
 
 /** Where a block or trust command came from. */
@@ -51,6 +51,13 @@ export interface Requests {
   protectAfterScan: { request: Record<string, never>; result: null };
   /** Calls that wish off, and forgets what the last one came to. */
   clearProtectionWish: { request: Record<string, never>; result: null };
+  /**
+   * Switches an AI service on when the scan of the sent mail has finished without an error: the scan that is
+   * running, or else a scan of everything that is started here. Kept like protection that waits for the scan.
+   */
+  enableAfterScan: { request: { id: string }; result: null };
+  /** With a service: calls its wish off, or forgets what it came to. With null: forgets what the last wish of the services came to. */
+  clearServiceWish: { request: { id: string | null }; result: null };
   updateSettings: { request: { patch: SettingsPatch }; result: { invalid: string[] } };
   /** Without a kind, a value with a name before an "@" is an address and anything else a domain. */
   addEntry: {
@@ -79,13 +86,18 @@ export interface Requests {
     request: { id: string | null; definition: AccessPointDefinition; apiKey: string | null };
     result: ModelOption[];
   };
-  startSignIn: { request: { accessPointId: string | null; openTab: boolean }; result: { url: string } };
+  /** `afterScan`: for a new service, the answer to "scan first" (true waits for the scan, false uses the service anyway). */
+  startSignIn: { request: { accessPointId: string | null; openTab: boolean; afterScan?: boolean | null }; result: { url: string } };
   finishSignIn: { request: { url: string }; result: null };
   cancelSignIn: { request: Record<string, never>; result: null };
   signOut: { request: { id: string }; result: { revocationConfirmed: boolean } };
   clearLog: { request: Record<string, never>; result: null };
   exportData: { request: Record<string, never>; result: ExportResult };
-  importData: { request: { file: unknown; mode: ImportMode }; result: ImportReport };
+  importData: { request: { file: unknown; mode: ImportMode }; result: ImportReply };
+  /** Takes the last merge back: removes what it added and puts back what it moved, exactly. */
+  undoImport: { request: { id: string }; result: { removed: number; restored: number } };
+  /** Forgets what is kept for taking the last merge back. */
+  forgetImport: { request: Record<string, never>; result: null };
   resetData: { request: Record<string, never>; result: null };
   /**
    * The selection of a tab: how many messages, counted up to one more than the limit
@@ -111,6 +123,13 @@ export interface Requests {
   takeSettingsTarget: { request: Record<string, never>; result: { target: SettingsTarget | null } };
   welcomeShown: { request: Record<string, never>; result: null };
 }
+
+/** What an import did. `undoId` is set for a merge that can be taken back. */
+export type ImportReply = Omit<ImportReport, "undo"> & {
+  undoId: string | null;
+  /** AI services that were imported switched off, because protection is on and the sent mail was not scanned yet. */
+  servicesOff: number;
+};
 
 export type RequestName = keyof Requests;
 
@@ -183,7 +202,14 @@ export interface Status {
   /** A test of selected messages is running. */
   scoring: boolean;
   /** "Switch protection on" that waits for the scan: whether one is waiting, and what the last one came to until the user has seen it. */
-  wish: { waiting: boolean; outcome: WishOutcome | null };
+  wish: {
+    waiting: boolean;
+    outcome: WishOutcome | null;
+    /** The AI services that are switched on when the scan has finished. */
+    services: string[];
+    /** What became of the services that waited, until the user has seen it. */
+    servicesOutcome: ServicesOutcome | null;
+  };
 }
 
 /** Sends a request to the background and returns its result. Rejects with the background's error message. */

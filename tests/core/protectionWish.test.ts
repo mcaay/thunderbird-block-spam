@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { NO_WISH, outcomeOfScan, readWish } from "../../src/core/protectionWish";
+import { isNoWish, NO_WISH, outcomeOfScan, outcomeWithoutService, readWish, withoutService } from "../../src/core/protectionWish";
 
 describe("protection that waits for the scan, as stored", () => {
   it("reads a wish that waits, with the dates of its scan", () => {
-    expect(readWish({ waiting: { since: 5, from: null, to: 9 }, outcome: null })).toEqual({ waiting: { since: 5, from: null, to: 9 }, outcome: null });
+    expect(readWish({ waiting: { since: 5, from: null, to: 9 }, outcome: null })).toEqual({ ...NO_WISH, waiting: { since: 5, from: null, to: 9 } });
   });
 
   it("reads what the last wish came to", () => {
     const outcome = { kind: "errors", at: 7, scanned: 120 };
-    expect(readWish({ waiting: null, outcome })).toEqual({ waiting: null, outcome });
+    expect(readWish({ waiting: null, outcome })).toEqual({ ...NO_WISH, outcome });
   });
 
   it("takes anything that is not a wish for none, so nothing is switched on because of data that cannot be read", () => {
@@ -16,6 +16,36 @@ describe("protection that waits for the scan, as stored", () => {
       expect(readWish(raw), JSON.stringify(raw)).toEqual(NO_WISH);
     }
     expect(readWish({ waiting: null, outcome: { kind: "maybe", at: 1, scanned: 1 } })).toEqual(NO_WISH);
+  });
+});
+
+describe("AI services that wait for the scan, as stored", () => {
+  it("reads the services that wait and what became of the last ones", () => {
+    const services = { since: 5, from: null, to: 9, ids: ["a", "b"] };
+    const servicesOutcome = { kind: "cancelled", at: 7, scanned: 3, ids: ["a"] };
+    expect(readWish({ services, servicesOutcome })).toEqual({ ...NO_WISH, services, servicesOutcome });
+    // A wish written before services could wait reads as it did.
+    expect(readWish({ waiting: { since: 1, from: null, to: null }, outcome: null })).toMatchObject({ services: null, servicesOutcome: null });
+  });
+
+  it("takes services without an id, without dates or without a known outcome for none", () => {
+    for (const raw of [{ services: { since: 5, from: null, to: null, ids: [] } }, { services: { since: 5, from: null, to: null } }, { services: { ids: ["a"] } }, { services: { since: 5, from: null, to: null, ids: [7, ""] } }, { servicesOutcome: { kind: "on", at: 1, scanned: 1 } }, { servicesOutcome: { kind: "later", at: 1, scanned: 1, ids: ["a"] } }]) {
+      expect(readWish(raw), JSON.stringify(raw)).toEqual(NO_WISH);
+    }
+    expect(readWish({ services: { since: 5, from: null, to: null, ids: ["a", "a", 3] } }).services?.ids).toEqual(["a"]);
+  });
+
+  it("takes one service off the wish and off its outcome, and knows when nothing is left to store", () => {
+    const services = { since: 5, from: null, to: null, ids: ["a", "b"] };
+    expect(withoutService(services, "a")).toEqual({ ...services, ids: ["b"] });
+    expect(withoutService(withoutService(services, "a"), "b")).toBeNull();
+    expect(withoutService(null, "a")).toBeNull();
+    const outcome = { kind: "on" as const, at: 1, scanned: 2, ids: ["a"] };
+    expect(outcomeWithoutService(outcome, "b")).toEqual(outcome);
+    expect(outcomeWithoutService(outcome, "a")).toBeNull();
+    expect(isNoWish(NO_WISH)).toBe(true);
+    expect(isNoWish({ ...NO_WISH, services })).toBe(false);
+    expect(isNoWish({ ...NO_WISH, servicesOutcome: outcome })).toBe(false);
   });
 });
 

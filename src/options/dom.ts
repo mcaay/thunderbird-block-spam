@@ -154,9 +154,12 @@ export async function whileBusy(element: HTMLElement, action: () => Promise<unkn
     return;
   }
   setUnavailable(element, true);
+  // Busy, not merely unavailable: a filled button keeps its fill while its own action runs.
+  element.setAttribute("aria-busy", "true");
   try {
     await action();
   } finally {
+    element.removeAttribute("aria-busy");
     setUnavailable(element, false);
   }
 }
@@ -253,9 +256,41 @@ export function learnMore(topic: string, ...paragraphs: Child[]): HTMLDetailsEle
   );
 }
 
+/**
+ * A sentence with a "Learn more" disclosure after it. The disclosure is tied to the last word with a no-break
+ * space, so that it never stands alone on a line: the word moves down with it.
+ */
+export function withMore(text: string, more: HTMLElement): Child[] {
+  return [text.replace(/\u00a0(?=\S+$)/, " "), "\u00a0", more];
+}
+
 /** A description line, optionally followed by a "Learn more" disclosure. */
 export function description(text: string, more: HTMLElement | null = null, cls = ""): HTMLElement {
-  return h("div", { class: `description ${cls}`.trim() }, text, more === null ? null : " ", more);
+  return h("div", { class: `description ${cls}`.trim() }, ...(more === null ? [text] : withMore(text, more)));
+}
+
+/** A link to another pane of the settings page, inside a sentence. `go` opens the pane and moves the focus to what the sentence is about. */
+export function paneLink(pane: string, text: string, go: () => void): HTMLAnchorElement {
+  return h("a", {
+    href: `#${pane}`,
+    text,
+    onclick: (event) => {
+      event.preventDefault();
+      go();
+    },
+  });
+}
+
+/**
+ * Says something in a status element so that it is read out also when it is the same text as before: an action
+ * that was pressed twice and found the same thing still answers.
+ */
+export function announce(element: HTMLElement, text: string): void {
+  element.textContent = "";
+  // Emptied first and filled in the next frame: a live region reads a change, not a text that stayed.
+  requestAnimationFrame(() => {
+    element.textContent = text;
+  });
 }
 
 /** A checkbox with its label in one row, as in Thunderbird's Settings. */
@@ -355,6 +390,15 @@ export function inlineStatus(cls = ""): InlineStatus {
     },
   };
   return status;
+}
+
+/**
+ * The place of a status that stands between buttons: as wide as the longest text it can say, whether it says
+ * something or not, so that the buttons after it never move when it appears.
+ */
+export function statusSlot(status: InlineStatus, ...texts: string[]): HTMLElement {
+  const longest = texts.reduce((a, b) => (b.length > a.length ? b : a), "");
+  return h("span", { class: "status-slot" }, h("span", { class: "sizer", text: longest, attrs: { "aria-hidden": "true" } }), status.element);
 }
 
 // ---------------------------------------------------------------------------
@@ -660,8 +704,10 @@ export function dialog(options: DialogOptions): Promise<DialogResult> {
   return new Promise((resolve) => {
     dialogCount += 1;
     const titleId = `dialog-title-${dialogCount}`;
+    const bodyId = `dialog-text-${dialogCount}`;
     const opener = document.activeElement;
-    const box = h("dialog", { class: "modal", attrs: { "aria-labelledby": titleId } });
+    // The title names the dialog and its text describes it, so that the text is read when the dialog opens.
+    const box = h("dialog", { class: "modal", attrs: { "aria-labelledby": titleId, "aria-describedby": bodyId } });
     const problem = h("p", { class: "field-error", hidden: true, attrs: { role: "alert" } });
     let settled = false;
     const close = (result: DialogResult): void => {
@@ -706,7 +752,7 @@ export function dialog(options: DialogOptions): Promise<DialogResult> {
     const extra = options.extraLabel === undefined ? null : button(options.extraLabel, () => close("extra"));
     append(box, [
       h("h2", { id: titleId, text: options.title }),
-      ...options.body.map((part) => (typeof part === "string" ? h("p", { text: part }) : part)),
+      h("div", { id: bodyId, class: "dialog-text" }, ...options.body.map((part) => (typeof part === "string" ? h("p", { text: part }) : part))),
       problem,
       h("div", { class: "dialog-actions" }, ...(CONFIRM_FIRST ? [confirm, extra, cancel] : [cancel, extra, confirm])),
     ]);

@@ -11,11 +11,11 @@ import { aiHealth, summarizeDay } from "../../core/stats";
 import type { DaySummary } from "../../core/stats";
 import { stringsLocale, t, tCode, tn } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
-import { wishOutcomeText } from "../../tb/stateText";
+import { servicesOutcomeText, wishOutcomeText } from "../../tb/stateText";
 import { refreshGrants } from "../aiState";
-import { bar, button, byId, checkRow, description, dialog, download, guard, h, iconButton, learnMore, notice, reconcile, replace, setUnavailable, tNodes, whileBusy } from "../dom";
+import { announce, bar, button, byId, checkRow, description, dialog, download, guard, h, iconButton, learnMore, notice, paneLink, reconcile, replace, setUnavailable, tNodes, whileBusy } from "../dom";
 import type { Child, Keyed } from "../dom";
-import { formatScore, formatShortTime } from "../format";
+import { formatLogTime, formatScore, formatShortTime } from "../format";
 import { icon } from "../icons";
 import { logReader } from "../logData";
 import { accountName, forgetAccounts } from "../model";
@@ -98,22 +98,31 @@ export function overviewSection(shell: Shell): Section {
     "div",
     { class: "option-note plain indent", id: "protection-wish", hidden: true, attrs: { role: "status" } },
     icon("clock"),
-    h("span", { text: t("wishWaiting") }),
-    button(
-      t("wishCancel"),
-      () =>
-        void guard(async () => {
-          // The note goes away with the wish: the keyboard goes back to the switch it belongs to.
-          protection.input.focus();
-          await send("clearProtectionWish", {});
-          await shell.refresh();
-        }),
-      "small",
-    ),
+    h("span", { text: t("wishWaiting"), id: "protection-wish-text" }),
   );
+  /** "Don’t switch on": it is described by the sentence it stands in, so that the focus that lands on it reads both. */
+  const wishCancel = button(
+    t("wishCancel"),
+    () =>
+      void guard(async () => {
+        // The note goes away with the wish: the keyboard goes back to the switch it belongs to.
+        protection.input.focus();
+        await send("clearProtectionWish", {});
+        await shell.refresh();
+      }),
+    "small",
+  );
+  wishCancel.setAttribute("aria-describedby", "protection-wish-text");
+  wishNote.appendChild(wishCancel);
+  /** What became of AI services that waited for the scan: switched on, or why not. It stays until it is dismissed or the pane is left. */
+  const servicesOutcome = h("div", { class: "notice", tabIndex: -1, attrs: { role: "group" } });
+  /** When "Check again" was last pressed and found the problem still there. Null before that, and once the problem is gone. */
+  let junkCheckedAt: number | null = null;
+  const junkCheckedText = (): string => (junkCheckedAt === null ? "" : t("checkAgainStill", formatLogTime(junkCheckedAt, Date.now())));
   /** What became of protection that waited for the scan: switched on, or why not. It stays until it is dismissed or protection is switched. */
   const wishOutcome = h("div", { class: "notice", tabIndex: -1, attrs: { role: "group" } });
-  const statusLine = h("p", { class: "status-line indent" });
+  // The answer to "is it working": directly under the heading with the state, before the switch and its options.
+  const statusLine = h("p", { class: "status-line" });
   const warnings = h("div", { class: "warnings" });
   const setup = h("div", { class: "setup" });
   /** What a repair of stored data did. It stays until protection is switched. */
@@ -128,9 +137,14 @@ export function overviewSection(shell: Shell): Section {
   replace(
     body,
     h("h2", {}, t("protectionTitle"), " ", state),
+    statusLine,
     protection.row,
+    description(
+      t("protectionHint"),
+      learnMore(t("protectionTitle"), h("p", {}, ...tNodes("protectionMore", paneLink("incoming", t("catIncoming"), () => shell.go("incoming", { kind: "no-verdict" }))))),
+      "indent",
+    ),
     wishNote,
-    description(t("protectionHint"), learnMore(t("protectionTitle"), t("protectionMore")), "indent"),
     // Observation mode is an option of the switch: it stands under it, indented, and can be set before protection is on.
     h(
       "div",
@@ -139,9 +153,9 @@ export function overviewSection(shell: Shell): Section {
       h("div", { class: "description indent", id: "observation-hint", text: t("observationHint") }),
       observationNote,
     ),
-    statusLine,
     repaired.element,
     wishOutcome,
+    servicesOutcome,
     warnings,
     h("h2", { text: t("setupTitle") }),
     setup,
@@ -182,6 +196,12 @@ export function overviewSection(shell: Shell): Section {
         );
         if (choice === "confirm") {
           await protectAfterScan();
+          const active = document.activeElement;
+          if (!wishNote.hidden && (active === null || active === document.body || (active instanceof HTMLElement && active.matches("section.pane > h1")))) {
+            // The button of setup step 3 that asked is gone with the wish: the keyboard goes on with the note
+            // under the switch, which says what will happen and offers to call it off.
+            wishCancel.focus();
+          }
         }
         if (choice !== "extra") {
           return;
@@ -269,20 +289,36 @@ export function overviewSection(shell: Shell): Section {
     for (const problem of problemsOf(current)) {
       if (problem.kind === "ai-before-scan") {
         // The scan is offered once, by setup step 1 right below: the warning points there.
-        bars.push(warning("ai-before-scan", "", [t("warnAiBeforeScan"), " ", t("warnAiBeforeScanFix")], null));
+        // While protection is on such mail is sent, while it is off it would be.
+        const on = current.settings.protection;
+        bars.push(warning("ai-before-scan", String(on), [t(on ? "warnAiBeforeScanOn" : "warnAiBeforeScan"), " ", t("warnAiBeforeScanFix")], null));
       } else if (problem.kind === "no-junk") {
         const names = problem.accountIds.map((id) => accountName(current, id)).join(", ");
-        bars.push(
-          warning(
-            "no-junk",
-            names,
-            [t(problem.accountIds.length === 1 ? "warnNoJunk" : "warnNoJunkMany", names)],
-            fix(t("checkAgain"), "check", () => {
+        // The button checks the accounts again. When the folder is still missing, the bar says that it checked and what it found.
+        const checked = h("div", { class: "bar-status", id: "junk-checked", attrs: { role: "status" } });
+        const again: HTMLButtonElement = button(t("checkAgain"), () =>
+          void whileBusy(again, () =>
+            guard(async () => {
               forgetAccounts();
-              void shell.refresh();
+              await shell.refresh();
+              // Still here: the problem remains. A bar that is gone needs no answer, the warning itself was it.
+              const status = document.getElementById("junk-checked");
+              if (status !== null) {
+                junkCheckedAt = Date.now();
+                announce(status, junkCheckedText());
+              }
             }),
           ),
         );
+        again.dataset.focus = "check";
+        bars.push({
+          key: "no-junk",
+          signature: names,
+          build: () => {
+            checked.textContent = junkCheckedText();
+            return bar("warning", [t(problem.accountIds.length === 1 ? "warnNoJunk" : "warnNoJunkMany", names), checked], [again]);
+          },
+        });
       } else if (problem.kind === "attention") {
         const points = current.accessPoints.filter((item) => problem.accessPointIds.includes(item.id));
         const [first] = points;
@@ -326,6 +362,10 @@ export function overviewSection(shell: Shell): Section {
         );
       }
     }
+    if (!bars.some((item) => item.key === "no-junk")) {
+      // The problem is gone: what the last check found is history.
+      junkCheckedAt = null;
+    }
     return bars;
   }
 
@@ -361,6 +401,37 @@ export function overviewSection(shell: Shell): Section {
     replace(wishOutcome, box);
   }
 
+  /** AI services that waited for the scan: what became of them, with the way to them. */
+  function renderServicesOutcome(current: Model): void {
+    const outcome = current.status.wish.servicesOutcome;
+    const names = outcome === null ? [] : outcome.ids.map((id) => current.accessPoints.find((point) => point.id === id)?.name).filter((name): name is string => name !== undefined);
+    const signature = outcome === null || names.length === 0 ? "" : JSON.stringify([outcome, names]);
+    if (servicesOutcome.dataset.signature === signature) {
+      return;
+    }
+    servicesOutcome.dataset.signature = signature;
+    if (outcome === null || signature === "") {
+      servicesOutcome.removeAttribute("aria-label");
+      replace(servicesOutcome);
+      return;
+    }
+    const text = servicesOutcomeText(outcome, names);
+    const box = bar(outcome.kind === "on" ? "success" : "warning", [text], [
+      button(t("openAi"), () => shell.go("ai", { kind: "ai-service", id: outcome.ids[0] ?? "" })),
+      iconButton("close", t("dismiss"), () =>
+        void guard(async () => {
+          // The bar goes away: the keyboard goes back to the switch of the group.
+          protection.input.focus();
+          await send("clearServiceWish", { id: null });
+          await shell.refresh();
+        }),
+      ),
+    ]);
+    box.setAttribute("role", "status");
+    servicesOutcome.setAttribute("aria-label", text);
+    replace(servicesOutcome, box);
+  }
+
   function renderStatusLine(current: Model): void {
     const settings = current.settings;
     if (settings === null) {
@@ -382,16 +453,20 @@ export function overviewSection(shell: Shell): Section {
       }
     }
     const health = aiHealth(current.accessPoints, Date.now());
+    const waitingServices = current.status.wish.services.length;
     if (health.enabled > 0) {
       parts.push(t("statusAi", health.working, health.enabled));
-    } else if (current.accessPoints.length > 0) {
+    } else if (current.accessPoints.length > 0 && waitingServices === 0) {
       parts.push(t("statusAiOff"));
+    }
+    if (waitingServices > 0) {
+      parts.push(tn("statusAiWaiting", waitingServices));
     }
     statusLine.textContent = parts.join(" ");
     statusLine.hidden = parts.length === 0;
   }
 
-  function step(mark: "todo" | "running" | "done", title: string, text: string, status: HTMLElement | null, action: HTMLElement | null): HTMLElement {
+  function step(mark: "todo" | "running" | "done", title: string, text: string | Child[], status: HTMLElement | null, action: HTMLElement | null): HTMLElement {
     return h(
       "li",
       { class: `step${mark === "todo" ? "" : ` ${mark}`}` },
@@ -409,7 +484,7 @@ export function overviewSection(shell: Shell): Section {
           title,
           mark === "todo" ? null : h("span", { class: "visually-hidden", text: ` (${t(mark === "done" ? "stepDone" : "stepRunning")})` }),
         ),
-        description(text),
+        typeof text === "string" ? description(text) : h("div", { class: "description" }, ...text),
         status === null ? null : h("div", { class: "step-status" }, status),
       ),
       h("div", { class: "step-action" }, action),
@@ -443,7 +518,8 @@ export function overviewSection(shell: Shell): Section {
     const scanButton: HTMLButtonElement =
       scan === "running"
         ? h("button", { type: "button", text: t("scanCancel"), attrs: { "data-focus": "scan" }, onclick: () => void guard(() => send("cancelScan", {})) })
-        : button(t(scan === "todo" ? "scanStart" : "scanAgain"), () => void whileBusy(scanButton, () => guard(startFullScan)), next === 1 ? "primary" : "");
+        : // A button that cannot act is never filled: without a mail account the step has nothing to start.
+          button(t(scan === "todo" ? "scanStart" : "scanAgain"), () => void whileBusy(scanButton, () => guard(startFullScan)), next === 1 && !noAccounts ? "primary" : "");
     scanButton.dataset.focus = "scan";
     if (noAccounts && scan !== "running") {
       // Without a mail account there is nothing to scan: the tooltip of the button says what is missing, and so does the warning above.
@@ -462,7 +538,8 @@ export function overviewSection(shell: Shell): Section {
       step(
         hasAi ? "done" : "todo",
         t("step2Title"),
-        t("step2Text"),
+        // The pane the sentence names is a link to the setting it means.
+        tNodes("step2Text", paneLink("incoming", t("catIncoming"), () => shell.go("incoming", { kind: "no-verdict" }))),
         null,
         h("button", {
           type: "button",
@@ -538,6 +615,7 @@ export function overviewSection(shell: Shell): Section {
     // A hidden note would still be read as part of the description, so it is named only while it shows.
     observation.input.setAttribute("aria-describedby", waiting ? "observation-hint observation-note" : "observation-hint");
     renderWish(current);
+    renderServicesOutcome(current);
     reconcile(warnings, warningBars(current));
     renderStatusLine(current);
     renderSetup(current);
@@ -580,8 +658,14 @@ export function overviewSection(shell: Shell): Section {
     leave() {
       repaired.clear();
       // What became of protection that waited for the scan was shown here and is history once the pane is left, like every confirmation in place.
-      if (model?.status.wish.outcome !== null && model?.status.wish.outcome !== undefined) {
-        void send("clearProtectionWish", {})
+      junkCheckedAt = null;
+      const checked = document.getElementById("junk-checked");
+      if (checked !== null) {
+        checked.textContent = "";
+      }
+      const wish = model?.status.wish;
+      if (wish !== undefined && (wish.outcome !== null || wish.servicesOutcome !== null)) {
+        void Promise.all([wish.outcome === null ? null : send("clearProtectionWish", {}), wish.servicesOutcome === null ? null : send("clearServiceWish", { id: null })])
           .then(() => shell.refresh())
           .catch(() => undefined);
       }

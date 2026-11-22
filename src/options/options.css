@@ -88,8 +88,9 @@ body:dir(rtl) {
   border-radius: 4px;
 }
 
+/* Under the pointer: Thunderbird's own fill in the light theme. In the dark theme its fill (#71717a) would leave the label at 4.4 to 1, so the quieter one stays. */
 .category:hover {
-  background-color: var(--hover);
+  background-color: light-dark(#f4f4f5, var(--hover));
 }
 
 .category[aria-current="page"] {
@@ -172,6 +173,15 @@ main {
   margin: 0 0 4px;
 }
 
+/* Running text of several lines has the line height of Thunderbird's Settings: 1.8, for full-size text and for descriptions alike. */
+.pane p,
+.pane .description,
+.pane .ways li,
+dialog.modal p,
+dialog.modal .description {
+  line-height: 1.8;
+}
+
 /* "Learn more": the rest of a description, opened in place. */
 
 details.more {
@@ -201,11 +211,13 @@ details.more > .more-body p {
 
 /* A checkbox with its label, and what belongs under it. */
 
+/* The row of a checkbox as in Thunderbird's Settings: the label has the line height of running text, with 4px above and below. */
 .check {
   display: flex;
   align-items: center;
   gap: 5.5px;
-  margin: 6px 0 2px;
+  margin: 4px 0;
+  line-height: 1.8;
 }
 
 .indent {
@@ -269,9 +281,10 @@ details.more > .more-body p {
   margin: 6px 0;
 }
 
+/* The answer to "is it working": directly under the heading with the state. */
 .status-line {
-  margin-top: 6px;
-  margin-bottom: 6px;
+  margin-top: 0;
+  margin-bottom: 4px;
 }
 
 h2 > .state {
@@ -433,6 +446,11 @@ h2 > .state {
   margin-top: 12px;
 }
 
+/* The folder menus of all accounts share one width, whatever the folders are called: a longer name is shortened, and the tooltip has all of it. */
+.account-block .row > select {
+  width: 220px;
+}
+
 /* The screening folders belong to one option of the menu above them: they stand under it, indented like every dependent option. */
 .screening-folders > h3 {
   margin-top: 8px;
@@ -441,8 +459,8 @@ h2 > .state {
 /* One grid for all accounts, so that the folder menus line up under each other. */
 .screening {
   display: grid;
-  /* The first column takes an account name that is an email address of forty characters in one line. */
-  grid-template-columns: fit-content(320px) minmax(140px, 260px) auto minmax(0, 1fr);
+  /* Both columns have one width whatever the accounts and their folders are called: a long name wraps, as an address does. */
+  grid-template-columns: 220px 220px auto minmax(0, 1fr);
   gap: 6px 8px;
   align-items: center;
   margin: 6px 0;
@@ -494,6 +512,37 @@ h2 > .state {
   min-width: 200px;
 }
 
+/*
+ * A status next to buttons has its place kept free: the buttons after it stand where they stand, whether the
+ * status says something or not. The slot is as wide as the longest thing it says.
+ */
+.status-slot {
+  display: inline-grid;
+  align-items: center;
+}
+
+.status-slot > * {
+  grid-area: 1 / 1;
+}
+
+.status-slot > .sizer {
+  visibility: hidden;
+}
+
+/* The line that stands where an editor was left with changes. */
+.option-note.draft {
+  align-items: center;
+  margin: 6px 0 0 46px;
+}
+
+.draft-line > .option-note.draft {
+  margin: 6px 0 6px 8px;
+}
+
+.option-note.draft > button.small {
+  margin: 0 0 0 2px;
+}
+
 .field .description,
 .field .field-error {
   margin: 0;
@@ -516,9 +565,18 @@ h2 > .state {
   min-width: 220px;
 }
 
+/*
+ * The menu of accounts has one width whatever the accounts are called, so the form looks the same with every
+ * mailbox: a longer name is shortened, and the tooltip has all of it.
+ */
+.add-entry select#entry-scope {
+  width: 160px;
+}
+
+/* Wide enough for its placeholder in both languages. */
 .filters input[type="search"] {
   flex: 1;
-  min-width: 160px;
+  min-width: 200px;
   max-width: 320px;
 }
 
@@ -527,13 +585,27 @@ h2 > .state {
   max-width: 220px;
 }
 
+.filters select#log-account {
+  width: 160px;
+}
+
+/* The search field and the button after it move to the next line together. */
+.filters .search-group {
+  display: flex;
+  flex: 1 1 320px;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.filters .search-group > button {
+  flex: none;
+  margin-inline-start: auto;
+}
+
 /* A second label in the row of filters keeps a little more distance from the menu before it. */
 .filters select + label {
   margin-inline-start: 6px;
-}
-
-.filters input[type="search"] + button {
-  margin-inline-start: auto;
 }
 
 .row > input[type="text"],
@@ -544,8 +616,13 @@ h2 > .state {
   max-width: 360px;
 }
 
-input[type="number"] {
+/* A number is typed into a plain field, as wide as its two decimals need. */
+input.number,
+.row > input.number {
+  flex: none;
   width: 6em;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
 }
 
 textarea {
@@ -611,6 +688,10 @@ td {
   vertical-align: top;
   overflow-wrap: break-word;
   border-bottom: 1px solid var(--separator);
+}
+
+thead th {
+  border-bottom-color: var(--header-line);
 }
 
 thead th {
@@ -769,7 +850,7 @@ table.keys tbody tr:hover {
  * or anywhere as the last resort: it never paints over the sender next to it.
  */
 table.log .col-time {
-  width: 88px;
+  width: 82px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -782,7 +863,7 @@ table.log .when .clock {
   white-space: nowrap;
 }
 
-/* Wide enough for the longest decision of both languages in one line, so that rows of one kind are of one height. */
+/* What was done stays together: when the line is too long for the column, it moves to the next line whole, after the comma. */
 table.log .col-outcome {
   width: 280px;
 }
@@ -792,24 +873,18 @@ table.log .col-score {
   font-variant-numeric: tabular-nums;
 }
 
+/* The account has a line of its own under the subject, where its whole name has room. A name that is an address breaks like one. */
 table.log .account {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
-/* In its narrow column the account takes one line and is cut, with all of it in the tooltip: there an address is plain text. */
-table.log .account .address,
-table.log .account .part {
-  display: inline;
-  max-width: none;
-}
-
-/* The subject takes one line and is cut when it is long. */
+/* The subject takes up to two lines. A longer one is cut there, and the tooltip has all of it. */
 table.log .subject {
+  display: -webkit-box;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 table.log .show-message-line {
@@ -824,11 +899,13 @@ table.log .col-action button.small + .show-message-line {
   margin-top: 2px;
 }
 
-/* Who scored: under the number, in one line. */
+/* Who scored: under the number, on up to two lines. */
 table.log .scorer {
+  display: -webkit-box;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 /* As wide as the widest button of both languages and its padding. */
@@ -1006,10 +1083,28 @@ table.log tr:focus-visible {
   margin: 0;
 }
 
+/* The lines of a row are as close as those of a table cell. */
+.service .description,
+.service-state {
+  line-height: 1.6;
+}
+
 .service-state {
   font-size: 0.9em;
-  line-height: 1.6;
   overflow-wrap: anywhere;
+}
+
+/* A service that waits for the scan: an icon, the state in the words of protection, and the way to call it off. */
+.service-state.waiting {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 6px;
+  margin: 2px 0;
+}
+
+.service-state.waiting > .icon {
+  color: var(--icon-information);
 }
 
 .service-state.off,
@@ -1065,9 +1160,14 @@ table.log tr:focus-visible {
   margin-top: 0;
 }
 
-.editor .field > input,
+.editor .field > input {
+  max-width: 520px;
+}
+
+/* A field with a button next to it keeps its width and the button its place, whatever is said under the row. */
 .editor .field .row > input,
 .editor .field .row > select {
+  flex: 0 1 520px;
   max-width: 520px;
 }
 
@@ -1310,28 +1410,9 @@ dialog.modal p {
     border: 0;
   }
 
-  /* The cell of the time gives way to its parts: the time keeps its place, and the account gets a line of its own under the subject. */
   table.log .col-time {
-    display: contents;
-    color: var(--deemphasized);
-  }
-
-  table.log .when {
     grid-area: time;
-  }
-
-  table.log .account {
-    grid-column: 1 / -1;
-    overflow: visible;
-    white-space: normal;
-    overflow-wrap: anywhere;
-  }
-
-  /* On a line of its own the account breaks like every address. */
-  table.log .account .address,
-  table.log .account .part {
-    display: inline-block;
-    max-width: 100%;
+    color: var(--deemphasized);
   }
 
   /* In the stacked layout the row is a grid and paints its own frame. */
