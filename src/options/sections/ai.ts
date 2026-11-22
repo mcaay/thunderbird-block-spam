@@ -360,9 +360,14 @@ export function aiSection(shell: Shell): Section {
       cutoffStatus.clear();
       return;
     }
+    const text = cutoff.value;
     void guard(
       async () => {
         await send("updateSettings", { patch: { cutoff: value } });
+        // Saved with Enter the field keeps the focus and is not redrawn: what it holds is the stored value now, not an edit.
+        if (cutoff.value === text) {
+          cutoffShown = text;
+        }
         cutoffError.set(null);
         cutoffStatus.flash(t("saved"));
       },
