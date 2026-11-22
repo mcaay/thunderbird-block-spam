@@ -933,7 +933,7 @@
     "message": "Żadnego innego folderu tego konta nie można tu dodać."
   },
   "noAccounts": {
-    "message": "W programie Thunderbird nie ma jeszcze konta pocztowego. Najpierw dodaj je w programie Thunderbird."
+    "message": "W programie Thunderbird nie ma jeszcze konta pocztowego. Najpierw je dodaj."
   },
   "folderToAdd": {
     "message": "Wybierz folder do dodania dla konta $1"
@@ -969,7 +969,7 @@
     "message": "Bez folderu do sprawdzenia: $1. Poczta takiego konta zostaje na miejscu, dopóki nie wybierzesz folderu poniżej."
   },
   "screeningTitle": {
-    "message": "Folder do sprawdzenia"
+    "message": "Foldery do sprawdzenia"
   },
   "screeningHint": {
     "message": "Folder pośredni między Odebranymi a Niechcianymi na pocztę bez oceny AI. Gdy nadawca trafi na białą listę, jego wiadomości przechodzą stamtąd do Odebranych."

@@ -25,6 +25,13 @@
   --button-border: light-dark(var(--border), #71717a);
   /* The focus ring of an item that is selected: Thunderbird's token for it, because the accent color is too close to the selection fill. */
   --focus-selected: light-dark(#0060df, #bebebf);
+  /*
+   * On the hover fill of a row the quieter text colors come too close to the fill. Each steps up to the token
+   * Thunderbird has for it: its success and primary colors for the hover state, and its interactive border.
+   */
+  --success-hover: light-dark(#1c5f32, #c0f2cf);
+  --link-hover: light-dark(#175fb6, #32aeff);
+  --button-border-on-fill: light-dark(#52525b, var(--border));
   --button-text: light-dark(#18181b, #f4f4f5);
   --primary: AccentColor;
   --primary-text: AccentColorText;
@@ -418,6 +425,7 @@ progress:indeterminate::-moz-progress-bar {
   border: 2px solid color-mix(in srgb, currentColor 25%, transparent);
   border-top-color: AccentColor;
   border-radius: 50%;
+  vertical-align: -2px;
   animation: spinner-turn 0.9s linear infinite;
 }
 

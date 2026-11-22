@@ -648,7 +648,7 @@ export function aiSection(shell: Shell): Section {
         void guard(
           () =>
             whileBusy(loadButton, async () => {
-              modelStatus.set(t("loadModelsBusy"));
+              modelStatus.busy(t("loadModelsBusy"));
               showModels(await send("listModels", { id: existing.id }));
             }),
           (message) => modelStatus.set(message, "error"),
@@ -668,7 +668,7 @@ export function aiSection(shell: Shell): Section {
         () =>
           whileBusy(loadButton, async () => {
             // Said only once the question about the host is answered, and taken back when the request fails.
-            modelStatus.set(t("loadModelsBusy"));
+            modelStatus.busy(t("loadModelsBusy"));
             try {
               showModels(await send("listModelsFor", { id: existing?.id ?? null, definition, apiKey: newKey }));
             } catch (error) {
@@ -871,7 +871,16 @@ export function aiSection(shell: Shell): Section {
     }
     const test = tests.get(point.id);
     if (test !== undefined) {
-      lines.push(h("div", { class: `service-state test ${test.kind}`, text: test.text, attrs: { role: test.kind === "error" ? "alert" : "status" } }));
+      lines.push(
+        h(
+          "div",
+          { class: `service-state test ${test.kind}`, attrs: { role: test.kind === "error" ? "alert" : "status" } },
+          // A test in progress turns the same ring as the scan and the test of selected messages.
+          test.kind === "busy" ? h("span", { class: "spinner", attrs: { "aria-hidden": "true" } }) : null,
+          test.kind === "busy" ? " " : null,
+          test.text,
+        ),
+      );
     }
     return lines;
   }

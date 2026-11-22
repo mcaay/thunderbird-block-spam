@@ -933,7 +933,7 @@
     "message": "No other folder of this account can be added here."
   },
   "noAccounts": {
-    "message": "Thunderbird has no mail account yet. Add one in Thunderbird first."
+    "message": "Thunderbird has no mail account yet. Add one first."
   },
   "folderToAdd": {
     "message": "Choose a folder to add for $1"
@@ -969,7 +969,7 @@
     "message": "Without a screening folder: $1. Mail of such an account stays where it is until you choose a folder below."
   },
   "screeningTitle": {
-    "message": "Screening folder"
+    "message": "Screening folders"
   },
   "screeningHint": {
     "message": "A folder between the Inbox and Junk for mail without an AI verdict. When a sender is added to the white list, their messages move from there to the Inbox."
@@ -1311,7 +1311,7 @@
     "message": "Choose a model"
   },
   "modelUnlisted": {
-    "message": "$1 (not on the service's list)"
+    "message": "$1 (not on the service’s list)"
   },
   "modelOther": {
     "message": "Other…"
@@ -1452,7 +1452,7 @@
     "message": "The sign-in was removed from this computer, but OpenAI did not confirm that the session ended. You can disconnect the app in ChatGPT settings."
   },
   "chatgptWelcomeTitle": {
-    "message": "You're using your ChatGPT plan"
+    "message": "You’re using your ChatGPT plan"
   },
   "chatgptWelcomeText": {
     "message": "Scoring mail from unknown senders in Block Spam now uses your ChatGPT plan. You can review and manage the usage in ChatGPT settings."
@@ -1536,16 +1536,16 @@
     "message": "Your own messages are ignored. Blocking and trusting by hand work in observation mode and while protection is off. After a shortcut or the context menu, a desktop notification says what was done, and the panel of the Block Spam button in the toolbar lets you undo it."
   },
   "cmdBlockAddress": {
-    "message": "Block the sender's address"
+    "message": "Block the sender’s address"
   },
   "cmdBlockDomain": {
-    "message": "Block the sender's domain"
+    "message": "Block the sender’s domain"
   },
   "cmdTrustAddress": {
-    "message": "Trust the sender's address"
+    "message": "Trust the sender’s address"
   },
   "cmdTrustDomain": {
-    "message": "Trust the sender's domain"
+    "message": "Trust the sender’s domain"
   },
   "colCommand": {
     "message": "Command"
@@ -1560,7 +1560,7 @@
     "message": "Change shortcuts…"
   },
   "shortcutsRebindHint": {
-    "message": "Opens Thunderbird's own list of shortcuts. You also find it under Add-ons and Themes, in the gear menu, as “Manage Extension Shortcuts”."
+    "message": "Opens Thunderbird’s own list of shortcuts. You also find it under Add-ons and Themes, in the gear menu, as “Manage Extension Shortcuts”."
   },
   "smartTitle": {
     "message": "Domain shortcuts"
@@ -1677,7 +1677,7 @@
     "message": "Export"
   },
   "exportHint": {
-    "message": "One file with the lists, the settings and the AI services, without their keys and sign-ins. Entries and folders of an account are saved with the account's email address."
+    "message": "One file with the lists, the settings and the AI services, without their keys and sign-ins. Entries and folders of an account are saved with the account’s email address."
   },
   "exportButton": {
     "message": "Export to a file…"

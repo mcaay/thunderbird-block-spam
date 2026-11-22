@@ -550,6 +550,37 @@ tbody tr.empty-row:hover {
   background-color: transparent;
 }
 
+/*
+ * Under the pointer a row carries Thunderbird's hover fill. What is quieter than plain text
+ * steps up there, so that everything in the row keeps a contrast of 4.5 to 1 (3 to 1 for a border).
+ */
+tbody tr:hover .description,
+tbody tr:hover .row-note,
+.plain-list li:hover .note {
+  color: var(--deemphasized);
+}
+
+tbody tr:hover button.link:not(:active) {
+  color: var(--link-hover);
+}
+
+tbody tr:hover .outcome-trusted,
+tbody tr:hover .outcome-passed,
+tbody tr:hover .outcome-released,
+tbody tr:hover .row-feedback:not(.error) {
+  color: var(--success-hover);
+}
+
+tbody tr:hover button:not(.icon, .link, [aria-disabled="true"]) {
+  border-color: var(--button-border-on-fill);
+}
+
+/* Rows that carry no hover fill keep their colors. */
+tbody tr.empty-row:hover .description,
+table.keys tbody tr:hover .description {
+  color: var(--description);
+}
+
 td.empty {
   padding: 16px 8px;
   text-align: center;
@@ -1204,5 +1235,15 @@ dialog.modal p {
   table.log tr.highlight {
     outline-width: 2px;
     outline-color: SelectedItem;
+  }
+
+  /* The focus ring stays a ring of its own: on the selected category in the color of its text, on a row over the outline of the pointer. */
+  .category[aria-current="page"]:focus-visible {
+    outline-color: SelectedItemText;
+  }
+
+  table.log tr:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
   }
 }

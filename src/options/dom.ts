@@ -285,6 +285,8 @@ export interface InlineStatus {
   set(message: string, kind?: "plain" | "ok" | "error"): void;
   /** Like set, for a confirmation such as "Saved.": it leaves by itself after a few seconds. */
   flash(message: string): void;
+  /** Something is in progress: the message with the turning ring that every busy state of the page has. */
+  busy(message: string): void;
   clear(): void;
 }
 
@@ -307,6 +309,10 @@ export function inlineStatus(cls = ""): InlineStatus {
       element.textContent = message;
       element.className = `inline-status ${cls} ${kind}`.replace(/\s+/g, " ").trim();
       element.setAttribute("role", kind === "error" ? "alert" : "status");
+    },
+    busy(message) {
+      status.set("", "plain");
+      replace(element, h("span", { class: "spinner", attrs: { "aria-hidden": "true" } }), " ", message);
     },
     flash(message) {
       status.set(message, "ok");
@@ -350,10 +356,23 @@ export function reconcile(container: Element, items: readonly Keyed[]): void {
       child.remove();
     }
   }
+  // What is no longer listed goes first, so that the items that stay never have to be moved around it:
+  // moving an element takes the keyboard focus off whatever it holds.
+  const wanted = new Set(items.map((item) => item.key));
+  let lostFocus: { kind: string | null } | null = null;
+  for (const [key, leftover] of existing) {
+    if (!wanted.has(key)) {
+      const active = document.activeElement;
+      if (active instanceof HTMLElement && leftover.contains(active)) {
+        lostFocus = { kind: active.dataset.focus ?? null };
+      }
+      leftover.remove();
+      existing.delete(key);
+    }
+  }
   let previous: Element | null = null;
   for (const item of items) {
     let element = existing.get(item.key);
-    existing.delete(item.key);
     if (element === undefined || element.dataset.signature !== item.signature) {
       const fresh = item.build();
       fresh.dataset.key = item.key;
@@ -370,17 +389,18 @@ export function reconcile(container: Element, items: readonly Keyed[]): void {
     }
     const expected: Element | null = previous === null ? container.firstElementChild : previous.nextElementSibling;
     if (expected !== element) {
+      // An item that changes its place keeps the focus it holds (an AI service that was moved up).
+      const active = document.activeElement;
+      const held = active instanceof HTMLElement && element.contains(active) ? active : null;
       container.insertBefore(element, expected);
+      if (held !== null && document.activeElement !== held) {
+        held.focus();
+      }
     }
     previous = element;
   }
-  for (const leftover of existing.values()) {
-    const active = document.activeElement;
-    const held = active instanceof HTMLElement && leftover.contains(active) ? active : null;
-    leftover.remove();
-    if (held !== null) {
-      focusAfterRemoval(container, held.dataset.focus ?? null);
-    }
+  if (lostFocus !== null) {
+    focusAfterRemoval(container, lostFocus.kind);
   }
 }
 

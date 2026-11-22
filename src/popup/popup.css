@@ -303,10 +303,6 @@ p.result {
   text-align: start;
 }
 
-.spinner {
-  vertical-align: -2px;
-}
-
 .decision .when {
   min-width: 34px;
   text-align: end;
