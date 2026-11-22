@@ -158,7 +158,7 @@ export function overviewSection(shell: Shell): Section {
       "div",
       { class: "sub-option" },
       observation.row,
-      h("div", { class: "description indent", id: "observation-hint", text: t("observationHint") }),
+      h("div", { class: "description indent", id: "observation-hint" }, ...tNodes("observationHint", paneLink("log", t("catLog"), () => shell.go("log")))),
       observationNote,
     ),
     h("h2", { text: t("setupTitle") }),

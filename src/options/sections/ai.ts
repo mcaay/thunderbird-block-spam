@@ -347,7 +347,7 @@ export function aiSection(shell: Shell): Section {
     h("div", { class: "row" }, savePromptButton, discardPromptButton, restorePromptButton, promptStatus.element),
     // Where a prompt or a cutoff is tried: the two tools for it live elsewhere, and this is the place that says so.
     // The names in these sentences are the labels themselves, so they cannot drift apart.
-    description(t("tryOnMail", t("popupScoreSelected"))),
+    h("div", { class: "description" }, ...tNodes("tryOnMail", t("popupScoreSelected"), paneLink("log", t("catLog"), () => shell.go("log")))),
     h(
       "div",
       { class: "description" },

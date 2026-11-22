@@ -612,7 +612,7 @@
     "message": "Tylko obserwuj: podejmuj decyzje i zapisuj je, ale niczego nie przenoś"
   },
   "observationHint": {
-    "message": "Block Spam podejmuje decyzje i je zapisuje, ale sam nie przenosi żadnej wiadomości i niczego nie dodaje do czarnej listy. Dziennik pokazuje, co by się stało. Wypróbuj w ten sposób model, prompt lub próg, zanim im zaufasz."
+    "message": "Block Spam podejmuje decyzje i je zapisuje, ale sam nie przenosi żadnej wiadomości i niczego nie dodaje do czarnej listy. $1 pokazuje, co by się stało. Wypróbuj w ten sposób model, prompt lub próg, zanim im zaufasz."
   },
   "observationOff": {
     "message": "Ochrona jest wyłączona, więc na razie nic nie jest obserwowane."
@@ -693,7 +693,7 @@
     "message": "Skanowanie wysłanej poczty"
   },
   "scanHint": {
-    "message": "Odczytuje odbiorców poczty z powyższych folderów wysłanej poczty i dodaje ich do białej listy. Ponowne uruchomienie niczemu nie szkodzi."
+    "message": "Odczytuje odbiorców poczty z poniższych folderów wysłanej poczty i dodaje ich do białej listy. Ponowne uruchomienie niczemu nie szkodzi."
   },
   "scanFrom": {
     "message": "Wysłane od dnia:"
@@ -1233,13 +1233,13 @@
     "message": "Nie udało się przenieść wiadomości: $1"
   },
   "logUndone_black_again": {
-    "message": "Cofnięto: $1 jest znowu na czarnej liście."
+    "message": "Cofnięto: wpis $1 jest znowu na czarnej liście."
   },
   "logUndone_white_again": {
-    "message": "Cofnięto: $1 jest znowu na białej liście."
+    "message": "Cofnięto: wpis $1 jest znowu na białej liście."
   },
   "logUndone_neither_again": {
-    "message": "Cofnięto: $1 znowu nie ma na żadnej liście."
+    "message": "Cofnięto: wpisu $1 znowu nie ma na żadnej liście."
   },
   "logBack_junk": {
     "message": "Wiadomość wróciła do Niechcianych."
@@ -1290,7 +1290,7 @@
     "message": "Żadnego folderu tego konta nie można tu użyć."
   },
   "noAccounts": {
-    "message": "W programie Thunderbird nie ma jeszcze konta pocztowego. Najpierw je dodaj."
+    "message": "W programie Thunderbird nie ma jeszcze konta pocztowego. Najpierw je dodaj: w menu programu Thunderbird (≡) wybierz „Dodaj konto”, a potem „E\u2011mail”."
   },
   "folderToAdd": {
     "message": "Wybierz folder do dodania dla konta $1"
@@ -1800,7 +1800,7 @@
     "message": "Przywróć domyślny"
   },
   "tryOnMail": {
-    "message": "Aby wypróbować prompt lub próg na prawdziwej poczcie, zaznacz wiadomości, kliknij przycisk Block Spam na pasku narzędzi i wybierz „$1”: oceny trafią do dziennika i nic nie zostanie przeniesione."
+    "message": "Aby wypróbować prompt lub próg na prawdziwej poczcie, zaznacz wiadomości, kliknij przycisk Block Spam na pasku narzędzi i wybierz „$1”: oceny zobaczysz w kategorii $2 i nic nie zostanie przeniesione."
   },
   "tryObserve": {
     "message": "Aby obserwować nową pocztę bez przenoszenia, zaznacz opcję „$1” w kategorii $2."
@@ -1953,7 +1953,7 @@
     "message": "Zmień skróty…"
   },
   "shortcutsRebindHint": {
-    "message": "Otwiera listę skrótów programu Thunderbird. Znajdziesz ją także w sekcji Dodatki i motywy, w menu koła zębatego, pod pozycją „Zarządzaj skrótami rozszerzeń”."
+    "message": "Otwiera listę skrótów programu Thunderbird. Znajdziesz ją także w sekcji Dodatki i motywy: kliknij przycisk z kołem zębatym („Narzędzia dla wszystkich dodatków”) i wybierz „Zarządzaj skrótami rozszerzeń”."
   },
   "smartTitle": {
     "message": "Polecenia dla domeny"
@@ -2004,7 +2004,7 @@
     "message": "Zapisz plik dodatku towarzyszącego…"
   },
   "bareKeysStepInstall": {
-    "message": "Otwórz Dodatki i motywy, kliknij menu koła zębatego, wybierz „Zainstaluj dodatek z pliku” i wskaż zapisany plik."
+    "message": "Otwórz Dodatki i motywy, kliknij przycisk z kołem zębatym („Narzędzia dla wszystkich dodatków”), wybierz „Zainstaluj dodatek z pliku…” i wskaż zapisany plik."
   },
   "bareKeysCaptures": {
     "message": "Od tej chwili dodatek przechwytuje klawisze $1 w oknach poczty i przekazuje je do Block Spam."
@@ -2154,10 +2154,10 @@
     "message": "Ustawienia zostały zastąpione. Zaimportowane usługi AI: $1. Wpisz ponownie ich klucze."
   },
   "importServicesOff": {
-    "message": "Usługi AI zaimportowane jako wyłączone: $1. Wysłana poczta nie jest jeszcze przeskanowana, więc trafiałaby do nich poczta od osób, z którymi już korespondujesz. Najpierw ją przeskanuj, a potem włącz usługi w kategorii AI."
+    "message": "Usługi AI zaimportowane jako wyłączone: $1. Wysłana poczta nie jest jeszcze przeskanowana, więc trafiałaby do nich poczta od osób, z którymi już korespondujesz. Najpierw ją przeskanuj, a potem włącz usługi w kategorii $2."
   },
   "importNoVerdictKept": {
-    "message": "Poczta bez oceny AI nadal zostaje na miejscu. Wysłana poczta nie jest jeszcze przeskanowana, więc poczta od osób, z którymi już korespondujesz, byłaby przenoszona. Najpierw ją przeskanuj, a potem wybierz ponownie w kategorii Poczta przychodząca."
+    "message": "Poczta bez oceny AI nadal zostaje na miejscu. Wysłana poczta nie jest jeszcze przeskanowana, więc poczta od osób, z którymi już korespondujesz, byłaby przenoszona. Najpierw ją przeskanuj, a potem wybierz ponownie w kategorii $1."
   },
   "importSkippedAccount": {
     "message": "Pominięto $1: brak konta o adresie $2."

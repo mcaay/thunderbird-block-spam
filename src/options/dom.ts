@@ -429,15 +429,6 @@ export function inlineStatus(cls = ""): InlineStatus {
   return status;
 }
 
-/**
- * The place of a status that stands between buttons: as wide as the longest text it can say, whether it says
- * something or not, so that the buttons after it never move when it appears.
- */
-export function statusSlot(status: InlineStatus, ...texts: string[]): HTMLElement {
-  const longest = texts.reduce((a, b) => (b.length > a.length ? b : a), "");
-  return h("span", { class: "status-slot" }, h("span", { class: "sizer", text: longest, attrs: { "aria-hidden": "true" } }), status.element);
-}
-
 // ---------------------------------------------------------------------------
 // Lists that are redrawn while the user works in them.
 

@@ -103,11 +103,7 @@ export function learningSection(shell: Shell): Section {
     root,
     h("h1", { text: t("catLearning"), tabIndex: -1 }),
     h("p", { class: "lead" }, ...withMore(t("learningHint"), learnMore(t("catLearning"), t("learningMore")))),
-    h("h2", { text: t("sentFoldersTitle") }),
-    description(t("sentFoldersHint")),
-    changed.element,
-    noAccounts,
-    folders,
+    // What every user does here stands first. The folders, a list that grows with the accounts, follow.
     h("h2", { text: t("scanTitle") }),
     description(t("scanHint")),
     h(
@@ -123,6 +119,11 @@ export function learningSection(shell: Shell): Section {
     h("div", { class: "description", id: "scan-dates-hint", text: t("scanDatesHint") }),
     rangeError.element,
     status.element,
+    h("h2", { text: t("sentFoldersTitle") }),
+    description(t("sentFoldersHint")),
+    changed.element,
+    noAccounts,
+    folders,
     wishLine,
   );
 

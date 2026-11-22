@@ -410,7 +410,12 @@ function drawRecent(): void {
 // "Test AI on selected messages": sends the selection to the AI and only logs the scores.
 
 function showScoreMessage(message: string, isError = false): void {
-  replace(scoreBox, h("p", { class: isError ? "result error" : "description", text: message, attrs: { role: isError ? "alert" : "status" } }), scoreButton());
+  // What the test said stays until it is closed or the next test is asked for: it has the close button of every result.
+  const close = iconButton("close", t("dismiss"), () => {
+    replace(scoreBox, scoreButton());
+    restoreFocus("score");
+  });
+  replace(scoreBox, resultBox([message], isError, "", [close]), scoreButton());
   // The buttons of the question are gone: the keyboard goes back to the button that asks again.
   restoreFocus("score");
 }

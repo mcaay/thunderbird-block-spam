@@ -5,12 +5,20 @@ import type { ImportMode } from "../../core/exportImport";
 import { t } from "../../tb/i18n";
 import { RequestError, send } from "../../tb/protocol";
 import type { ImportReply } from "../../tb/protocol";
-import { addressed, bar, button, byId, closeButton, description, dialog, download, errorText, guard, h, inlineStatus, learnMore, named, option, replace, whileBusy } from "../dom";
+import { addressed, bar, button, byId, closeButton, description, dialog, download, errorText, guard, h, inlineStatus, learnMore, named, option, paneLink, replace, tNodes, whileBusy } from "../dom";
+import type { Child } from "../dom";
 import { firstFew } from "../format";
 import type { Section } from "../section";
 
-function reportLines(report: ImportReply): string[] {
-  const lines = [t("importEntries", report.entriesAdded, report.entriesReplaced, report.entriesUnchanged)];
+/** A pane that a line of the report names: a link that opens it. */
+function pane(name: string, label: string): HTMLAnchorElement {
+  return paneLink(name, label, () => {
+    location.hash = name;
+  });
+}
+
+function reportLines(report: ImportReply): (string | Child[])[] {
+  const lines: (string | Child[])[] = [t("importEntries", report.entriesAdded, report.entriesReplaced, report.entriesUnchanged)];
   // The entries that changed sides are named: whether to keep the import depends on which senders they are.
   // The first ten of each side, then how many more.
   const white = firstFew(report.movedToWhite);
@@ -25,10 +33,10 @@ function reportLines(report: ImportReply): string[] {
     lines.push(t("importReplaced", report.accessPoints));
   }
   if (report.servicesOff > 0) {
-    lines.push(t("importServicesOff", report.servicesOff));
+    lines.push(tNodes("importServicesOff", String(report.servicesOff), pane("ai", t("catAi"))));
   }
   if (report.noVerdictKept) {
-    lines.push(t("importNoVerdictKept"));
+    lines.push(tNodes("importNoVerdictKept", pane("incoming", t("catIncoming"))));
   }
   for (const item of report.skipped) {
     lines.push(item.account === "" ? t("importSkippedFolder", item.item) : t("importSkippedAccount", item.item, item.account));
@@ -141,7 +149,7 @@ export function backupSection(): Section {
       report.removeAttribute("aria-label");
       replace(
         report,
-        bar("success", [h("strong", { text: t("importDone") }), h("ul", {}, ...reportLines(result).map((line) => h("li", {}, ...addressed(line))))], [undo, closeReport()]),
+        bar("success", [h("strong", { text: t("importDone") }), h("ul", {}, ...reportLines(result).map((line) => h("li", {}, ...(typeof line === "string" ? addressed(line) : line))))], [undo, closeReport()]),
       );
       report.firstElementChild?.setAttribute("role", "status");
       file.value = "";

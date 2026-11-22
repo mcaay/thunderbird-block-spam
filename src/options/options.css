@@ -265,10 +265,13 @@ details.more > .more-body p {
   color: var(--icon-information);
 }
 
-/* What the note offers stands at the end of its sentence, in line with it. */
+/*
+ * What the note offers stands at the end of its line, in line with its sentence, like the button of a message bar:
+ * it has one place whatever the sentence names (the option that waits for the scan, for example).
+ */
 .option-note > button.small {
   flex: none;
-  margin: -3px 0 -3px 2px;
+  margin: -3px 0 -3px auto;
 }
 
 .option-note > button.link {
@@ -549,20 +552,6 @@ h2 > .state {
 .field .row > select {
   flex: 1;
   min-width: 200px;
-}
-
-/* The line that stands where an editor was left with changes. */
-.option-note.draft {
-  align-items: center;
-  margin: 6px 0 0 46px;
-}
-
-.draft-line > .option-note.draft {
-  margin: 6px 0 6px 8px;
-}
-
-.option-note.draft > button.small {
-  margin: 0 0 0 2px;
 }
 
 .field .description,

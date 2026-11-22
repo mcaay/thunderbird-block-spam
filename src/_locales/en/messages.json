@@ -390,7 +390,7 @@
     "message": "Its key is missing. Edit this service and enter the key."
   },
   "remedy_permission": {
-    "message": "Thunderbird may not connect to this service yet. Edit this service and press “Save” to allow it."
+    "message": "Thunderbird is not allowed to connect to this service yet. Edit this service and press “Save” to allow it."
   },
   "remedy_sign_in": {
     "message": "You are not signed in. Use “Continue with ChatGPT” in its row."
@@ -408,7 +408,7 @@
     "message": "Their keys are missing. Edit each of them and enter its key."
   },
   "remedyMany_permission": {
-    "message": "Thunderbird may not connect to these services yet. Edit each of them and press “Save” to allow it."
+    "message": "Thunderbird is not allowed to connect to these services yet. Edit each of them and press “Save” to allow it."
   },
   "remedyMany_sign_in": {
     "message": "You are not signed in. Use “Continue with ChatGPT” in the row of each of them."
@@ -612,7 +612,7 @@
     "message": "Only observe: decide and log, but move nothing"
   },
   "observationHint": {
-    "message": "Block Spam decides and logs, but by itself moves no message and adds nothing to the black list. The log shows what would have happened. Use it to try a model, a prompt or a cutoff before you trust them."
+    "message": "Block Spam decides and logs, but by itself moves no message and adds nothing to the black list. The $1 shows what would have happened. Use it to try a model, a prompt or a cutoff before you trust them."
   },
   "observationOff": {
     "message": "Protection is off, so nothing is observed yet."
@@ -693,7 +693,7 @@
     "message": "Scan of sent mail"
   },
   "scanHint": {
-    "message": "Reads the recipients of the mail in the Sent folders above and adds them to the white list. Running it again is harmless."
+    "message": "Reads the recipients of the mail in the Sent folders below and adds them to the white list. Running it again is harmless."
   },
   "scanFrom": {
     "message": "Sent on or after:"
@@ -1290,7 +1290,7 @@
     "message": "No folder of this account can be used here."
   },
   "noAccounts": {
-    "message": "Thunderbird has no mail account yet. Add one first."
+    "message": "Thunderbird has no mail account yet. Add one first: in Thunderbird’s menu (≡) choose “Add Account”, then “Email”."
   },
   "folderToAdd": {
     "message": "Choose a folder to add for $1"
@@ -1542,7 +1542,7 @@
     "message": "Test $1"
   },
   "apTestNeedsSignIn": {
-    "message": "Sign in first: nothing can be tested without a sign-in."
+    "message": "Sign in first: nothing can be tested without a sign\u2011in."
   },
   "apTesting": {
     "message": "Testing…"
@@ -1572,7 +1572,7 @@
     "message": "The sign\u2011in could not be renewed."
   },
   "diag_no_permission": {
-    "message": "Thunderbird may not connect to $1 yet. Edit the service and press “Save” to allow it."
+    "message": "Thunderbird is not allowed to connect to $1 yet. Edit the service and press “Save” to allow it."
   },
   "diag_service": {
     "message": "The service refused the request."
@@ -1800,7 +1800,7 @@
     "message": "Restore default"
   },
   "tryOnMail": {
-    "message": "To try a prompt or a cutoff on real mail, select messages, click the Block Spam button in the toolbar and choose “$1”: the scores go to the log and nothing is moved."
+    "message": "To try a prompt or a cutoff on real mail, select messages, click the Block Spam button in the toolbar and choose “$1”: the scores go to the $2 and nothing is moved."
   },
   "tryObserve": {
     "message": "To watch new mail without moving anything, tick “$1” on the $2."
@@ -1953,7 +1953,7 @@
     "message": "Change shortcuts…"
   },
   "shortcutsRebindHint": {
-    "message": "Opens Thunderbird’s own list of shortcuts. You also find it under Add\u2011ons and Themes, in the gear menu, as “Manage Extension Shortcuts”."
+    "message": "Opens Thunderbird’s own list of shortcuts. You also find it under Add\u2011ons and Themes: click the gear button (“Tools for all add\u2011ons”) and choose “Manage Extension Shortcuts”."
   },
   "smartTitle": {
     "message": "Whole\u2011domain commands"
@@ -2004,7 +2004,7 @@
     "message": "Save the companion add\u2011on file…"
   },
   "bareKeysStepInstall": {
-    "message": "Open Add\u2011ons and Themes, click the gear menu, choose “Install Add\u2011on From File” and pick the saved file."
+    "message": "Open Add\u2011ons and Themes, click the gear button (“Tools for all add\u2011ons”), choose “Install Add\u2011on From File…” and pick the saved file."
   },
   "bareKeysCaptures": {
     "message": "From then on it captures $1 in mail windows and passes them on to Block Spam."
@@ -2154,10 +2154,10 @@
     "message": "The settings were replaced. AI services imported: $1. Enter their keys again."
   },
   "importServicesOff": {
-    "message": "AI services imported switched off: $1. Your sent mail is not scanned yet, so they would get mail from people you already write to. Scan it first, then switch them on under AI."
+    "message": "AI services imported switched off: $1. Your sent mail is not scanned yet, so they would get mail from people you already write to. Scan it first, then switch them on under $2."
   },
   "importNoVerdictKept": {
-    "message": "Mail without an AI verdict still stays where it is. Your sent mail is not scanned yet, so mail from people you already write to would be moved. Scan it first, then choose again under Incoming mail."
+    "message": "Mail without an AI verdict still stays where it is. Your sent mail is not scanned yet, so mail from people you already write to would be moved. Scan it first, then choose again under $1."
   },
   "importSkippedAccount": {
     "message": "Skipped $1: no account with the address $2."

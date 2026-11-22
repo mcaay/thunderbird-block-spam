@@ -143,12 +143,14 @@ export function logSection(): Section {
           await send("clearLog", {});
           results.clear();
           gone.clear();
+          // The button goes with the last entry, before the dialog closes: the focus then goes to the title of the pane.
+          entries = [];
+          draw();
         },
       }),
     "small",
   );
-  // Unavailable, not disabled: the dialog gives the focus back to this button after the log was cleared.
-  setUnavailable(clear, true);
+  const countRow = h("div", { class: "count-row", hidden: true }, summary, clear);
   const header = (label: string, cls: string): HTMLElement => h("th", { text: label, class: cls, attrs: { role: "columnheader", scope: "col" } });
 
   replace(
@@ -166,7 +168,7 @@ export function logSection(): Section {
       search,
     ),
     // The count at the start of its line, and at its end the button that clears the log: not among the filters.
-    h("div", { class: "count-row" }, summary, clear),
+    countRow,
     h(
       "table",
       { class: "log", attrs: { role: "table" } },
@@ -492,8 +494,8 @@ export function logSection(): Section {
     if (summary.textContent !== count) {
       summary.textContent = count;
     }
-    summary.hidden = entries.length === 0;
-    setUnavailable(clear, entries.length === 0);
+    // An empty log has nothing to count and nothing to clear: the line is not there.
+    countRow.hidden = entries.length === 0;
     reconcile(
       rows,
       matching.length === 0
