@@ -296,6 +296,8 @@ export function aiSection(shell: Shell): Section {
         await send("updateSettings", { patch: { prompt: text } });
         promptStored = text;
         promptError.set(null);
+        // Save is unavailable again: the keyboard goes back to the field.
+        prompt.focus();
         drawPromptState();
         promptStatus.flash(t("saved"));
       },
@@ -339,7 +341,13 @@ export function aiSection(shell: Shell): Section {
       signIn === undefined || signIn.error === "" ? null : h("p", { class: "field-error", text: t("signInFailed", signIn.error), attrs: { role: "alert" } }),
     );
     if (signIn === undefined || signIn.url === null) {
+      // The panel leaves with the sign-in. When the keyboard was in it, it goes on in the row of that service, or with the menu for adding one.
+      const held = signInPanel.contains(document.activeElement);
+      const row = signInPanel.closest<HTMLElement>("li");
       replace(signInPanel);
+      if (held) {
+        (row?.querySelector<HTMLElement>('[data-focus="sign-in"]') ?? presetSelect).focus();
+      }
       return;
     }
     const url = signIn.url;

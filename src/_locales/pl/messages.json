@@ -936,7 +936,7 @@
     "message": "W programie Thunderbird nie ma jeszcze konta pocztowego. Najpierw dodaj je w programie Thunderbird."
   },
   "folderToAdd": {
-    "message": "Folder do dodania dla konta $1"
+    "message": "Wybierz folder do dodania dla konta $1"
   },
   "incomingHint": {
     "message": "Gdy ochrona jest włączona, nowa poczta w monitorowanych folderach jest sprawdzana, gdy nadejdzie, po uruchomieniu programu Thunderbird i co 5 minut, także wtedy, gdy wcześniej przeczytano ją na innym urządzeniu."

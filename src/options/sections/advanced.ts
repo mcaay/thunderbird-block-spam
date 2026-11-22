@@ -155,6 +155,8 @@ export function advancedSection(): Section {
         const invalid = await update({ forwardLabels: labels.value.split(",") });
         labelsError.set(invalid.length > 0 ? t("invalidItems", invalid.join(", ")) : null);
         labelsStored = labels.value;
+        // Save is unavailable again: the keyboard goes back to the field.
+        labels.focus();
         drawLabelsState();
         labelsStatus.flash(t("saved"));
       },

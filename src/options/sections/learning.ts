@@ -158,7 +158,12 @@ export function learningSection(shell: Shell): Section {
       accountCount = model.accounts.length;
       scanRunning = running;
       drawStart();
+      const onCancel = document.activeElement === cancel;
       cancel.hidden = !running;
+      if (onCancel && !running) {
+        // Cancel is gone with the scan: the keyboard goes back to the button that starts one.
+        start.focus();
+      }
       status.update(model);
     },
     leave() {

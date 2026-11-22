@@ -936,7 +936,7 @@
     "message": "Thunderbird has no mail account yet. Add one in Thunderbird first."
   },
   "folderToAdd": {
-    "message": "Folder to add for $1"
+    "message": "Choose a folder to add for $1"
   },
   "incomingHint": {
     "message": "While protection is on, new mail in monitored folders is checked when it arrives, when Thunderbird starts and every 5 minutes, also when it was read on another device first."

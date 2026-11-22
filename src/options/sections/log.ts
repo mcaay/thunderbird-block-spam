@@ -100,7 +100,8 @@ export function logSection(): Section {
       },
     }),
   );
-  clear.disabled = true;
+  // Unavailable, not disabled: the dialog gives the focus back to this button after the log was cleared.
+  setUnavailable(clear, true);
   const header = (label: string, cls: string): HTMLElement => h("th", { text: label, class: cls, attrs: { role: "columnheader", scope: "col" } });
 
   replace(
@@ -415,7 +416,7 @@ export function logSection(): Section {
       summary.textContent = count;
     }
     summary.hidden = entries.length === 0;
-    clear.disabled = entries.length === 0;
+    setUnavailable(clear, entries.length === 0);
     reconcile(
       rows,
       matching.length === 0
@@ -445,8 +446,11 @@ export function logSection(): Section {
       more,
       matching.length > limit
         ? button(t("showMore", Math.min(LOG_PAGE, matching.length - limit), matching.length - limit), () => {
+            const first = limit;
             limit += LOG_PAGE;
             draw();
+            // The button was drawn anew, or is gone with the last rows: the keyboard stays on it, or goes on with the first new row.
+            (more.querySelector("button") ?? rows.querySelectorAll<HTMLElement>("tr")[first])?.focus();
           })
         : null,
     );

@@ -72,6 +72,11 @@ body:dir(rtl) {
   outline-offset: -2px;
 }
 
+/* On the selection fill the ring takes the color Thunderbird gives the border of a focused selected item. */
+.category[aria-current="page"]:focus-visible {
+  outline-color: var(--focus-selected);
+}
+
 .category svg {
   flex: none;
   width: 24px;
@@ -760,9 +765,14 @@ table.log .detail {
   color: var(--error);
 }
 
+/*
+ * The entry the popup pointed at: a frame in the accent color with a heavier edge at its
+ * start. No fill, so that every text of the row keeps the contrast it has on the page.
+ */
 table.log tr.highlight {
-  background-color: var(--row-hover);
-  box-shadow: inset 3px 0 0 AccentColor;
+  box-shadow:
+    inset 3px 0 0 AccentColor,
+    inset 0 0 0 1px AccentColor;
 }
 
 table.log tr:focus-visible {
@@ -1160,6 +1170,7 @@ dialog.modal p {
   table.log tr.highlight {
     outline: 1px solid CanvasText;
     outline-offset: -1px;
+    box-shadow: none;
   }
 
   /* The progress bar and the spinner keep a visible moving part. */

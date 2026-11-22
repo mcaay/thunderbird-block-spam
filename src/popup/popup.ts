@@ -109,6 +109,16 @@ async function countProblems(settings: Settings, accessPoints: AccessPoint[], on
   return findProblems({ settings, accessPoints, accounts, onlyOwnAddresses, now: Date.now() }).length;
 }
 
+/**
+ * After a part of the popup was drawn anew: puts the keyboard focus back on the
+ * control of the given kind, or else on the first button for the selected message, or
+ * else on the button that opens the settings. The focus is never left on nothing.
+ */
+function restoreFocus(kind: string | null): void {
+  const same = kind === null ? undefined : [...document.querySelectorAll<HTMLElement>("[data-focus]")].find((candidate) => candidate.dataset.focus === kind && candidate.closest("[hidden]") === null);
+  (same ?? selectionBox.querySelector<HTMLElement>(".row button") ?? byId("open-settings")).focus();
+}
+
 // ---------------------------------------------------------------------------
 // The last command, with Undo.
 
@@ -150,6 +160,8 @@ function drawCommand(tabId: number | null): void {
             lastCommand = null;
             drawCommand(tabId);
             await refresh();
+            // Undo is gone with the command it took back.
+            restoreFocus(null);
           })();
         },
         "small",
@@ -157,6 +169,7 @@ function drawCommand(tabId: number | null): void {
   const dismiss = iconButton("close", t("dismiss"), () => {
     lastCommand = null;
     drawCommand(tabId);
+    restoreFocus(null);
     if (record.undoable) {
       void send("dismissCommand", { id: record.id }).catch(() => undefined);
     }
@@ -178,6 +191,7 @@ function commandButton(label: string, name: string, command: CommandName, tabId:
     h("span", { text: label }),
     key === undefined ? null : h("span", { class: "key", text: key, attrs: { "aria-hidden": "true" } }),
   );
+  element.dataset.focus = command;
   if (unchanged) {
     // The sender is on this list already and the message is where the command would put it.
     setUnavailable(element, true);
@@ -202,6 +216,8 @@ function commandButton(label: string, name: string, command: CommandName, tabId:
       log = (await logReader.load()).entries;
       drawRecent();
       await drawSelection(tabId);
+      // The buttons were drawn anew: the keyboard stays on the one that was pressed, also when it is unavailable now.
+      restoreFocus(command);
     })();
   });
   return element;
@@ -242,7 +258,8 @@ function decisionOf(sender: SenderInfo): HTMLElement | null {
     {
       type: "button",
       class: "decision own",
-      title: `${tCode("reason", entry.reason)}\n${formatFullTime(entry.time)}`,
+      // The tooltip has all of what the row shows, for when it is too long for its line, and the reason.
+      title: `${outcome}\n${tCode("reason", entry.reason)}\n${formatFullTime(entry.time)}`,
       attrs: { "aria-label": t("popupDecisionLabel", outcome, time) },
     },
     h("span", { class: `dot outcome-${entry.outcome}${entry.test || entry.observed ? " hollow" : ""}`, attrs: { "aria-hidden": "true" } }),
@@ -356,7 +373,8 @@ function decisionRow(entry: LogEntry, now: number): HTMLElement {
     {
       type: "button",
       class: "decision",
-      title: `${sender}\n${entry.subject}\n${tCode("reason", entry.reason)}\n${formatFullTime(entry.time)}`,
+      // The tooltip has all of what the row shows, for when it is too long for its line, and the subject and the reason.
+      title: `${sender}\n${entry.subject}\n${outcome}\n${tCode("reason", entry.reason)}\n${formatFullTime(entry.time)}`,
       attrs: { "aria-label": t("popupRowLabel", sender, outcome, time) },
     },
     h("span", { class: `dot outcome-${entry.outcome}${entry.test || entry.observed ? " hollow" : ""}`, attrs: { "aria-hidden": "true" } }),
@@ -386,6 +404,8 @@ function drawRecent(): void {
 
 function showScoreMessage(message: string, isError = false): void {
   replace(scoreBox, h("p", { class: isError ? "result error" : "description", text: message, attrs: { role: isError ? "alert" : "status" } }), scoreButton());
+  // The buttons of the question are gone: the keyboard goes back to the button that asks again.
+  restoreFocus("score");
 }
 
 /** Confirmation: the content of the selected messages, and how many they are, is sent to the configured AI. */
@@ -407,7 +427,15 @@ function confirmScoring(tabId: number, count: number): void {
   replace(
     scoreBox,
     h("p", { text: t("popupScoreConfirm", count) }),
-    h("div", { class: "row" }, send_, button(t("cancel"), () => replace(scoreBox, scoreButton()))),
+    h(
+      "div",
+      { class: "row" },
+      send_,
+      button(t("cancel"), () => {
+        replace(scoreBox, scoreButton());
+        restoreFocus("score");
+      }),
+    ),
   );
   send_.focus();
 }
@@ -438,6 +466,7 @@ function scoreButton(): HTMLButtonElement {
     })();
   });
   element.dataset.role = "score";
+  element.dataset.focus = "score";
   drawScoreButton(element);
   return element;
 }
@@ -459,11 +488,13 @@ function drawScoreButton(element: HTMLElement | null = scoreBox.querySelector<HT
 
 function toggleButton(settings: Settings): HTMLButtonElement {
   const toggle = button(t(settings.protection ? "protectionSwitchOff" : "protectionSwitchOn"), () => {
-    toggle.disabled = true;
+    setUnavailable(toggle, true);
     void send("setProtection", { on: !settings.protection })
       .catch((error: unknown) => showScoreMessage(errorText(error), true))
-      .finally(() => void draw());
+      // The footer is drawn anew with the other label: the keyboard stays on the switch.
+      .finally(() => void draw().then(() => restoreFocus("toggle")));
   });
+  toggle.dataset.focus = "toggle";
   return toggle;
 }
 

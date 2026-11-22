@@ -201,7 +201,7 @@ export function listsSection(): Section {
   function row(entry: Entry): HTMLElement {
     const element = h(
       "tr",
-      {},
+      { tabIndex: -1 },
       h("td", { class: "value" }, address(entry.value)),
       h("td", { class: "nowrap", text: t(entry.list === "white" ? "listWhite" : "listBlack") }),
       h("td", { class: "nowrap ellipsis", text: scopeLabel(entry), title: scopeLabel(entry) }),
@@ -251,8 +251,11 @@ export function listsSection(): Section {
       more,
       matching.length > limit
         ? button(t("showMore", Math.min(PAGE, matching.length - limit), matching.length - limit), () => {
+            const first = limit;
             limit += PAGE;
             draw();
+            // The button was drawn anew, or is gone with the last rows: the keyboard stays on it, or goes on with the first new row.
+            (more.querySelector("button") ?? rows.querySelectorAll<HTMLElement>("tr")[first])?.focus();
           })
         : null,
     );

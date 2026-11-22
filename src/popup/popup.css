@@ -10,6 +10,8 @@
   --page: var(--panel);
   /* On the panel the description color of the page would fall below a contrast of 4.5 to 1: the de-emphasized strength is used instead. */
   --description: color-mix(in srgb, var(--text) 69%, transparent);
+  /* On the dark panel Thunderbird's dark button border (#71717a) falls below 3 to 1: the border of fields is used in both themes. */
+  --button-border: var(--border);
 }
 
 /*
@@ -159,14 +161,9 @@ section > p:last-child {
   gap: 8px;
 }
 
+/* The key of a button: smaller than its label, in the color of the label, which keeps it readable on the button fill in both themes. */
 .selection .key {
   font-size: 0.9em;
-  color: var(--description);
-}
-
-/* On an unavailable button the hint is as faint as the label next to it. */
-.selection button[aria-disabled="true"] .key {
-  color: inherit;
 }
 
 /* The whole-domain variant: quieter, under the two main buttons. */
@@ -228,6 +225,17 @@ section > p:last-child {
 
 .result.error > .icon {
   color: var(--icon-warning);
+}
+
+/* On the fill of a result or of the warning line: see the same rule for bars in common.css. */
+.result button:not(.icon),
+.notice button {
+  border-color: var(--border);
+}
+
+.result :focus-visible,
+.notice :focus-visible {
+  outline-color: var(--focus-selected);
 }
 
 p.result {

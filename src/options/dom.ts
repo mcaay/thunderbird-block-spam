@@ -375,8 +375,32 @@ export function reconcile(container: Element, items: readonly Keyed[]): void {
     previous = element;
   }
   for (const leftover of existing.values()) {
+    const active = document.activeElement;
+    const held = active instanceof HTMLElement && leftover.contains(active) ? active : null;
     leftover.remove();
+    if (held !== null) {
+      focusAfterRemoval(container, held.dataset.focus ?? null);
+    }
   }
+}
+
+const FOCUSABLE = 'button:not(:disabled), a[href], input:not(:disabled):not([type="hidden"]), select:not(:disabled), textarea:not(:disabled), summary';
+
+/**
+ * The item that held the keyboard focus is gone from a list: the focus goes to the
+ * control of the same kind in the first item that is left, or else to the first control
+ * there, or else to the title of the pane. It is never left on nothing.
+ */
+function focusAfterRemoval(container: Element, kind: string | null): void {
+  const items = [...container.children].filter((child): child is HTMLElement => child instanceof HTMLElement);
+  const same = kind === null ? undefined : items.flatMap((item) => [...item.querySelectorAll<HTMLElement>("[data-focus]")]).find((candidate) => candidate.dataset.focus === kind);
+  const target = same ?? items.map((item) => item.querySelector<HTMLElement>(FOCUSABLE)).find((candidate) => candidate !== null) ?? paneTitle(container);
+  target?.focus();
+}
+
+/** The title of the pane an element is in. It can take the focus. */
+export function paneTitle(element: Element): HTMLElement | null {
+  return element.closest("section.pane")?.querySelector<HTMLElement>(":scope > h1") ?? null;
 }
 
 // ---------------------------------------------------------------------------
@@ -598,6 +622,10 @@ export function dialog(options: DialogOptions): Promise<DialogResult> {
       box.remove();
       if (opener instanceof HTMLElement && opener.isConnected) {
         opener.focus();
+      }
+      if (document.activeElement === null || document.activeElement === document.body) {
+        // The control that opened the dialog is gone or cannot take the focus any more: the title of the open pane takes it.
+        document.querySelector<HTMLElement>("section.pane:not([hidden]) > h1")?.focus();
       }
       resolve(result);
     };

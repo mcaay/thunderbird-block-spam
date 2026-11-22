@@ -18,7 +18,13 @@
   --button: light-dark(#e4e4e7, #52525b);
   --button-hover: light-dark(#f4f4f5, #3f3f46);
   --button-active: light-dark(#d4d4d8, #71717a);
-  --button-border: light-dark(#a1a1aa, #71717a);
+  /*
+   * Thunderbird's own light button border (#a1a1aa) has a contrast of 2.6 to 1 on the page. The border of its
+   * fields and tables is the nearest of its tokens that reaches 3 to 1 there, so the light theme uses that one.
+   */
+  --button-border: light-dark(var(--border), #71717a);
+  /* The focus ring of an item that is selected: Thunderbird's token for it, because the accent color is too close to the selection fill. */
+  --focus-selected: light-dark(#0060df, #bebebf);
   --button-text: light-dark(#18181b, #f4f4f5);
   --primary: AccentColor;
   --primary-text: AccentColorText;
@@ -327,8 +333,9 @@ input[type="search"]:dir(rtl) {
   background-position: right 7px center;
 }
 
+/* The description strength: Thunderbird's own 50 percent would fall below a contrast of 4.5 to 1 in both themes. */
 ::placeholder {
-  color: color-mix(in srgb, var(--text) 50%, transparent);
+  color: var(--description);
   opacity: 1;
 }
 
@@ -531,6 +538,19 @@ details[open] > summary::before {
 .bar-actions button:not(.icon) {
   min-height: 24px;
   padding: 0 8px;
+}
+
+/*
+ * On the fill of a bar the neutral button border and the accent color of the focus ring
+ * come too close to the fill in the dark theme. The border of fields and Thunderbird's
+ * color for the border of a focused item on a fill keep both at 3 to 1 or more.
+ */
+.bar button:not(.icon, .primary, .destructive) {
+  border-color: var(--border);
+}
+
+.bar :focus-visible {
+  outline-color: var(--focus-selected);
 }
 
 /* Feedback. */

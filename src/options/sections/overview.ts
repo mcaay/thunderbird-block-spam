@@ -202,6 +202,8 @@ export function overviewSection(shell: Shell): Section {
             await send("repairSetting", { name });
             await shell.refresh();
             repaired.show(t("fatalRepaired", label, standard));
+            // The button that was pressed is gone with the warning: the confirmation takes the focus and is read.
+            repaired.element.focus({ preventScroll: true });
           }),
         ),
       );
