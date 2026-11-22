@@ -183,6 +183,8 @@ Overview:
 - [ ] Observation mode stands under "Protect incoming mail". Ticked while protection is off, it says that nothing is observed yet.
 - [ ] Setup step 1 while a long scan runs: a spinner, a progress bar that fills, Cancel, and no filled button on step 3. After Cancel the step shows its number again and "Scan again" is filled. Only after the scan has ended does the step show its check mark.
 - [ ] A scan in an account whose Sent folders are empty says that no sent mail was found and links to the Sent folders.
+- [ ] With an AI service on, switch protection on while a scan is still running: a dialog asks whether to wait for the scan. "Wait for the scan" leaves protection off, "Switch on anyway" switches it on.
+- [ ] Cancel a scan in the Learning pane with the keyboard: the focus goes on to "Scan sent mail".
 - [ ] "Block and trust by hand" names the two shortcuts as they are set and links to the pane "Block and trust".
 - [ ] With protection on and a problem (for example a rejected key): the Block Spam button in the toolbar has a badge, and its tooltip names the number of problems. Its label, when the toolbar shows labels, stays "Block Spam". The badge goes away when the problem is fixed or protection is switched off.
 - [ ] When an AI service first answers 401 for incoming mail, one desktop notification names the service and the remedy. More mail does not repeat it. A click on it opens the Overview.
