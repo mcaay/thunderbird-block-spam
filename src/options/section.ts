@@ -19,7 +19,8 @@ export function paneOf(fragment: string): PaneId | null {
 /** What a link into a pane wants to be shown there. */
 export type Intent =
   | { kind: "ai-add" }
-  | { kind: "ai-edit"; id: string }
+  /** `focus` names the field the link is about: the key, for a warning about a rejected or a missing key. */
+  | { kind: "ai-edit"; id: string; focus?: "key" }
   | { kind: "screening"; accountId: string }
   | { kind: "log-entry"; key: string };
 

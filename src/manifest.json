@@ -31,6 +31,7 @@
   },
   "action": {
     "default_title": "__MSG_extensionName__",
+    "default_label": "__MSG_extensionName__",
     "default_popup": "popup/popup.html",
     "default_icon": "icons/icon.svg"
   },

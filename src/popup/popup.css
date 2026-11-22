@@ -8,6 +8,8 @@
 :root {
   --text: var(--panel-text);
   --page: var(--panel);
+  /* On the panel the description color of the page would fall below a contrast of 4.5 to 1: the de-emphasized strength is used instead. */
+  --description: color-mix(in srgb, var(--text) 69%, transparent);
 }
 
 /*
@@ -160,6 +162,11 @@ section > p:last-child {
 .selection .key {
   font-size: 0.9em;
   color: var(--description);
+}
+
+/* On an unavailable button the hint is as faint as the label next to it. */
+.selection button[aria-disabled="true"] .key {
+  color: inherit;
 }
 
 /* The whole-domain variant: quieter, under the two main buttons. */

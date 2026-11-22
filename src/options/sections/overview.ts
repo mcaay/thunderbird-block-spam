@@ -12,7 +12,7 @@ import type { DaySummary } from "../../core/stats";
 import { stringsLocale, t, tCode, tn } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
 import { remedyOf, refreshGrants } from "../aiState";
-import { bar, button, byId, checkRow, description, dialog, download, guard, h, learnMore, notice, reconcile, replace, tNodes } from "../dom";
+import { bar, button, byId, checkRow, description, dialog, download, guard, h, learnMore, notice, reconcile, replace, setUnavailable, tNodes, whileBusy } from "../dom";
 import type { Child, Keyed } from "../dom";
 import { formatScore, formatShortTime } from "../format";
 import { icon } from "../icons";
@@ -152,7 +152,21 @@ export function overviewSection(shell: Shell): Section {
   function requestProtection(on: boolean): void {
     repaired.clear();
     void guard(async () => {
-      if (on && model !== null && aiBeforeScan(model)) {
+      if (on && model !== null && aiBeforeScan(model) && model.status.scan?.running === true) {
+        // The scan that prevents it is running already: the question is whether to wait for it.
+        protection.input.checked = false;
+        const choice = await dialog({
+          title: t("scanWaitTitle"),
+          body: [t("scanWaitText")],
+          confirmLabel: t("scanWait"),
+          extraLabel: t("switchOnAnyway"),
+          hideCancel: true,
+          focus: "confirm",
+        });
+        if (choice !== "extra") {
+          return;
+        }
+      } else if (on && model !== null && aiBeforeScan(model)) {
         // Nothing is switched on before the answer, and the box says so while the question is open.
         protection.input.checked = false;
         const choice = await dialog({
@@ -183,11 +197,13 @@ export function overviewSection(shell: Shell): Section {
       const label = settingLabel(name);
       const standard = settingDefault(name);
       const reset = button(t("fatalRepair"), () =>
-        void guard(async () => {
-          await send("repairSetting", { name });
-          await shell.refresh();
-          repaired.show(t("fatalRepaired", label, standard));
-        }),
+        void whileBusy(reset, () =>
+          guard(async () => {
+            await send("repairSetting", { name });
+            await shell.refresh();
+            repaired.show(t("fatalRepaired", label, standard));
+          }),
+        ),
       );
       reset.setAttribute("aria-label", t("fatalRepairNamed", label));
       return h("div", { class: "row repair" }, h("span", { class: "repair-text", text: t("fatalRepairText", label, standard) }), reset);
@@ -273,7 +289,10 @@ export function overviewSection(shell: Shell): Section {
               `attention:${point.id}`,
               `${point.name}|${remedy}`,
               [t("warnNeedsAttention", point.name), " ", tCode("remedy", remedy)],
-              fix(t("editNamed", point.name), "edit", () => shell.go("ai", { kind: "ai-edit", id: point.id })),
+              // A warning about the key leads to the key: the editor opens with that field focused.
+              fix(t("editNamed", point.name), "edit", () =>
+                shell.go("ai", remedy === "key-rejected" || remedy === "key-missing" ? { kind: "ai-edit", id: point.id, focus: "key" } : { kind: "ai-edit", id: point.id }),
+              ),
             ),
           );
         }
@@ -372,7 +391,8 @@ export function overviewSection(shell: Shell): Section {
     const complete = scanned && settings.protection;
     // While the scan runs nothing is the next step: protection waits for the contacts to be learned.
     const next = scan === "running" ? 0 : !scanned ? 1 : !settings.protection ? 3 : 0;
-    const signature = JSON.stringify([scan, hasAi, settings.protection, complete]);
+    const noAccounts = current.accounts.length === 0;
+    const signature = JSON.stringify([scan, hasAi, settings.protection, complete, noAccounts]);
     if (setup.dataset.signature === signature) {
       return;
     }
@@ -381,16 +401,15 @@ export function overviewSection(shell: Shell): Section {
     const wasOpen = setup.querySelector("details")?.open === true;
     setup.dataset.signature = signature;
 
-    const scanButton =
+    const scanButton: HTMLButtonElement =
       scan === "running"
         ? h("button", { type: "button", text: t("scanCancel"), attrs: { "data-focus": "scan" }, onclick: () => void guard(() => send("cancelScan", {})) })
-        : h("button", {
-            type: "button",
-            text: t(scan === "todo" ? "scanStart" : "scanAgain"),
-            class: next === 1 ? "primary" : "",
-            attrs: { "data-focus": "scan" },
-            onclick: () => void guard(startFullScan),
-          });
+        : button(t(scan === "todo" ? "scanStart" : "scanAgain"), () => void whileBusy(scanButton, () => guard(startFullScan)), next === 1 ? "primary" : "");
+    scanButton.dataset.focus = "scan";
+    if (noAccounts && scan !== "running") {
+      // Without a mail account there is nothing to scan: the button says what is missing.
+      setUnavailable(scanButton, true, t("noAccounts"));
+    }
     const steps = h(
       "ol",
       { class: "steps" },

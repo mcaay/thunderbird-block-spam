@@ -2,12 +2,14 @@
 // the screening folder of each account.
 
 import type { SettingsPatch } from "../../core/edit";
+import { folderCandidates, mayJoin, screeningFolderPaths } from "../../core/folders";
 import { folderKey } from "../../core/ports";
 import type { Settings } from "../../core/types";
-import { t } from "../../tb/i18n";
+import { t, tCode } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
-import { byId, description, errorText, guard, h, inlineStatus, notice, option, reconcile, replace } from "../dom";
-import { folderRef, folderView, forgetAccounts, hasFolder, monitoredFolders, withoutFolder } from "../model";
+import { button, byId, description, errorText, guard, h, inlineStatus, notice, option, reconcile, replace, setUnavailable } from "../dom";
+import { icon } from "../icons";
+import { chosenIn, folderRef, folderView, forgetAccounts, hasFolder, monitoredFolders, withoutFolder } from "../model";
 import type { Model } from "../model";
 import type { Intent, Section, Shell } from "../section";
 import { folderEditors } from "./folderEditor";
@@ -27,11 +29,21 @@ export function incomingSection(shell: Shell): Section {
   const created = new Map<string, { text: string; ok: boolean }>();
   const noVerdict = h(
     "select",
-    { id: "no-verdict", onchange: () => void guard(() => update({ noVerdictAction: noVerdict.value as Settings["noVerdictAction"] })) },
+    {
+      id: "no-verdict",
+      attrs: { "aria-describedby": "no-verdict-note" },
+      onchange: () => void guard(() => update({ noVerdictAction: noVerdict.value as Settings["noVerdictAction"] })),
+    },
     option("leave", t("noVerdictLeave")),
     option("junk", t("noVerdictJunk")),
     option("screening", t("noVerdictScreening")),
   );
+  /** Said while the screening folder is the choice and an account has none: its mail then stays where it is. */
+  const noVerdictNote = h("div", { class: "option-note", id: "no-verdict-note", hidden: true, attrs: { role: "status" } });
+  /** Said in place of the lists while Thunderbird has no mail account. */
+  const noAccounts = [description(t("noAccounts")), description(t("noAccounts"))];
+  /** The accounts whose folder is being created right now. */
+  const creating = new Set<string>();
 
   replace(
     root,
@@ -40,18 +52,25 @@ export function incomingSection(shell: Shell): Section {
     h("h2", { text: t("monitoredTitle") }),
     description(t("monitoredHint")),
     changed.element,
+    noAccounts[0],
     monitored,
     h("h2", { text: t("noVerdictTitle") }),
     h("div", { class: "row" }, h("label", { for: "no-verdict", text: t("noVerdictLabel") }), noVerdict),
+    noVerdictNote,
     h("h2", { text: t("screeningTitle") }),
     description(t("screeningHint")),
+    noAccounts[1],
     screening,
   );
 
   function createFolder(accountId: string): void {
+    if (creating.has(accountId)) {
+      return;
+    }
     // Creating a folder needs an optional permission, which Thunderbird only grants
     // while the click is being handled: nothing may be awaited before the request.
     const request = browser.permissions.request({ permissions: ["accountsFolders"] });
+    creating.add(accountId);
     void (async () => {
       try {
         if (!(await request)) {
@@ -66,6 +85,7 @@ export function incomingSection(shell: Shell): Section {
       } catch (error) {
         created.set(accountId, { text: errorText(error), ok: false });
       }
+      creating.delete(accountId);
       if (model !== null) {
         drawScreening(model);
       }
@@ -77,21 +97,35 @@ export function incomingSection(shell: Shell): Section {
     if (settings === null) {
       return;
     }
+    const folderName = t("screeningFolderName");
     reconcile(
       screening,
       current.accounts.map((account) => {
         const chosen = settings.screeningFolders.find((folder) => folder.accountId === account.id) ?? null;
         const others = settings.screeningFolders.filter((folder) => folder.accountId !== account.id);
+        const roles = chosenIn(account, settings);
+        // Only folders that can be right here are offered. The folder that is stored stays in the menu, whatever its role.
+        const offered = account.folders.filter(
+          (folder) => (chosen !== null && folderKey(chosen) === folderKey(folder)) || (!hasFolder(roles.screening, folder) && mayJoin("screening", folder, roles)),
+        );
+        const candidates = folderCandidates("screening", account.folders, roles);
+        // The folder the button makes: it may exist already, at the top of the account or inside its Inbox.
+        const places = screeningFolderPaths(folderName, account.inboxes, account.id);
+        const existing = account.folders.find((folder) => places.includes(folder.path)) ?? null;
+        const isChosen = chosen !== null && places.includes(chosen.path);
+        const usable = existing === null || isChosen || mayJoin("screening", existing, roles);
         const note = created.get(account.id);
         return {
           key: account.id,
-          signature: JSON.stringify([account.name, account.folders, chosen, note ?? null]),
+          signature: JSON.stringify([account.name, offered, candidates.length, chosen, note ?? null, existing?.path ?? null, isChosen, usable, creating.has(account.id)]),
           build: () => {
             const id = `screening-${account.id}`;
             const select = h(
               "select",
               {
                 id,
+                // The whole name of the chosen folder, for when the menu is too narrow for it.
+                title: chosen === null ? undefined : folderView(current, chosen).name,
                 attrs: { "data-focus": "select", "aria-label": t("screeningFor", account.name) },
                 onchange: () => {
                   const folder = account.folders.find((candidate) => candidate.path === select.value);
@@ -100,24 +134,54 @@ export function incomingSection(shell: Shell): Section {
                 },
               },
               option("", t("screeningNone"), chosen === null),
-              ...account.folders.map((folder) => option(folder.path, folder.name, chosen !== null && folderKey(chosen) === folderKey(folder))),
+              // A stored folder that no longer exists is named by its path, so that the menu shows what is stored.
+              chosen !== null && !offered.some((folder) => folderKey(folder) === folderKey(chosen)) ? option(chosen.path, folderView(current, chosen).name, true) : null,
+              ...offered.map((folder) => option(folder.path, folder.name, chosen !== null && folderKey(chosen) === folderKey(folder))),
             );
             const status = inlineStatus();
             if (note !== undefined) {
               status.set(note.text, note.ok ? "ok" : "error");
             }
+            const existsElsewhere = existing !== null && !isChosen;
+            const create = button(t(existsElsewhere ? "screeningUse" : "screeningCreate", folderName), () => createFolder(account.id));
+            create.dataset.focus = "create";
+            create.setAttribute("aria-label", t(existsElsewhere ? "screeningUseFor" : "screeningCreateFor", folderName, account.name));
+            // The button is unavailable when its folder is the screening folder already, or cannot be one.
+            if (isChosen) {
+              setUnavailable(create, true, t("screeningIsChosen", folderName));
+            } else if (!usable) {
+              setUnavailable(create, true, tCode("invalid", "folder-role"));
+            } else if (creating.has(account.id)) {
+              setUnavailable(create, true);
+            }
             return h(
               "div",
               { class: "screening-row" },
               h("label", { for: id, text: account.name }),
-              select,
-              h("button", { type: "button", text: t("screeningCreate"), attrs: { "data-focus": "create", "aria-label": t("screeningCreateFor", account.name) }, onclick: () => createFolder(account.id) }),
+              // Nothing to choose from is said in one line, not shown as a menu with one item.
+              chosen === null && candidates.length === 0 ? h("span", { class: "description no-candidate", text: t("screeningNoCandidate") }) : select,
+              create,
               status.element,
             );
           },
         };
       }),
     );
+  }
+
+  function drawNoVerdictNote(current: Model): void {
+    const settings = current.settings;
+    if (settings === null) {
+      return;
+    }
+    const without = current.accounts.filter((account) => !settings.screeningFolders.some((folder) => folder.accountId === account.id)).map((account) => account.name);
+    const show = settings.noVerdictAction === "screening" && without.length > 0;
+    const signature = show ? without.join("\n") : "";
+    if (noVerdictNote.dataset.signature !== signature) {
+      noVerdictNote.dataset.signature = signature;
+      replace(noVerdictNote, show ? icon("warning") : null, show ? h("span", { text: t("noVerdictNoFolder", without.join(", ")) }) : null);
+    }
+    noVerdictNote.hidden = !show;
   }
 
   return {
@@ -128,11 +192,16 @@ export function incomingSection(shell: Shell): Section {
         return;
       }
       noVerdict.value = settings.noVerdictAction;
+      for (const line of noAccounts) {
+        line.hidden = next.accounts.length > 0;
+      }
+      drawNoVerdictNote(next);
       reconcile(
         monitored,
         folderEditors(next.accounts, {
           id: "monitored",
           chosen: (account) => monitoredFolders(account, settings),
+          candidates: (account) => folderCandidates("monitored", account.folders, chosenIn(account, settings)),
           removable: (account, folder) => !hasFolder(account.inboxes, folder),
           fixedNote: t("monitoredAlways"),
           onRemove: (account, folder) =>

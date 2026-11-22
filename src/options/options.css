@@ -381,6 +381,20 @@ h2 > .state {
 /* Every account starts a line of its own, also while the status at the end of the line before is hidden. */
 .screening-row > label {
   grid-column: 1;
+  overflow-wrap: anywhere;
+}
+
+.screening-row > select {
+  min-width: 0;
+}
+
+.screening-row > .no-candidate {
+  margin: 0;
+}
+
+/* What the button did stands under the row it belongs to, where a sentence has room. */
+.screening-row > .inline-status {
+  grid-column: 2 / -1;
 }
 
 /* Forms. */
@@ -461,6 +475,16 @@ textarea {
 
 .counts {
   margin: 6px 0;
+}
+
+/* How many rows a table shows, or how many match its filter and its search. */
+.count-line {
+  margin: 2px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.count-line:empty {
+  display: none;
 }
 
 .file-name {
@@ -572,8 +596,23 @@ table.keys tbody tr:hover {
 
 /* The log. */
 
+/*
+ * The date of another day stands above the time, so the column is as wide as the
+ * longer of the two, whatever the language writes: "21.11.2025" over "00:38", or
+ * "11/21/2025" over "12:38 AM". A date longer than the column breaks at its spaces,
+ * or anywhere as the last resort: it never paints over the sender next to it.
+ */
 table.log .col-time {
   width: 88px;
+  font-variant-numeric: tabular-nums;
+}
+
+table.log .when .date {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+table.log .when .clock {
   white-space: nowrap;
 }
 
@@ -732,20 +771,17 @@ table.log tr:focus-visible {
 
 /* AI services. */
 
+/* Plain rows with separator lines, like every other list of the page. No box, also not around an editor or a sign-in inside a row. */
 .services {
   margin: 8px 0;
   padding: 0;
   list-style: none;
-  border: 1px solid var(--border);
-  border-radius: 3px;
+  border-top: 1px solid var(--separator);
 }
 
 .service {
-  padding: 8px 10px;
-}
-
-.service + .service {
-  border-top: 1px solid var(--separator);
+  padding: 8px 2px 8px 8px;
+  border-bottom: 1px solid var(--separator);
 }
 
 .service-main {
@@ -1039,9 +1075,10 @@ dialog.modal p {
     clip-path: inset(50%);
   }
 
+  /* The first column has the content width of the time column of the wide layout, so every row starts its outcome at the same place, whatever the account is called. */
   table.log tr {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: 72px minmax(0, 1fr) auto;
     grid-template-areas:
       "time outcome action"
       "message message action"
@@ -1075,7 +1112,8 @@ dialog.modal p {
     grid-area: outcome;
   }
 
-  table.log .col-outcome > .description {
+  table.log .col-outcome > .description,
+  table.log .col-outcome > .row-feedback {
     grid-column: 1 / -1;
   }
 

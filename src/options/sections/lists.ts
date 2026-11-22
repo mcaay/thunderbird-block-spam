@@ -55,6 +55,8 @@ export function listsSection(): Section {
   });
   const rows = h("tbody");
   const more = h("div", { class: "row" });
+  /** How many entries are shown, or how many match the filter and the search, out of how many. */
+  const summary = h("p", { class: "description count-line", attrs: { role: "status" } });
 
   const addValue = h("input", {
     type: "text",
@@ -63,6 +65,8 @@ export function listsSection(): Section {
     oninput: () => {
       valueError.set(null);
       addStatus.clear();
+      // Nothing can be added before something is typed: the button says so by being unavailable.
+      addButton.disabled = addValue.value.trim() === "";
     },
     attrs: { autocomplete: "off", spellcheck: "false" },
   });
@@ -70,6 +74,7 @@ export function listsSection(): Section {
   const addList = h("select", { id: "entry-list" }, option("white", t("listWhite")), option("black", t("listBlack")));
   const addScope = h("select", { id: "entry-scope" });
   const addStatus = inlineStatus();
+  const addButton = h("button", { type: "submit", text: t("add"), disabled: true });
   const addForm = h(
     "form",
     {
@@ -88,6 +93,7 @@ export function listsSection(): Section {
             const reply = await send("addEntry", { list: addList.value, value: addValue.value, scope: addScope.value });
             valueError.set(null);
             addValue.value = "";
+            addButton.disabled = true;
             const white = reply.list === "white";
             addStatus.set(
               reply.result === "added"
@@ -109,7 +115,7 @@ export function listsSection(): Section {
     h("div", { class: "field grow" }, h("label", { for: "entry-value", text: t("listsValueLabel") }), addValue),
     h("div", { class: "field" }, h("label", { for: "entry-list", text: t("listsListLabel") }), addList),
     h("div", { class: "field" }, h("label", { for: "entry-scope", text: t("listsScopeLabel") }), addScope),
-    h("button", { type: "submit", text: t("add") }),
+    addButton,
   );
 
   const newScope = h(
@@ -137,6 +143,7 @@ export function listsSection(): Section {
     description(t("newEntriesHint")),
     h("h2", { text: t("listsEntriesTitle") }),
     h("div", { class: "row filters" }, h("label", { for: "entries-filter", text: t("listsFilterLabel") }), filter, search),
+    summary,
     removed.element,
     h(
       "table",
@@ -199,7 +206,7 @@ export function listsSection(): Section {
       h("td", { class: "nowrap", text: t(entry.list === "white" ? "listWhite" : "listBlack") }),
       h("td", { class: "nowrap ellipsis", text: scopeLabel(entry), title: scopeLabel(entry) }),
       h("td", { class: "nowrap", text: tCode("source", entry.source) }),
-      h("td", { class: "nowrap", text: formatDate(entry.addedAt), title: formatFullTime(entry.addedAt) }),
+      h("td", { class: "nowrap ellipsis", text: formatDate(entry.addedAt), title: formatFullTime(entry.addedAt) }),
       h("td", { class: "action" }),
     );
     element.lastElementChild?.appendChild(removeButton(t("removeNamed", entry.value), () => remove(entry, element)));
@@ -215,6 +222,14 @@ export function listsSection(): Section {
       .filter((entry) => filter.value === "all" || entry.list === filter.value)
       .filter((entry) => needle === "" || entry.value.includes(needle))
       .sort((a, b) => b.addedAt - a.addedAt || a.value.localeCompare(b.value));
+    // Without a filter the line counts the rows, with one it counts what matches. The button under the table offers the rest.
+    const total = model.entries.length;
+    const filtered = filter.value !== "all" || needle !== "";
+    const count = total === 0 ? "" : filtered ? t("matchCount", matching.length, total) : t("logCount", Math.min(matching.length, limit), total);
+    if (summary.textContent !== count) {
+      summary.textContent = count;
+    }
+    summary.hidden = total === 0;
     reconcile(
       rows,
       matching.length === 0

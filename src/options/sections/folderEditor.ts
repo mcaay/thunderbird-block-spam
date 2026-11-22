@@ -4,7 +4,6 @@
 import { t } from "../../tb/i18n";
 import { description, focusNeighbor, h, option, removeButton } from "../dom";
 import type { Keyed } from "../dom";
-import { hasFolder } from "../model";
 import type { AccountView, FolderView } from "../model";
 import type { FolderRef } from "../../core/types";
 
@@ -13,6 +12,8 @@ export interface FolderEditorOptions {
   id: string;
   /** The folders of the account that are on the list. */
   chosen: (account: AccountView) => FolderRef[];
+  /** The folders of the account the menu offers: those that can be right on this list and are not on it yet. */
+  candidates: (account: AccountView) => FolderView[];
   /** False for a folder that is always on the list. */
   removable: (account: AccountView, folder: FolderRef) => boolean;
   /** Said next to a folder that cannot be removed. */
@@ -25,10 +26,11 @@ export interface FolderEditorOptions {
 export function folderEditors(accounts: readonly AccountView[], options: FolderEditorOptions): Keyed[] {
   return accounts.map((account) => {
     const chosenRefs = options.chosen(account);
+    // A folder that is stored stays listed, whatever its role, and a folder that no longer exists is named by its path.
     const chosen: FolderView[] = chosenRefs.map(
-      (folder) => account.folders.find((candidate) => candidate.path === folder.path) ?? { ...folder, name: folder.path.replace(/^\//, "") },
+      (folder) => account.folders.find((candidate) => candidate.path === folder.path) ?? { ...folder, name: folder.path.replace(/^\//, ""), specialUse: [] },
     );
-    const candidates = account.folders.filter((folder) => !hasFolder(chosenRefs, folder));
+    const candidates = options.candidates(account);
     return {
       key: account.id,
       signature: JSON.stringify([account.name, chosen, candidates, chosen.map((folder) => options.removable(account, folder))]),
@@ -82,8 +84,9 @@ export function folderEditors(accounts: readonly AccountView[], options: FolderE
           h("h3", { text: account.name }),
           // An empty list is one line of text, not an empty box.
           rows.length === 0 ? description(t("noFolders")) : h("ul", { class: "plain-list", attrs: { "aria-label": account.name } }, ...rows),
+          // Nothing left to offer is said in one line, not shown as an empty menu.
           candidates.length === 0
-            ? null
+            ? description(t("noFolderToAdd"))
             : h("div", { class: "row" }, h("label", { for: selectId, class: "visually-hidden", text: t("folderToAdd", account.name) }), select, add),
         );
       },

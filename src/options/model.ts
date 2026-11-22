@@ -2,7 +2,8 @@
 // folder facts from Thunderbird. Every change goes through the background.
 
 import { normalizeAddress } from "../core/address";
-import { resolveMonitoredFolders, resolveSentFolders } from "../core/folders";
+import { chosenFolders, resolveMonitoredFolders, resolveSentFolders } from "../core/folders";
+import type { ChosenFolders } from "../core/folders";
 import { folderKey } from "../core/ports";
 import { KEY_ACCESS_POINTS, KEY_ENTRIES, KEY_META, KEY_SETTINGS } from "../core/keys";
 import type { AccessPoint, Entry, FolderRef, Settings } from "../core/types";
@@ -13,6 +14,8 @@ import type { Status } from "../tb/protocol";
 export interface FolderView extends FolderRef {
   /** Display name. A folder inside another one is shown with the names of its parents. */
   name: string;
+  /** The roles Thunderbird gives the folder ("inbox", "sent", "junk" and so on). They decide which lists it can join. */
+  specialUse: readonly string[];
 }
 
 export interface AccountView {
@@ -88,7 +91,7 @@ async function readAccounts(): Promise<AccountView[]> {
       emails: account.identities
         .map((identity) => normalizeAddress(identity.email ?? ""))
         .filter((email): email is string => email !== null),
-      folders: folders.map((folder) => ({ accountId: account.id, path: folder.path, name: folderDisplayName(folder, names) })),
+      folders: folders.map((folder) => ({ accountId: account.id, path: folder.path, name: folderDisplayName(folder, names), specialUse: folder.specialUse })),
       inboxes: withUse("inbox"),
       sentDefaults: withUse("sent"),
       hasJunk: withUse("junk").length > 0,
@@ -128,7 +131,12 @@ export function folderView(model: Model, folder: FolderRef): FolderView {
   const known = model.accounts
     .find((account) => account.id === folder.accountId)
     ?.folders.find((candidate) => candidate.path === folder.path);
-  return known ?? { ...folder, name: folder.path.replace(/^\//, "") };
+  return known ?? { ...folder, name: folder.path.replace(/^\//, ""), specialUse: [] };
+}
+
+/** The folders of every list as they are now for one account, its defaults included. */
+export function chosenIn(account: AccountView, settings: Settings): ChosenFolders {
+  return chosenFolders(account.sentDefaults, account.inboxes, settings);
 }
 
 export function sentFolders(account: AccountView, settings: Settings): FolderRef[] {

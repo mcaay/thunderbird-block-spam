@@ -23,10 +23,20 @@ export function formatShortTime(time: number, now: number, locale?: string): str
     : date.toLocaleDateString(locale, { day: "numeric", month: "numeric", year: "numeric" });
 }
 
-/** Like formatShortTime, but with the time of day for other days as well. For the log. */
-export function formatLogTime(time: number, now: number, locale?: string): string {
+/**
+ * A moment in two parts: the date, when it is not today (day and month for this year,
+ * the whole date for older ones), and the time of day. The log shows the date above
+ * the time, so that the column is as wide as the longer of the two, not as their sum.
+ */
+export function logTimeParts(time: number, now: number, locale?: string): { date: string | null; clock: string } {
   const date = new Date(time);
-  return sameDay(date, new Date(now)) ? clock(date, locale) : `${formatShortTime(time, now, locale)}, ${clock(date, locale)}`;
+  return { date: sameDay(date, new Date(now)) ? null : formatShortTime(time, now, locale), clock: clock(date, locale) };
+}
+
+/** The same in one line: "20:35" for today, "21.11, 20:35" for another day. */
+export function formatLogTime(time: number, now: number, locale?: string): string {
+  const parts = logTimeParts(time, now, locale);
+  return parts.date === null ? parts.clock : `${parts.date}, ${parts.clock}`;
 }
 
 /** The complete date and time, in numbers only, for tooltips. */

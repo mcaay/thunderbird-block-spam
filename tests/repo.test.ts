@@ -69,7 +69,7 @@ describe("strings", () => {
     source: ["identity", "sent", "scan", "ai", "manual"],
     problem: ["name-missing", "endpoint-invalid", "endpoint-insecure", "endpoint-placeholder", "model-missing", "key-missing"],
     // Mistakes a user can make: the codes of ValidationError that the pages translate.
-    invalid: ["entry-invalid", "address-invalid", "account-unknown", "cutoff-range", "prompt-empty", "own-address", "no-sender", "import-invalid", "undo-gone"],
+    invalid: ["entry-invalid", "address-invalid", "account-unknown", "cutoff-range", "prompt-empty", "own-address", "no-sender", "import-invalid", "undo-gone", "folder-role"],
     remedy: ["sign-in", "permission", "key-missing", "key-rejected", "plan-refused"],
     // What went wrong with a request to an AI service, see core/diagnostics.
     diag: DIAGNOSTIC_CODES,
@@ -233,10 +233,12 @@ describe("locales", () => {
     expect(manifest.name).toBe("__MSG_extensionName__");
     expect(manifest.description).toBe("__MSG_extensionDescription__");
     expect((manifest.action as { default_title: string }).default_title).toBe("__MSG_extensionName__");
+    // The label under the toolbar button is the name and nothing else: the tooltip and the badge carry the state.
+    expect((manifest.action as { default_label: string }).default_label).toBe("__MSG_extensionName__");
     for (const command of Object.values(manifest.commands as Record<string, { description: string }>)) {
       expect(command.description).toMatch(/^__MSG_cmd[A-Za-z]+__$/);
     }
-    expect(text).not.toMatch(/"(default_title|description|name)": "(?!__MSG_)[^"]*[A-Za-z]/);
+    expect(text).not.toMatch(/"(default_title|default_label|description|name)": "(?!__MSG_)[^"]*[A-Za-z]/);
   });
 });
 

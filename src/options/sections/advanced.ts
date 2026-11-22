@@ -127,7 +127,18 @@ export function advancedSection(): Section {
   }
 
   // Forwarding mailboxes.
-  const mailbox = h("input", { type: "email", id: "forward-mailbox", placeholder: "office@example.com", oninput: () => mailboxError.set(null), attrs: { spellcheck: "false", autocomplete: "off" } });
+  const mailbox = h("input", {
+    type: "email",
+    id: "forward-mailbox",
+    placeholder: "office@example.com",
+    oninput: () => {
+      mailboxError.set(null);
+      // Nothing can be added before something is typed: the button says so by being unavailable.
+      addMailboxButton.disabled = mailbox.value.trim() === "";
+    },
+    attrs: { spellcheck: "false", autocomplete: "off" },
+  });
+  const addMailboxButton = h("button", { type: "submit", text: t("add"), disabled: true });
   const mailboxError = fieldError(mailbox, "forward-mailbox-error");
   const mailboxes = plainList({ label: t("forwardingTitle") }, mailbox);
   /** What the last removal of a mailbox did, with Undo. */
@@ -183,6 +194,7 @@ export function advancedSection(): Section {
       async () => {
         await update({ forwardingMailboxes: [...settings.forwardingMailboxes, value] });
         mailbox.value = "";
+        addMailboxButton.disabled = true;
         mailboxError.set(null);
         mailbox.focus();
       },
@@ -218,7 +230,7 @@ export function advancedSection(): Section {
       },
       h("label", { for: "forward-mailbox", text: t("forwardingMailboxLabel") }),
       mailbox,
-      h("button", { type: "submit", text: t("add") }),
+      addMailboxButton,
     ),
     mailboxError.element,
     mailboxNotice.element,

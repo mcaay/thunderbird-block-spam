@@ -1,12 +1,13 @@
 // Learning: the Sent folders per account and the manual scan of sent mail.
 
 import type { SettingsPatch } from "../../core/edit";
+import { folderCandidates } from "../../core/folders";
 import type { FolderRef, Settings } from "../../core/types";
 import { t } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
-import { byId, description, fieldError, guard, h, learnMore, notice, reconcile, replace } from "../dom";
+import { button, byId, description, fieldError, guard, h, learnMore, notice, reconcile, replace, setUnavailable } from "../dom";
 import { endOfLocalDay } from "../fields";
-import { hasFolder, sentFolders, withoutFolder } from "../model";
+import { chosenIn, hasFolder, sentFolders, withoutFolder } from "../model";
 import type { AccountView, Model } from "../model";
 import type { Section, Shell } from "../section";
 import { folderEditors } from "./folderEditor";
@@ -50,26 +51,45 @@ export function learningSection(shell: Shell): Section {
   const to = h("input", { type: "date", id: "scan-to", oninput: () => rangeError.set(null), attrs: { "aria-describedby": "scan-dates-hint" } });
   const rangeError = fieldError(to, "scan-range-error");
   const status = scanStatusView();
-  const start = h("button", {
-    type: "button",
-    text: t("scanStart"),
-    onclick: () =>
-      void guard(async () => {
-        const fromTime = dayStart(from.value);
-        const toDay = dayStart(to.value);
-        // messages.query includes toDate, so exclude midnight of the following day.
-        const toTime = toDay === null ? null : endOfLocalDay(toDay);
-        if (fromTime !== null && toTime !== null && fromTime >= toTime) {
-          rangeError.set(t("scanRangeInvalid"));
-          to.focus();
-          return;
-        }
-        rangeError.set(null);
-        await send("startScan", { from: fromTime, to: toTime });
-        shell.startPolling();
-        await shell.refresh();
-      }),
+  let accountCount = 0;
+  let scanRunning = false;
+  let starting = false;
+  const start = button(t("scanStart"), () => {
+    // Unavailable from the click on: a second click cannot ask for a second scan.
+    starting = true;
+    drawStart();
+    void guard(async () => {
+      const fromTime = dayStart(from.value);
+      const toDay = dayStart(to.value);
+      // messages.query includes toDate, so exclude midnight of the following day.
+      const toTime = toDay === null ? null : endOfLocalDay(toDay);
+      if (fromTime !== null && toTime !== null && fromTime >= toTime) {
+        rangeError.set(t("scanRangeInvalid"));
+        to.focus();
+        return;
+      }
+      rangeError.set(null);
+      await send("startScan", { from: fromTime, to: toTime });
+      shell.startPolling();
+      await shell.refresh();
+    }).finally(() => {
+      starting = false;
+      drawStart();
+    });
   });
+
+  /** While a scan runs, Cancel stands next to the button. Without an account there is nothing to scan, and the button says so. */
+  function drawStart(): void {
+    setUnavailable(start, false);
+    if (accountCount === 0) {
+      setUnavailable(start, true, t("noAccounts"));
+    } else {
+      setUnavailable(start, scanRunning || starting);
+    }
+  }
+
+  /** Said in place of the folder lists while Thunderbird has no mail account. */
+  const noAccounts = description(t("noAccounts"));
   const cancel = h("button", { type: "button", text: t("scanCancel"), hidden: true, onclick: () => void guard(() => send("cancelScan", {})) });
 
   replace(
@@ -79,6 +99,7 @@ export function learningSection(shell: Shell): Section {
     h("h2", { text: t("sentFoldersTitle") }),
     description(t("sentFoldersHint")),
     changed.element,
+    noAccounts,
     folders,
     h("h2", { text: t("scanTitle") }),
     description(t("scanHint")),
@@ -109,6 +130,7 @@ export function learningSection(shell: Shell): Section {
         folderEditors(model.accounts, {
           id: "sent",
           chosen: (account) => sentFolders(account, settings),
+          candidates: (account) => folderCandidates("sent", account.folders, chosenIn(account, settings)),
           removable: () => true,
           fixedNote: "",
           onRemove: (account, folder) =>
@@ -132,7 +154,10 @@ export function learningSection(shell: Shell): Section {
       );
 
       const running = model.status.scan?.running === true;
-      start.disabled = running;
+      noAccounts.hidden = model.accounts.length > 0;
+      accountCount = model.accounts.length;
+      scanRunning = running;
+      drawStart();
       cancel.hidden = !running;
       status.update(model);
     },

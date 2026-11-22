@@ -4,7 +4,7 @@
 import type { ImportMode, ImportReport } from "../../core/exportImport";
 import { t } from "../../tb/i18n";
 import { RequestError, send } from "../../tb/protocol";
-import { bar, button, byId, description, dialog, download, errorText, guard, h, inlineStatus, learnMore, option, replace } from "../dom";
+import { bar, button, byId, description, dialog, download, errorText, guard, h, inlineStatus, learnMore, option, replace, whileBusy } from "../dom";
 import type { Section } from "../section";
 
 function reportLines(report: ImportReport): string[] {
@@ -31,9 +31,25 @@ export function backupSection(): Section {
   const report = h("div", { class: "import-report" });
   const exportStatus = inlineStatus();
 
+  // Nothing to import before a file is chosen: the button is unavailable until then.
+  const importButton = button(t("importButton"), () => void whileBusy(importButton, runImport).then(drawImport));
+  function drawImport(): void {
+    const had = document.activeElement === importButton;
+    importButton.disabled = file.files?.[0] === undefined;
+    if (had && importButton.disabled) {
+      // The file is used up and the button unavailable again: the keyboard goes back to where the next file is chosen.
+      choose.focus();
+    }
+  }
+  drawImport();
+
   file.addEventListener("change", () => {
-    fileName.textContent = file.files?.[0]?.name ?? t("importNoFile");
+    const chosen = file.files?.[0]?.name;
+    fileName.textContent = chosen ?? t("importNoFile");
+    // The whole name, for when it is too long for its line.
+    fileName.title = chosen ?? "";
     showProblem(null);
+    drawImport();
   });
 
   function showProblem(message: string | null): void {
@@ -41,12 +57,10 @@ export function backupSection(): Section {
     problem.hidden = message === null;
   }
 
-  const runImport = async (): Promise<void> => {
+  async function runImport(): Promise<void> {
     const chosen = file.files?.[0];
     replace(report);
     if (chosen === undefined) {
-      showProblem(t("importChooseFile"));
-      choose.focus();
       return;
     }
     let parsed: unknown;
@@ -67,6 +81,7 @@ export function backupSection(): Section {
       report.firstElementChild?.setAttribute("role", "status");
       file.value = "";
       fileName.textContent = t("importNoFile");
+      fileName.removeAttribute("title");
     };
     try {
       if (selected === "replace") {
@@ -84,7 +99,7 @@ export function backupSection(): Section {
       // What is wrong with the file is a diagnostic in English: it follows the sentence in the user's language.
       showProblem(error instanceof RequestError && error.code !== "" ? `${errorText(error)} ${t("errorDetail", error.message)}` : errorText(error));
     }
-  };
+  }
 
   replace(
     root,
@@ -110,7 +125,7 @@ export function backupSection(): Section {
     h("h2", { text: t("importTitle") }),
     description(t("importHint"), learnMore(t("importTitle"), t("importMore"))),
     h("div", { class: "row" }, choose, fileName, file),
-    h("div", { class: "row" }, h("label", { for: "import-mode", text: t("importModeLabel") }), mode, button(t("importButton"), () => void runImport())),
+    h("div", { class: "row" }, h("label", { for: "import-mode", text: t("importModeLabel") }), mode, importButton),
     problem,
     report,
   );

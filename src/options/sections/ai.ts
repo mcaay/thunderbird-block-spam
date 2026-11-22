@@ -24,11 +24,14 @@ import {
   h,
   iconButton,
   inlineStatus,
+  isUnavailable,
   learnMore,
   option,
   reconcile,
   replace,
   setUnavailable,
+  tNodes,
+  whileBusy,
 } from "../dom";
 import type { Child, DialogResult, FieldError, Keyed } from "../dom";
 import { mayRedraw, sameNumber } from "../fields";
@@ -91,8 +94,20 @@ export function aiSection(shell: Shell): Section {
   let welcomeOpen = false;
   let signInDrawn = "";
   /** The field for the pasted redirect address. It keeps its text while the panel is redrawn. */
-  const pasted = h("input", { type: "text", id: "sign-in-address", placeholder: "http://127.0.0.1:1455/auth/callback?code=..." });
+  const pasted = h("input", {
+    type: "text",
+    id: "sign-in-address",
+    placeholder: "http://127.0.0.1:1455/auth/callback?code=...",
+    oninput: () => drawFinish(),
+    attrs: { spellcheck: "false", autocomplete: "off" },
+  });
   let pastedFor: string | null = null;
+  // Nothing to finish with before an address is pasted: the button says so by being unavailable.
+  const finishSignIn = button(t("signInFinish"), () => void whileBusy(finishSignIn, () => guard(() => send("finishSignIn", { url: pasted.value }))).then(drawFinish));
+  function drawFinish(): void {
+    finishSignIn.disabled = pasted.value.trim() === "";
+  }
+  drawFinish();
 
   const list = h("ol", { class: "services" });
   const empty = description(t("servicesNone"));
@@ -167,7 +182,8 @@ export function aiSection(shell: Shell): Section {
       { class: "row add-service" },
       h("label", { for: "preset", text: t("serviceAddLabel") }),
       presetSelect,
-      button(t("add"), () => {
+      // "Add…": more is asked before anything is added, in the editor or in the consent dialog.
+      button(t("serviceAdd"), () => {
         const preset = PRESETS.find((item) => item.id === presetSelect.value) ?? null;
         if (preset?.type === "chatgpt") {
           startChatGpt(null);
@@ -186,12 +202,31 @@ export function aiSection(shell: Shell): Section {
     h("div", { class: "description", id: "prompt-hint", text: t("promptHint") }),
     prompt,
     promptError.element,
-    // The default prompt is English in every language of the interface: it is what the model reads.
+    // The default prompt is English in every language of the interface: it is the model that reads it.
     description(t("promptLanguage")),
     description(t("outputLineLabel")),
     h("pre", { class: "code-block", text: OUTPUT_LINE }),
     // "Unsaved changes" stands right after the button that saves them.
     h("div", { class: "row" }, savePromptButton, promptStatus.element, discardPromptButton, restorePromptButton),
+    // Where a prompt or a cutoff is tried: the two tools for it live elsewhere, and this is the place that says so.
+    // The names in these sentences are the labels themselves, so they cannot drift apart.
+    description(t("tryOnMail", t("popupScoreSelected"))),
+    h(
+      "div",
+      { class: "description" },
+      ...tNodes(
+        "tryObserve",
+        t("observationLabel"),
+        h("a", {
+          href: "#overview",
+          text: t("catOverview"),
+          onclick: (event) => {
+            event.preventDefault();
+            shell.go("overview");
+          },
+        }),
+      ),
+    ),
   );
 
   function drawPresetHint(): void {
@@ -329,16 +364,16 @@ export function aiSection(shell: Shell): Section {
         ),
         status.element,
       ),
-      description(t("signInPasteHint")),
+      // Where the page updates by itself, pasting is the way out when it does not. Where it cannot, pasting is the next step and was said above.
+      signIn.capture ? description(t("signInPasteHint")) : null,
       h(
         "div",
-        { class: "row" },
-        h("label", { for: "sign-in-address", class: "visually-hidden", text: t("signInAddressLabel") }),
-        pasted,
-        button(t("signInFinish"), () => void guard(() => send("finishSignIn", { url: pasted.value }))),
-        button(t("cancel"), () => void guard(() => send("cancelSignIn", {}))),
+        { class: "field" },
+        h("label", { for: "sign-in-address", text: t("signInAddressLabel") }),
+        h("div", { class: "row tight" }, pasted, finishSignIn, button(t("cancel"), () => void guard(() => send("cancelSignIn", {})))),
       ),
     );
+    drawFinish();
   }
 
   // -------------------------------------------------------------------------
@@ -357,7 +392,7 @@ export function aiSection(shell: Shell): Section {
     }
   }
 
-  function openEditor(id: string | null, preset: Preset | null): void {
+  function openEditor(id: string | null, preset: Preset | null, focus: "name" | "key" = "name"): void {
     if (model === null) {
       return;
     }
@@ -381,6 +416,8 @@ export function aiSection(shell: Shell): Section {
       disabled: fixed,
       oninput: () => {
         drawLocalNote();
+        drawEndpointHint();
+        drawKeyHint();
         lookUp();
       },
       attrs: { spellcheck: "false" },
@@ -429,6 +466,23 @@ export function aiSection(shell: Shell): Section {
     const modelStatus = inlineStatus();
     const saveStatus = inlineStatus();
     const localNote = h("div", { class: "local-note" });
+    /** What the address field expects. The sentence about the placeholder is shown only while the address holds one. */
+    const endpointHint = h("div", { class: "description" });
+    const drawEndpointHint = (): void => {
+      const text = fixed ? t("endpointFixed") : tCode("endpointHint", type);
+      const whole = !fixed && /<[^<>]*>/.test(endpoint.value) ? `${text} ${t("endpointPlaceholder")}` : text;
+      if (endpointHint.textContent !== whole) {
+        endpointHint.textContent = whole;
+      }
+    };
+    /** Said under the key field only for a server on this computer, where it is true. */
+    const keyLocalHint = h("span");
+    const drawKeyHint = (): void => {
+      const text = type !== "chatgpt" && isLocal(endpoint.value) ? ` ${t("keyHintLocal")}` : "";
+      if (keyLocalHint.textContent !== text) {
+        keyLocalHint.textContent = text;
+      }
+    };
 
     // What this computer already allows. Looked up ahead of the click, because nothing
     // may be awaited between a click and a permission request.
@@ -563,13 +617,15 @@ export function aiSection(shell: Shell): Section {
       withConsent(
         definition,
         t("consentAgree"),
-        async () => {
-          const { id: savedId } = await send("saveAccessPoint", { id: existing?.id ?? null, definition, apiKey: newKey });
-          await shell.refresh();
-          closeEditor(savedId);
-          // One test right away, so the row says at once whether the service works.
-          runTest(savedId);
-        },
+        // Unavailable while the request runs: a second click cannot save the service twice.
+        () =>
+          whileBusy(saveButton, async () => {
+            const { id: savedId } = await send("saveAccessPoint", { id: existing?.id ?? null, definition, apiKey: newKey });
+            await shell.refresh();
+            closeEditor(savedId);
+            // One test right away, so the row says at once whether the service works.
+            runTest(savedId);
+          }),
         (message) => saveStatus.set(message, "error"),
       );
     };
@@ -582,10 +638,11 @@ export function aiSection(shell: Shell): Section {
           return;
         }
         void guard(
-          async () => {
-            modelStatus.set(t("loadModelsBusy"));
-            showModels(await send("listModels", { id: existing.id }));
-          },
+          () =>
+            whileBusy(loadButton, async () => {
+              modelStatus.set(t("loadModelsBusy"));
+              showModels(await send("listModels", { id: existing.id }));
+            }),
           (message) => modelStatus.set(message, "error"),
         );
         return;
@@ -600,16 +657,17 @@ export function aiSection(shell: Shell): Section {
       withConsent(
         definition,
         t("consentAgreeLoad"),
-        async () => {
-          // Said only once the question about the host is answered, and taken back when the request fails.
-          modelStatus.set(t("loadModelsBusy"));
-          try {
-            showModels(await send("listModelsFor", { id: existing?.id ?? null, definition, apiKey: newKey }));
-          } catch (error) {
-            modelStatus.clear();
-            throw error;
-          }
-        },
+        () =>
+          whileBusy(loadButton, async () => {
+            // Said only once the question about the host is answered, and taken back when the request fails.
+            modelStatus.set(t("loadModelsBusy"));
+            try {
+              showModels(await send("listModelsFor", { id: existing?.id ?? null, definition, apiKey: newKey }));
+            } catch (error) {
+              modelStatus.clear();
+              throw error;
+            }
+          }),
         (message) => modelStatus.set(message, "error"),
         (result) => {
           if (result === "cancel") {
@@ -634,15 +692,20 @@ export function aiSection(shell: Shell): Section {
       replace(
         modelMenu,
         current === "" ? option("", t("modelChoose"), true) : null,
-        // A model the service did not list stays selected: loading the list changes nothing by itself.
-        current !== "" && !listed ? option(current, current, true) : null,
+        // A model the service did not list stays selected, because loading the list changes nothing by itself. The menu says that it is not on the list.
+        current !== "" && !listed ? option(current, t("modelUnlisted", current), true) : null,
         ...options.map((item) => option(item.id, item.label, item.id === current)),
         option(OTHER_MODEL, t("modelOther")),
       );
       modelInput.hidden = true;
       modelMenu.hidden = false;
       modelLabel.htmlFor = modelMenu.id;
-      modelStatus.set(t("loadModelsDone", options.length), "ok");
+      if (current !== "" && !listed) {
+        // Not a confirmation: a mistyped model would otherwise look confirmed until the test fails.
+        modelStatus.set(t("loadModelsUnlisted", options.length));
+      } else {
+        modelStatus.set(t("loadModelsDone", options.length), "ok");
+      }
       modelMenu.focus();
     }
 
@@ -666,6 +729,9 @@ export function aiSection(shell: Shell): Section {
           : null;
 
     const titleId = `${prefix}-title`;
+    const loadButton = button(t("loadModels"), loadModels);
+    // The form is submitted by this button and by Enter in a field. While a save runs, neither starts a second one.
+    const saveButton = h("button", { type: "submit", class: "primary", text: t("save") });
     const element = h(
       "form",
       {
@@ -673,7 +739,9 @@ export function aiSection(shell: Shell): Section {
         attrs: { "aria-labelledby": titleId, novalidate: "" },
         onsubmit: (event) => {
           event.preventDefault();
-          save();
+          if (!isUnavailable(saveButton)) {
+            save();
+          }
         },
         onkeydown: (event) => {
           if (event.key === "Escape") {
@@ -684,33 +752,41 @@ export function aiSection(shell: Shell): Section {
       },
       h("h3", { id: titleId, text: existing === null ? t("editorAddTitle", presetName) : t("editorEditTitle", existing.name) }),
       field(t("fieldName"), name, errors.name, []),
-      type === "chatgpt" ? null : field(t("fieldEndpoint"), endpoint, errors.endpoint, [fixed ? t("endpointFixed") : tCode("endpointHint", type)]),
+      type === "chatgpt" ? null : h("div", { class: "field" }, h("label", { for: endpoint.id, text: t("fieldEndpoint") }), endpoint, errors.endpoint.element, endpointHint),
       field(
         modelLabel,
         modelInput,
         errors.model,
         [tCode("modelHint", type)],
         modelMenu,
-        canLoadModels ? button(t("loadModels"), loadModels) : null,
+        canLoadModels ? loadButton : null,
         canLoadModels ? modelStatus.element : null,
       ),
-      type === "chatgpt" ? null : field(t("fieldKey"), key, errors.key, [t("keyHint"), keyLink === null ? null : " ", keyLink]),
+      type === "chatgpt" ? null : field(t("fieldKey"), key, errors.key, [t("keyHint"), keyLocalHint, keyLink === null ? null : " ", keyLink]),
       localNote,
       h(
         "div",
         { class: "row" },
-        h("button", { type: "submit", class: "primary", text: t("save") }),
+        saveButton,
         button(t("cancel"), () => closeEditor(existing?.id ?? null)),
         saveStatus.element,
       ),
     );
     drawLocalNote();
+    drawEndpointHint();
+    drawKeyHint();
     lookUp();
     editor = { id: existing?.id ?? null, serial, element, focus: () => name.focus() };
     drawList();
     element.scrollIntoView({ block: "nearest" });
-    name.focus();
-    name.select();
+    if (focus === "key" && type !== "chatgpt") {
+      // Opened from a warning about the key: the field the warning is about takes the focus.
+      key.scrollIntoView({ block: "center" });
+      key.focus();
+    } else {
+      name.focus();
+      name.select();
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -775,7 +851,10 @@ export function aiSection(shell: Shell): Section {
       lines.push(h("div", { class: "service-state attention" }, h("strong", { text: t("apNeedsAttention") }), " ", tCode("remedy", remedyOf(point))));
     }
     if (point.cooldownUntil > now) {
-      lines.push(h("div", { class: "service-state paused", text: t("apCoolingDown", formatLogTime(point.cooldownUntil, now)) }));
+      // What happens meanwhile depends on the other services: it is said only where another one can answer.
+      const others = model?.accessPoints.some((item) => item.id !== point.id && item.enabled && !item.needsAttention && item.cooldownUntil <= now) === true;
+      const until = formatLogTime(point.cooldownUntil, now);
+      lines.push(h("div", { class: "service-state paused", text: others ? `${t("apCoolingDown", until)} ${t("apCoolingOthers")}` : t("apCoolingDown", until) }));
     }
     if (point.lastError !== "") {
       // A failure that neither paused the service nor needs the user: say that it simply is tried again.
@@ -804,8 +883,13 @@ export function aiSection(shell: Shell): Section {
       return element;
     };
     const test = withFocus(button(t("apTest"), () => runTest(point.id)), "test");
-    setUnavailable(test, tests.get(point.id)?.kind === "busy");
     test.setAttribute("aria-label", t("apTestNamed", point.name));
+    if (point.type === "chatgpt" && !signedIn(point)) {
+      // Nothing can be asked without a sign-in: the button says what is missing instead of failing.
+      setUnavailable(test, true, t("apTestNeedsSignIn"));
+    } else {
+      setUnavailable(test, tests.get(point.id)?.kind === "busy");
+    }
     const edit = withFocus(button(t("edit"), () => openEditor(point.id, null)), "edit");
     edit.setAttribute("aria-label", t("editNamed", point.name));
     const up = withFocus(iconButton("up", t("moveUpNamed", point.name), () => void guard(() => send("moveAccessPoint", { id: point.id, direction: -1 })), "quiet"), "up");
@@ -900,6 +984,8 @@ export function aiSection(shell: Shell): Section {
     // A sign-in in progress belongs to the service it signs in again, or is a new row of its own.
     const signIn = model.status.signIn;
     const signInRow = signIn.url === null ? null : points.some((point) => point.id === signIn.accessPointId) ? signIn.accessPointId : "";
+    // How many services can answer now: a paused one says whether another takes over.
+    const answering = points.filter((point) => point.enabled && !point.needsAttention && point.cooldownUntil <= now).length;
     const items: Keyed[] = points.map((point, index) => {
       const editing = current !== null && current.id === point.id ? current : null;
       const signingIn = signInRow === point.id;
@@ -908,7 +994,7 @@ export function aiSection(shell: Shell): Section {
         signature:
           editing !== null
             ? `editing:${editing.serial}:${index}:${points.length}:${signingIn}`
-            : JSON.stringify([point, index, points.length, tests.get(point.id) ?? null, point.cooldownUntil > now, hostGranted(point), signingIn]),
+            : JSON.stringify([point, index, points.length, tests.get(point.id) ?? null, point.cooldownUntil > now, hostGranted(point), signingIn, answering]),
         build: () => serviceRow(point, index, points.length, editing, signingIn),
       };
     });
@@ -979,7 +1065,7 @@ export function aiSection(shell: Shell): Section {
         presetSelect.scrollIntoView({ block: "center" });
         presetSelect.focus();
       } else if (intent.kind === "ai-edit") {
-        openEditor(intent.id, null);
+        openEditor(intent.id, null, intent.focus ?? "name");
       }
     },
     unsaved() {

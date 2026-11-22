@@ -21,6 +21,8 @@ import { COMMANDS, isCommandName } from "./core/commands";
 import type { CommandName } from "./core/commands";
 import { errorText } from "./core/decision";
 import { applySettingsPatch, manualEntry } from "./core/edit";
+import { chosenFolders, mayJoin, refusedFolders, screeningFolderPaths } from "./core/folders";
+import type { FolderFacts } from "./core/folders";
 import { Engine } from "./core/engine";
 import type { CommandOutcome, CommandUndo, LogActionUndo, ScanProgress } from "./core/engine";
 import { applyImport, buildExport } from "./core/exportImport";
@@ -787,6 +789,16 @@ function findPoint(state: AppState, id: string): AccessPoint {
   return point;
 }
 
+/** The folders of the given accounts with the roles Thunderbird gives them. An account that is gone has none. */
+async function folderFacts(accountIds: ReadonlySet<string>): Promise<FolderFacts[]> {
+  const facts: FolderFacts[] = [];
+  for (const accountId of accountIds) {
+    const folders = await browser.folders.query({ accountId }).catch(() => []);
+    facts.push(...folders.map((folder) => ({ accountId, path: folder.path, specialUse: folder.specialUse })));
+  }
+  return facts;
+}
+
 /** What the settings page was asked to show. Kept until the page takes it, for a short while. */
 let settingsTarget: { target: SettingsTarget; at: number } | null = null;
 const SETTINGS_TARGET_MS = 30 * 1000;
@@ -847,6 +859,20 @@ const handlers: Handlers = {
   async updateSettings({ patch }) {
     const { state } = need();
     const { settings, invalid } = applySettingsPatch(state.settings, patch);
+    // The menus of the page offer only folders that can be right in their list. The rule holds here too.
+    const lists = [settings.sentFoldersAdded, settings.monitoredFoldersAdded, settings.screeningFolders];
+    const before = [state.settings.sentFoldersAdded, state.settings.monitoredFoldersAdded, state.settings.screeningFolders];
+    if (JSON.stringify(lists) !== JSON.stringify(before)) {
+      const [facts, sentDefaults, inboxes] = await Promise.all([
+        folderFacts(new Set(lists.flat().map((folder) => folder.accountId))),
+        mail.specialFolders("sent"),
+        mail.specialFolders("inbox"),
+      ]);
+      const refused = refusedFolders(state.settings, settings, facts, sentDefaults, inboxes);
+      if (refused.length > 0) {
+        throw new ValidationError(`folders: not possible in this list: ${refused.map(folderKey).join(", ")}`, "folder-role");
+      }
+    }
     state.settings = settings;
     await state.saveSettings();
     return { invalid };
@@ -947,7 +973,17 @@ const handlers: Handlers = {
     const { state } = need();
     const folderName = t("screeningFolderName");
     const folders = await browser.folders.query({ accountId });
-    let folder = folders.find((item) => item.path === `/${folderName}`);
+    const inboxes = await mail.specialFolders("inbox");
+    // The folder may exist already: at the top of the account, or inside the Inbox where the server allows nothing else.
+    const places = screeningFolderPaths(folderName, inboxes, accountId);
+    let folder = places.map((path) => folders.find((item) => item.path === path)).find((item) => item !== undefined);
+    if (folder !== undefined && !state.settings.screeningFolders.some((item) => item.accountId === accountId && item.path === folder?.path)) {
+      // A folder of that name that has another job already is not made the screening folder behind the user's back.
+      const chosen = chosenFolders(await mail.specialFolders("sent"), inboxes, state.settings);
+      if (!mayJoin("screening", { accountId, path: folder.path, specialUse: folder.specialUse }, chosen)) {
+        throw new ValidationError(`screening: ${folder.path} has another role`, "folder-role");
+      }
+    }
     if (folder === undefined) {
       const create = browser.folders.create;
       if (typeof create !== "function") {

@@ -143,6 +143,9 @@
   "invalid_undo_gone": {
     "message": "Tego polecenia nie można już tutaj cofnąć: od tego czasu wykonano inne."
   },
+  "invalid_folder_role": {
+    "message": "Tego folderu nie można tu użyć: wyklucza to jego rola w programie Thunderbird albo na innej liście Block Spam."
+  },
   "catOverview": {
     "message": "Przegląd"
   },
@@ -192,7 +195,7 @@
     "message": "Nowa poczta w monitorowanych folderach jest porównywana z listami, a poczta od zablokowanych nadawców trafia do Niechcianych. Poczta odebrana przed włączeniem ochrony nigdy nie jest ruszana."
   },
   "protectionMore": {
-    "message": "Pocztę od nadawców spoza obu list ocenia usługa AI, o ile została dodana. W przeciwnym razie obowiązuje ustawienie z kategorii Poczta przychodząca. Uczenie z wysłanej poczty, skróty klawiszowe i przyciski panelu na pasku narzędzi działają niezależnie od tego, czy ochrona jest włączona."
+    "message": "Pocztę od nadawców spoza obu list ocenia usługa AI, o ile została dodana. W przeciwnym razie obowiązuje ustawienie z kategorii Poczta przychodząca. Uczenie z wysłanej poczty, skróty klawiszowe i przycisk Block Spam na pasku narzędzi działają niezależnie od tego, czy ochrona jest włączona."
   },
   "protectionSwitchOn": {
     "message": "Włącz ochronę"
@@ -282,7 +285,7 @@
     "message": "Brakuje jej klucza. Edytuj tę usługę i wpisz klucz."
   },
   "remedy_permission": {
-    "message": "Ten komputer nie zezwolił jeszcze na połączenia z jej serwerem. Edytuj tę usługę i naciśnij Zapisz."
+    "message": "Ten komputer nie zezwolił jeszcze na połączenia z jej serwerem. Edytuj tę usługę i naciśnij „Zapisz”."
   },
   "remedy_sign_in": {
     "message": "Brak zalogowania. Użyj przycisku „Kontynuuj z ChatGPT” w jej wierszu."
@@ -318,7 +321,7 @@
     "message": "Dodaj usługę AI (opcjonalnie)"
   },
   "step2Text": {
-    "message": "Ocenia pocztę od nadawców, do których nie piszesz. Bez niej taka poczta zostaje na miejscu."
+    "message": "Ocenia pocztę od nadawców, do których nie piszesz. Bez niej taka poczta zostaje na miejscu, chyba że w kategorii Poczta przychodząca wybierzesz inaczej."
   },
   "step2Add": {
     "message": "Dodaj usługę AI"
@@ -338,6 +341,15 @@
   "switchOnAnyway": {
     "message": "Włącz mimo to"
   },
+  "scanWaitTitle": {
+    "message": "Zaczekać na koniec skanowania?"
+  },
+  "scanWaitText": {
+    "message": "Skanowanie wysłanej poczty jeszcze trwa. Dopóki się nie zakończy, poczta od osób, z którymi już korespondujesz, mogłaby zostać wysłana do AI."
+  },
+  "scanWait": {
+    "message": "Zaczekaj na skanowanie"
+  },
   "observationTitle": {
     "message": "Tryb obserwacji"
   },
@@ -345,7 +357,7 @@
     "message": "Tylko obserwuj: podejmuj decyzje i zapisuj je, ale niczego nie przenoś"
   },
   "observationHint": {
-    "message": "Żadna wiadomość nie jest przenoszona, a AI niczego nie dodaje do czarnej listy. Dziennik pokazuje, co by się stało. Wypróbuj w ten sposób model, prompt lub próg, zanim im zaufasz."
+    "message": "Block Spam podejmuje decyzje i je zapisuje, ale sam nie przenosi żadnej wiadomości, a AI niczego nie dodaje do czarnej listy. Dziennik pokazuje, co by się stało. Wypróbuj w ten sposób model, prompt lub próg, zanim im zaufasz."
   },
   "observationOff": {
     "message": "Ochrona jest wyłączona, więc na razie nic nie jest obserwowane."
@@ -405,7 +417,7 @@
     "message": "wyłączone"
   },
   "fatalDownload": {
-    "message": "Pobierz surowe dane"
+    "message": "Pobierz surowe dane…"
   },
   "fatalDownloadHint": {
     "message": "Surowe dane zawierają klucze API i tokeny logowania. Nie udostępniaj nikomu tego pliku."
@@ -480,7 +492,7 @@
     "message": "Nadawca jest dopasowywany najpierw po adresie, a potem po domenie, więc wpis z adresem zawsze ma pierwszeństwo przed wpisem z domeną."
   },
   "listsMore": {
-    "message": "Zablokowany adres pozostaje zablokowany w zaufanej domenie, a zaufana osoba przechodzi mimo zablokowanej domeny. Biała lista powstaje na podstawie wysłanej poczty. Czarna lista zawiera nadawców zablokowanych ręcznie oraz tych, których AI oceniło jako spam."
+    "message": "Zablokowany adres pozostaje zablokowany w zaufanej domenie, a zaufana osoba przechodzi mimo zablokowanej domeny. Biała lista powstaje na podstawie wysłanej poczty i zawiera także nadawców, którym ręcznie zaufano. Czarna lista zawiera nadawców zablokowanych ręcznie oraz tych, których AI oceniło jako spam."
   },
   "listsWhiteCount_one": {
     "message": "Biała lista: $1 wpis."
@@ -603,7 +615,7 @@
     "message": "Ręcznie"
   },
   "newEntriesTitle": {
-    "message": "Nowe wpisy"
+    "message": "Współdzielenie między kontami"
   },
   "newEntriesLabel": {
     "message": "Wpisy tworzone przez uczenie, przez AI oraz przez blokowanie i ufanie są:"
@@ -615,16 +627,16 @@
     "message": "osobne dla każdego konta"
   },
   "newEntriesHint": {
-    "message": "Zmiana dotyczy tylko przyszłych wpisów. Wpisy dodawane ręcznie powyżej mają własne ustawienie."
+    "message": "Zmiana dotyczy tylko przyszłych wpisów. Wpis dodawany w formularzu powyżej korzysta z własnego pola „Dotyczy”."
   },
   "logHint": {
-    "message": "Ostatnie 5000 decyzji Block Spam, bez treści wiadomości."
+    "message": "Ostatnie 5000 decyzji i ocen testowych Block Spam, bez treści wiadomości."
   },
   "logUndoHint": {
     "message": "Aby cofnąć decyzję, użyj przycisku w jej wierszu."
   },
   "logUndoHintKey": {
-    "message": "Aby cofnąć decyzję, użyj przycisku w jej wierszu albo zaznacz wiadomość i naciśnij $1."
+    "message": "Aby cofnąć decyzję, użyj przycisku w jej wierszu. Przy zaznaczonej wiadomości $1 ufa jej nadawcy, a $2 go blokuje."
   },
   "logFilterLabel": {
     "message": "Pokaż:"
@@ -642,7 +654,7 @@
     "message": "Szukaj nadawcy lub tematu"
   },
   "logSearchLabel": {
-    "message": "Szukaj w dzienniku według nadawcy lub tematu"
+    "message": "Szukaj nadawcy lub tematu w dzienniku"
   },
   "logClear": {
     "message": "Wyczyść dziennik…"
@@ -659,8 +671,11 @@
   "logCount": {
     "message": "Wyświetlono $1 z $2."
   },
+  "matchCount": {
+    "message": "Pasujące: $1 z $2."
+  },
   "logEmpty": {
-    "message": "Dziennik jest jeszcze pusty."
+    "message": "Nie ma jeszcze żadnych decyzji."
   },
   "logNoMatch": {
     "message": "Żaden wpis nie pasuje."
@@ -914,11 +929,17 @@
   "noFolders": {
     "message": "Brak folderów."
   },
+  "noFolderToAdd": {
+    "message": "Żadnego innego folderu tego konta nie można tu dodać."
+  },
+  "noAccounts": {
+    "message": "W programie Thunderbird nie ma jeszcze konta pocztowego. Najpierw dodaj je w programie Thunderbird."
+  },
   "folderToAdd": {
     "message": "Folder do dodania dla konta $1"
   },
   "incomingHint": {
-    "message": "Nowa poczta w monitorowanych folderach jest sprawdzana, gdy nadejdzie, po uruchomieniu programu Thunderbird i co 5 minut, także wtedy, gdy wcześniej przeczytano ją na innym urządzeniu."
+    "message": "Gdy ochrona jest włączona, nowa poczta w monitorowanych folderach jest sprawdzana, gdy nadejdzie, po uruchomieniu programu Thunderbird i co 5 minut, także wtedy, gdy wcześniej przeczytano ją na innym urządzeniu."
   },
   "monitoredTitle": {
     "message": "Monitorowane foldery"
@@ -933,7 +954,7 @@
     "message": "Poczta bez oceny AI"
   },
   "noVerdictLabel": {
-    "message": "Gdy nie ma żadnej usługi AI albo wszystkie zawiodły:"
+    "message": "Gdy żadna usługa AI nie jest włączona albo wszystkie zawiodły:"
   },
   "noVerdictLeave": {
     "message": "Pozostaw wiadomość na miejscu"
@@ -944,26 +965,41 @@
   "noVerdictScreening": {
     "message": "Przenieś ją do folderu do sprawdzenia"
   },
+  "noVerdictNoFolder": {
+    "message": "Bez folderu do sprawdzenia: $1. Poczta takiego konta zostaje na miejscu, dopóki nie wybierzesz folderu poniżej."
+  },
   "screeningTitle": {
     "message": "Folder do sprawdzenia"
   },
   "screeningHint": {
-    "message": "Folder pośredni między Odebranymi a Niechcianymi na pocztę od nieznanych nadawców. Gdy nadawca trafi na białą listę, jego wiadomości przechodzą stamtąd do Odebranych."
+    "message": "Folder pośredni między Odebranymi a Niechcianymi na pocztę bez oceny AI. Gdy nadawca trafi na białą listę, jego wiadomości przechodzą stamtąd do Odebranych."
   },
   "screeningNone": {
     "message": "Brak"
   },
+  "screeningNoCandidate": {
+    "message": "Nie ma jeszcze odpowiedniego folderu."
+  },
   "screeningFor": {
-    "message": "Folder do sprawdzenia konta $1"
+    "message": "$1: folder do sprawdzenia"
   },
   "screeningCreate": {
-    "message": "Utwórz folder"
+    "message": "Utwórz folder „$1”"
   },
   "screeningCreateFor": {
-    "message": "Utwórz folder dla konta $1"
+    "message": "Utwórz folder „$1” dla konta $2"
+  },
+  "screeningUse": {
+    "message": "Użyj folderu „$1”"
+  },
+  "screeningUseFor": {
+    "message": "Użyj folderu „$1” dla konta $2"
+  },
+  "screeningIsChosen": {
+    "message": "Folder „$1” jest już folderem do sprawdzenia."
   },
   "screeningCreated": {
-    "message": "Folder do sprawdzenia: $1"
+    "message": "Folder „$1” jest teraz folderem do sprawdzenia."
   },
   "screeningFolderName": {
     "message": "Do sprawdzenia"
@@ -994,6 +1030,9 @@
   },
   "serviceAddLabel": {
     "message": "Dodaj usługę:"
+  },
+  "serviceAdd": {
+    "message": "Dodaj…"
   },
   "presetGroup_decision": {
     "message": "Modele decyzyjne: najtańsze i najszybsze"
@@ -1092,7 +1131,7 @@
     "message": "Dokumentacja"
   },
   "apUseNamed": {
-    "message": "Używaj usługi $1"
+    "message": "$1: używaj tej usługi"
   },
   "apDisabled": {
     "message": "Wyłączona"
@@ -1101,7 +1140,10 @@
     "message": "Wymaga uwagi."
   },
   "apCoolingDown": {
-    "message": "Wstrzymana do $1 po przekroczeniu limitu. W tym czasie zastępuje ją następna usługa."
+    "message": "Wstrzymana do $1 po przekroczeniu limitu."
+  },
+  "apCoolingOthers": {
+    "message": "W tym czasie odpowiadają pozostałe usługi."
   },
   "apLastError": {
     "message": "Ostatni problem: $1"
@@ -1117,6 +1159,9 @@
   },
   "apTestNamed": {
     "message": "Testuj usługę $1"
+  },
+  "apTestNeedsSignIn": {
+    "message": "Najpierw się zaloguj: bez logowania niczego nie można przetestować."
   },
   "apTesting": {
     "message": "Testowanie…"
@@ -1143,7 +1188,7 @@
     "message": "Nie udało się odnowić logowania."
   },
   "diag_no_permission": {
-    "message": "Ten komputer nie zezwolił jeszcze na połączenia z serwerem $1. Edytuj usługę i naciśnij Zapisz."
+    "message": "Ten komputer nie zezwolił jeszcze na połączenia z serwerem $1. Edytuj usługę i naciśnij „Zapisz”."
   },
   "diag_service": {
     "message": "Usługa odrzuciła żądanie."
@@ -1212,13 +1257,16 @@
     "message": "Ustalony przez dostawcę."
   },
   "endpointHint_systemone": {
-    "message": "Pełny adres punktu końcowego decyzji. W przypadku Cloudflare zastąp <account id> identyfikatorem swojego konta."
+    "message": "Pełny adres punktu końcowego decyzji."
   },
   "endpointHint_openai_chat": {
     "message": "Adres podstawowy, bez /chat/completions. Tylko adresy na tym komputerze mogą używać http."
   },
+  "endpointPlaceholder": {
+    "message": "Zastąp część w nawiasach ostrych własną wartością, w przypadku Cloudflare identyfikatorem swojego konta."
+  },
   "modelHint_systemone": {
-    "message": "Pozostaw puste w przypadku lokalnego serwera, który udostępnia jeden model."
+    "message": "Nazwa modelu. Pozostaw puste w przypadku lokalnego serwera, który udostępnia jeden model."
   },
   "modelHint_openai_decisions": {
     "message": "Model decyzyjny, na przykład gpt-6-luna."
@@ -1239,7 +1287,10 @@
     "message": "Zapisany. Pozostaw puste, aby go zachować."
   },
   "keyHint": {
-    "message": "Przechowywany w profilu programu Thunderbird bez szyfrowania. Serwery na tym komputerze zwykle nie wymagają klucza."
+    "message": "Przechowywany w profilu programu Thunderbird bez szyfrowania."
+  },
+  "keyHintLocal": {
+    "message": "Serwery na tym komputerze zwykle nie wymagają klucza."
   },
   "loadModels": {
     "message": "Wczytaj modele"
@@ -1250,11 +1301,17 @@
   "loadModelsDone": {
     "message": "Wczytane modele: $1. Wybierz jeden z menu."
   },
+  "loadModelsUnlisted": {
+    "message": "Wczytane modele: $1. Ustawionego modelu nie ma wśród nich."
+  },
   "loadModelsNone": {
     "message": "Serwer nie podał żadnych modeli."
   },
   "modelChoose": {
     "message": "Wybierz model"
+  },
+  "modelUnlisted": {
+    "message": "$1 (nie ma go na liście usługi)"
   },
   "modelOther": {
     "message": "Inny…"
@@ -1332,7 +1389,7 @@
     "message": "Pytanie, na które AI odpowiada w sprawie każdej wiadomości. Modele decyzyjne otrzymują je jako instrukcje, modele czatu jako prompt systemowy."
   },
   "promptLanguage": {
-    "message": "Domyślny prompt jest po angielsku, bo to model go czyta, a własny możesz napisać w dowolnym języku."
+    "message": "Domyślny prompt jest po angielsku, bo to model go czyta. Własny możesz napisać w dowolnym języku."
   },
   "outputLineLabel": {
     "message": "W przypadku modeli czatu zawsze dodawany jest ten wiersz. Nie można go zmienić:"
@@ -1345,6 +1402,12 @@
   },
   "promptRestore": {
     "message": "Przywróć domyślny"
+  },
+  "tryOnMail": {
+    "message": "Aby wypróbować prompt lub próg na prawdziwej poczcie, zaznacz wiadomości, kliknij przycisk Block Spam na pasku narzędzi i wybierz „$1”: oceny trafią do dziennika i nic nie zostanie przeniesione."
+  },
+  "tryObserve": {
+    "message": "Aby obserwować nową pocztę bez przenoszenia, zaznacz opcję „$1” w kategorii $2."
   },
   "chatgptConsentTitle": {
     "message": "Użycie własnego planu ChatGPT"
@@ -1377,7 +1440,7 @@
     "message": "Zarządzaj użyciem"
   },
   "chatgptSignInAgain": {
-    "message": "Zaloguj się ponownie"
+    "message": "Zaloguj się ponownie…"
   },
   "chatgptSignOut": {
     "message": "Wyloguj się"
@@ -1401,10 +1464,10 @@
     "message": "Logowanie przez ChatGPT"
   },
   "signInWaiting": {
-    "message": "Dokończ logowanie w karcie, która się otworzyła. Ta strona zaktualizuje się sama po zakończeniu logowania."
+    "message": "Zaloguj się w karcie, która się otworzyła. Ta strona zaktualizuje się sama po zakończeniu logowania."
   },
   "signInManual": {
-    "message": "Dokończ logowanie w karcie, która się otworzyła, albo w przeglądarce. Następnie wklej poniżej adres, pod który nastąpiło przekierowanie."
+    "message": "Zaloguj się w karcie, która się otworzyła, albo w przeglądarce. Na końcu przeglądarka wyświetli stronę błędu dla adresu zaczynającego się od http://127.0.0.1:1455. Tak ma być: skopiuj ten adres z paska adresu, wklej go w polu poniżej i naciśnij „Dokończ logowanie”."
   },
   "signInOpenBrowser": {
     "message": "Otwórz w mojej przeglądarce"
@@ -1413,10 +1476,10 @@
     "message": "Kopiuj adres logowania"
   },
   "signInPasteHint": {
-    "message": "Jeśli ta strona nie zaktualizuje się sama: na końcu logowania przeglądarka próbuje otworzyć adres zaczynający się od http://127.0.0.1:1455 i wyświetla stronę błędu. Tak ma być. Skopiuj ten adres z paska adresu i wklej go tutaj."
+    "message": "Jeśli ta strona nie zaktualizuje się sama: na końcu logowania przeglądarka wyświetla stronę błędu dla adresu zaczynającego się od http://127.0.0.1:1455. Tak ma być. Skopiuj ten adres z paska adresu, wklej go w polu poniżej i naciśnij „Dokończ logowanie”."
   },
   "signInAddressLabel": {
-    "message": "Adres, pod który nastąpiło przekierowanie"
+    "message": "Adres strony błędu"
   },
   "signInFinish": {
     "message": "Dokończ logowanie"
@@ -1470,7 +1533,7 @@
     "message": "Skróty klawiszowe"
   },
   "shortcutsMore": {
-    "message": "Własne wiadomości są pomijane. Ręczne blokowanie i ufanie działa także w trybie obserwacji i przy wyłączonej ochronie. Po użyciu skrótu lub menu kontekstowego powiadomienie systemowe informuje, co zrobiono, a panel Block Spam na pasku narzędzi pozwala to cofnąć."
+    "message": "Własne wiadomości są pomijane. Ręczne blokowanie i ufanie działa także w trybie obserwacji i przy wyłączonej ochronie. Po użyciu skrótu lub menu kontekstowego powiadomienie systemowe informuje, co zrobiono, a panel przycisku Block Spam na pasku narzędzi pozwala to cofnąć."
   },
   "cmdBlockAddress": {
     "message": "Zablokuj adres nadawcy"
@@ -1527,7 +1590,7 @@
     "message": "Dziennik."
   },
   "otherWaysLog": {
-    "message": "Każda decyzja ma w swoim wierszu przycisk, który ją cofa."
+    "message": "Decyzję można cofnąć przyciskiem w jej wierszu."
   },
   "otherWaysLogLink": {
     "message": "Otwórz dziennik"
@@ -1629,10 +1692,10 @@
     "message": "Import"
   },
   "importHint": {
-    "message": "Scalanie dodaje wpisy z pliku do list i pozostawia ustawienia oraz usługi AI bez zmian. Zastąpienie nadpisuje listy, ustawienia i usługi AI."
+    "message": "„Scal listy” dodaje wpisy z pliku do list i pozostawia ustawienia oraz usługi AI bez zmian. „Zastąp wszystko” nadpisuje listy, ustawienia i usługi AI."
   },
   "importMore": {
-    "message": "Po zastąpieniu musisz ponownie wpisać klucze i powtórzyć logowanie do ChatGPT. Import nigdy nie włącza ochrony. Pozycje należące do konta trafiają do konta o tym samym adresie e-mail. Pozostałe są pomijane i wymieniane w raporcie."
+    "message": "Po użyciu trybu „Zastąp wszystko” musisz ponownie wpisać klucze i powtórzyć logowanie do ChatGPT. Import nigdy nie włącza ochrony. Pozycje należące do konta trafiają do konta o tym samym adresie e-mail. Pozostałe są pomijane i wymieniane w raporcie."
   },
   "importChoose": {
     "message": "Wybierz plik…"
@@ -1651,9 +1714,6 @@
   },
   "importButton": {
     "message": "Importuj"
-  },
-  "importChooseFile": {
-    "message": "Najpierw wybierz plik."
   },
   "importNotJson": {
     "message": "Ten plik nie jest eksportem Block Spam."
@@ -1731,13 +1791,13 @@
     "message": "Nie ma go na żadnej liście."
   },
   "popupDecisionLabel": {
-    "message": "Decyzja w sprawie tej wiadomości: $1, $2. Pokaż w dzienniku."
+    "message": "$1, $2. Decyzja w sprawie tej wiadomości: pokaż w dzienniku."
   },
   "popupNoChange": {
     "message": "Nic do zmiany: nadawca jest już na tej liście."
   },
   "popupLastCommand": {
-    "message": "Ostatnie polecenie, $1:"
+    "message": "Ostatnie polecenie ($1):"
   },
   "popupSelectedMany_one": {
     "message": "Zaznaczono $1 wiadomość"
@@ -1761,16 +1821,16 @@
     "message": "Zaufaj"
   },
   "popupBlock": {
-    "message": "Zablokuj nadawcę"
+    "message": "Zablokuj adres"
   },
   "popupTrust": {
-    "message": "Zaufaj nadawcy"
+    "message": "Zaufaj adresowi"
   },
   "popupBlockMany": {
-    "message": "Zablokuj nadawców"
+    "message": "Zablokuj adresy"
   },
   "popupTrustMany": {
-    "message": "Zaufaj nadawcom"
+    "message": "Zaufaj adresom"
   },
   "popupBlockDomainNamed": {
     "message": "Zablokuj całą domenę $1"
@@ -1785,7 +1845,7 @@
     "message": "To jeden z własnych adresów."
   },
   "popupUnknownSender": {
-    "message": "Pierwotny nadawca nie jest znany. Wiadomość zostanie przeniesiona, ale żaden wpis nie zostanie dodany."
+    "message": "Pierwotny nadawca nie jest znany. Zablokowanie lub zaufanie przenosi wiadomość, ale nie dodaje wpisu."
   },
   "popupRecent": {
     "message": "Ostatnie decyzje"

@@ -143,6 +143,9 @@
   "invalid_undo_gone": {
     "message": "This command can no longer be undone here: another one was made since."
   },
+  "invalid_folder_role": {
+    "message": "This folder cannot be used here: its role in Thunderbird or in another list of Block Spam rules it out."
+  },
   "catOverview": {
     "message": "Overview"
   },
@@ -192,7 +195,7 @@
     "message": "New mail in monitored folders is checked against the lists, and mail from blocked senders goes to Junk. Mail that arrived before protection was switched on is never touched."
   },
   "protectionMore": {
-    "message": "Mail from senders on neither list is scored by an AI service if you added one. Otherwise it follows the setting under Incoming mail. Learning from sent mail, the shortcuts and the buttons of the toolbar panel work whether protection is on or off."
+    "message": "Mail from senders on neither list is scored by an AI service if you added one. Otherwise it follows the setting under Incoming mail. Learning from sent mail, the shortcuts and the Block Spam button in the toolbar work whether protection is on or off."
   },
   "protectionSwitchOn": {
     "message": "Switch protection on"
@@ -282,10 +285,10 @@
     "message": "Its key is missing. Edit this service and enter the key."
   },
   "remedy_permission": {
-    "message": "This computer has not allowed its host yet. Edit this service and press Save."
+    "message": "This computer has not allowed its host yet. Edit this service and press “Save”."
   },
   "remedy_sign_in": {
-    "message": "You are not signed in. Use Continue with ChatGPT in its row."
+    "message": "You are not signed in. Use “Continue with ChatGPT” in its row."
   },
   "remedy_plan_refused": {
     "message": "OpenAI refused to use this plan. Sign in again, or check the plan in ChatGPT settings."
@@ -318,7 +321,7 @@
     "message": "Add an AI service (optional)"
   },
   "step2Text": {
-    "message": "It scores mail from senders you have never written to. Without one, such mail stays where it is."
+    "message": "It scores mail from senders you have never written to. Without one, such mail stays where it is, unless you choose otherwise under Incoming mail."
   },
   "step2Add": {
     "message": "Add an AI service"
@@ -338,6 +341,15 @@
   "switchOnAnyway": {
     "message": "Switch on anyway"
   },
+  "scanWaitTitle": {
+    "message": "Wait for the scan to finish?"
+  },
+  "scanWaitText": {
+    "message": "The scan of your sent mail is still running. Until it has finished, mail from people you already write to could be sent to the AI."
+  },
+  "scanWait": {
+    "message": "Wait for the scan"
+  },
   "observationTitle": {
     "message": "Observation mode"
   },
@@ -345,7 +357,7 @@
     "message": "Only observe: decide and log, but move nothing"
   },
   "observationHint": {
-    "message": "No message is moved and the AI adds nothing to the black list. The log shows what would have happened. Use it to try a model, a prompt or a cutoff before you trust them."
+    "message": "Block Spam decides and logs, but moves no message by itself, and the AI adds nothing to the black list. The log shows what would have happened. Use it to try a model, a prompt or a cutoff before you trust them."
   },
   "observationOff": {
     "message": "Protection is off, so nothing is observed yet."
@@ -405,7 +417,7 @@
     "message": "off"
   },
   "fatalDownload": {
-    "message": "Download the raw data"
+    "message": "Download the raw data…"
   },
   "fatalDownloadHint": {
     "message": "The raw data contains your API keys and sign-in tokens. Keep the file private."
@@ -480,7 +492,7 @@
     "message": "A sender is matched by address first, then by domain, so an address entry always beats a domain entry."
   },
   "listsMore": {
-    "message": "A blocked address stays blocked inside a trusted domain, and a trusted person passes inside a blocked domain. The white list is learned from your sent mail. The black list holds senders you blocked and senders the AI scored as spam."
+    "message": "A blocked address stays blocked inside a trusted domain, and a trusted person passes inside a blocked domain. The white list is learned from your sent mail and also holds senders you trusted by hand. The black list holds senders you blocked and senders the AI scored as spam."
   },
   "listsWhiteCount_one": {
     "message": "White list: $1 entry."
@@ -603,7 +615,7 @@
     "message": "Manual"
   },
   "newEntriesTitle": {
-    "message": "New entries"
+    "message": "Sharing between accounts"
   },
   "newEntriesLabel": {
     "message": "Entries created by learning, by AI and by blocking or trusting are:"
@@ -615,16 +627,16 @@
     "message": "Kept per account"
   },
   "newEntriesHint": {
-    "message": "Changing this affects future entries only. Entries you add by hand above choose for themselves."
+    "message": "Changing this affects future entries only. An entry you add with the form above uses its own “Applies to”."
   },
   "logHint": {
-    "message": "The last 5000 decisions of Block Spam, without the text of any message."
+    "message": "The last 5,000 decisions and test scores of Block Spam, without the text of any message."
   },
   "logUndoHint": {
     "message": "To undo a decision, use the button in its row."
   },
   "logUndoHintKey": {
-    "message": "To undo a decision, use the button in its row, or select the message and press $1."
+    "message": "To undo a decision, use the button in its row. With the message selected, $1 trusts its sender and $2 blocks it."
   },
   "logFilterLabel": {
     "message": "Show:"
@@ -642,7 +654,7 @@
     "message": "Search sender or subject"
   },
   "logSearchLabel": {
-    "message": "Search the log by sender or subject"
+    "message": "Search sender or subject in the log"
   },
   "logClear": {
     "message": "Clear log…"
@@ -659,8 +671,11 @@
   "logCount": {
     "message": "Showing $1 of $2."
   },
+  "matchCount": {
+    "message": "Matching: $1 of $2."
+  },
   "logEmpty": {
-    "message": "Nothing logged yet."
+    "message": "No decisions yet."
   },
   "logNoMatch": {
     "message": "No entry matches."
@@ -888,7 +903,7 @@
     "message": "Show message"
   },
   "logShowMessageNamed": {
-    "message": "Show the message: $1"
+    "message": "Show message: $1"
   },
   "logMessageGone": {
     "message": "The message was not found."
@@ -914,11 +929,17 @@
   "noFolders": {
     "message": "No folders."
   },
+  "noFolderToAdd": {
+    "message": "No other folder of this account can be added here."
+  },
+  "noAccounts": {
+    "message": "Thunderbird has no mail account yet. Add one in Thunderbird first."
+  },
   "folderToAdd": {
     "message": "Folder to add for $1"
   },
   "incomingHint": {
-    "message": "New mail in monitored folders is checked when it arrives, when Thunderbird starts and every 5 minutes, also when it was read on another device first."
+    "message": "While protection is on, new mail in monitored folders is checked when it arrives, when Thunderbird starts and every 5 minutes, also when it was read on another device first."
   },
   "monitoredTitle": {
     "message": "Monitored folders"
@@ -933,7 +954,7 @@
     "message": "Mail without an AI verdict"
   },
   "noVerdictLabel": {
-    "message": "When no AI service is set up or all of them failed:"
+    "message": "When no AI service is switched on or all of them failed:"
   },
   "noVerdictLeave": {
     "message": "Leave the message where it is"
@@ -944,26 +965,41 @@
   "noVerdictScreening": {
     "message": "Move it to the screening folder"
   },
+  "noVerdictNoFolder": {
+    "message": "Without a screening folder: $1. Mail of such an account stays where it is until you choose a folder below."
+  },
   "screeningTitle": {
     "message": "Screening folder"
   },
   "screeningHint": {
-    "message": "A folder between the Inbox and Junk for mail from unknown senders. When a sender is added to the white list, their messages move from there to the Inbox."
+    "message": "A folder between the Inbox and Junk for mail without an AI verdict. When a sender is added to the white list, their messages move from there to the Inbox."
   },
   "screeningNone": {
     "message": "None"
   },
+  "screeningNoCandidate": {
+    "message": "No suitable folder yet."
+  },
   "screeningFor": {
-    "message": "Screening folder of $1"
+    "message": "$1: screening folder"
   },
   "screeningCreate": {
-    "message": "Create folder"
+    "message": "Create the folder “$1”"
   },
   "screeningCreateFor": {
-    "message": "Create folder for $1"
+    "message": "Create the folder “$1” for $2"
+  },
+  "screeningUse": {
+    "message": "Use the folder “$1”"
+  },
+  "screeningUseFor": {
+    "message": "Use the folder “$1” for $2"
+  },
+  "screeningIsChosen": {
+    "message": "The folder “$1” is the screening folder already."
   },
   "screeningCreated": {
-    "message": "Screening folder: $1"
+    "message": "The folder “$1” is now the screening folder."
   },
   "screeningFolderName": {
     "message": "Screening"
@@ -994,6 +1030,9 @@
   },
   "serviceAddLabel": {
     "message": "Add a service:"
+  },
+  "serviceAdd": {
+    "message": "Add…"
   },
   "presetGroup_decision": {
     "message": "Decision models: cheapest and fastest"
@@ -1092,7 +1131,7 @@
     "message": "Documentation"
   },
   "apUseNamed": {
-    "message": "Use $1"
+    "message": "$1: use this service"
   },
   "apDisabled": {
     "message": "Switched off"
@@ -1101,7 +1140,10 @@
     "message": "Needs attention."
   },
   "apCoolingDown": {
-    "message": "Paused until $1 after a rate limit. The next service takes over meanwhile."
+    "message": "Paused until $1 after a rate limit."
+  },
+  "apCoolingOthers": {
+    "message": "The other services answer meanwhile."
   },
   "apLastError": {
     "message": "Last problem: $1"
@@ -1117,6 +1159,9 @@
   },
   "apTestNamed": {
     "message": "Test $1"
+  },
+  "apTestNeedsSignIn": {
+    "message": "Sign in first: nothing can be tested without a sign-in."
   },
   "apTesting": {
     "message": "Testing…"
@@ -1143,7 +1188,7 @@
     "message": "The sign-in could not be renewed."
   },
   "diag_no_permission": {
-    "message": "This computer has not allowed the host $1 yet. Edit the service and press Save."
+    "message": "This computer has not allowed the host $1 yet. Edit the service and press “Save”."
   },
   "diag_service": {
     "message": "The service refused the request."
@@ -1212,25 +1257,28 @@
     "message": "Set by the provider."
   },
   "endpointHint_systemone": {
-    "message": "The full address of the decision endpoint. For Cloudflare, replace <account id> with your account id."
+    "message": "The full address of the decision endpoint."
   },
   "endpointHint_openai_chat": {
     "message": "The base address, without /chat/completions. Only addresses on this computer may use http."
   },
+  "endpointPlaceholder": {
+    "message": "Replace the part in angle brackets with your own value, for Cloudflare with your account id."
+  },
   "modelHint_systemone": {
-    "message": "Leave empty for a local server that serves a single model."
+    "message": "The name of the model. Leave empty for a local server that serves a single model."
   },
   "modelHint_openai_decisions": {
     "message": "The decision model, for example gpt-6-luna."
   },
   "modelHint_openai_chat": {
-    "message": "The model name as the provider spells it. Load models lists what the server offers."
+    "message": "The model name as the provider spells it. “Load models” lists what the server offers."
   },
   "modelHint_anthropic": {
     "message": "A Claude model id, for example claude-opus-5-5, or claude-haiku-5-5 for lower cost."
   },
   "modelHint_chatgpt": {
-    "message": "Load models lists the models of your ChatGPT account."
+    "message": "“Load models” lists the models of your ChatGPT account."
   },
   "keyPlaceholder": {
     "message": "Paste the key"
@@ -1239,7 +1287,10 @@
     "message": "Saved. Leave empty to keep it."
   },
   "keyHint": {
-    "message": "Stored unencrypted in your Thunderbird profile. Servers on this computer usually need no key."
+    "message": "Stored unencrypted in your Thunderbird profile."
+  },
+  "keyHintLocal": {
+    "message": "Servers on this computer usually need no key."
   },
   "loadModels": {
     "message": "Load models"
@@ -1250,11 +1301,17 @@
   "loadModelsDone": {
     "message": "Models loaded: $1. Choose one from the menu."
   },
+  "loadModelsUnlisted": {
+    "message": "Models loaded: $1. The model that is set is not among them."
+  },
   "loadModelsNone": {
     "message": "The server listed no models."
   },
   "modelChoose": {
     "message": "Choose a model"
+  },
+  "modelUnlisted": {
+    "message": "$1 (not on the service's list)"
   },
   "modelOther": {
     "message": "Other…"
@@ -1332,7 +1389,7 @@
     "message": "The question the AI answers about each email. Decision models get it as their instructions, chat models as their system prompt."
   },
   "promptLanguage": {
-    "message": "The default prompt is in English because that is what the model reads, and you can write yours in any language."
+    "message": "The default prompt is in English because it is the model that reads it. You can write yours in any language."
   },
   "outputLineLabel": {
     "message": "For chat models this line is always added. It cannot be changed:"
@@ -1345,6 +1402,12 @@
   },
   "promptRestore": {
     "message": "Restore default"
+  },
+  "tryOnMail": {
+    "message": "To try a prompt or a cutoff on real mail, select messages, click the Block Spam button in the toolbar and choose “$1”: the scores go to the log and nothing is moved."
+  },
+  "tryObserve": {
+    "message": "To watch new mail without moving anything, tick “$1” on the $2."
   },
   "chatgptConsentTitle": {
     "message": "Use your ChatGPT plan"
@@ -1377,7 +1440,7 @@
     "message": "Manage usage"
   },
   "chatgptSignInAgain": {
-    "message": "Sign in again"
+    "message": "Sign in again…"
   },
   "chatgptSignOut": {
     "message": "Sign out"
@@ -1401,10 +1464,10 @@
     "message": "Signing in with ChatGPT"
   },
   "signInWaiting": {
-    "message": "Finish signing in in the tab that opened. This page updates by itself when the sign-in completes."
+    "message": "Sign in in the tab that opened. This page updates by itself when the sign-in is complete."
   },
   "signInManual": {
-    "message": "Finish signing in in the tab that opened, or in your browser. Then paste the address you were redirected to below."
+    "message": "Sign in in the tab that opened, or in your browser. At the end the browser shows an error page for an address that starts with http://127.0.0.1:1455. That is expected: copy that address from the address bar, paste it into the field below and press “Finish sign-in”."
   },
   "signInOpenBrowser": {
     "message": "Open in my browser instead"
@@ -1413,10 +1476,10 @@
     "message": "Copy the sign-in address"
   },
   "signInPasteHint": {
-    "message": "If this page does not update by itself: at the end of the sign-in the browser tries to open an address that starts with http://127.0.0.1:1455 and shows an error page. That is expected. Copy that address from the address bar and paste it here."
+    "message": "If this page does not update by itself: at the end of the sign-in the browser shows an error page for an address that starts with http://127.0.0.1:1455. That is expected. Copy that address from the address bar, paste it into the field below and press “Finish sign-in”."
   },
   "signInAddressLabel": {
-    "message": "Address you were redirected to"
+    "message": "Address of the error page"
   },
   "signInFinish": {
     "message": "Finish sign-in"
@@ -1470,7 +1533,7 @@
     "message": "Keyboard shortcuts"
   },
   "shortcutsMore": {
-    "message": "Your own messages are ignored. Blocking and trusting by hand work in observation mode and while protection is off. After a shortcut or the context menu, a desktop notification says what was done, and the Block Spam panel in the toolbar offers Undo."
+    "message": "Your own messages are ignored. Blocking and trusting by hand work in observation mode and while protection is off. After a shortcut or the context menu, a desktop notification says what was done, and the panel of the Block Spam button in the toolbar lets you undo it."
   },
   "cmdBlockAddress": {
     "message": "Block the sender's address"
@@ -1497,7 +1560,7 @@
     "message": "Change shortcuts…"
   },
   "shortcutsRebindHint": {
-    "message": "Opens Thunderbird's own list of shortcuts. You also find it under Add-ons and Themes, in the gear menu, Manage Extension Shortcuts."
+    "message": "Opens Thunderbird's own list of shortcuts. You also find it under Add-ons and Themes, in the gear menu, as “Manage Extension Shortcuts”."
   },
   "smartTitle": {
     "message": "Domain shortcuts"
@@ -1515,7 +1578,7 @@
     "message": "Toolbar button."
   },
   "otherWaysPopup": {
-    "message": "Select one or more messages and click the Block Spam button in the toolbar. The panel says what the lists hold about the sender, offers buttons to block and to trust, and Undo for the last command."
+    "message": "Select one or more messages and click the Block Spam button in the toolbar. The panel says what the lists hold about the sender, offers buttons to block and to trust, and lets you undo the last command."
   },
   "otherWaysMenuName": {
     "message": "Context menu."
@@ -1527,7 +1590,7 @@
     "message": "Log."
   },
   "otherWaysLog": {
-    "message": "Every decision has a button in its row that undoes it."
+    "message": "A decision can be undone with the button in its row."
   },
   "otherWaysLogLink": {
     "message": "Open the log"
@@ -1548,7 +1611,7 @@
     "message": "Save the companion add-on file…"
   },
   "bareKeysStepInstall": {
-    "message": "Open Add-ons and Themes, click the gear menu, choose Install Add-on From File and pick the saved file."
+    "message": "Open Add-ons and Themes, click the gear menu, choose “Install Add-on From File” and pick the saved file."
   },
   "bareKeysCaptures": {
     "message": "From then on it captures $1 in mail windows and passes them on to Block Spam."
@@ -1629,10 +1692,10 @@
     "message": "Import"
   },
   "importHint": {
-    "message": "Merge adds the entries of the file to your lists and leaves settings and AI services untouched. Replace overwrites lists, settings and AI services."
+    "message": "“Merge lists” adds the entries of the file to your lists and leaves settings and AI services untouched. “Replace everything” overwrites lists, settings and AI services."
   },
   "importMore": {
-    "message": "After Replace, keys must be entered again and the ChatGPT sign-in repeated. Importing never switches protection on. Items that belong to an account follow the account with the same email address here. The others are skipped and reported."
+    "message": "After “Replace everything”, keys must be entered again and the ChatGPT sign-in repeated. Importing never switches protection on. Items that belong to an account follow the account with the same email address here. The others are skipped and reported."
   },
   "importChoose": {
     "message": "Choose file…"
@@ -1651,9 +1714,6 @@
   },
   "importButton": {
     "message": "Import"
-  },
-  "importChooseFile": {
-    "message": "Choose a file first."
   },
   "importNotJson": {
     "message": "This file is not a Block Spam export."
@@ -1713,7 +1773,7 @@
     "message": "$1 problems need your attention."
   },
   "popupShowProblems": {
-    "message": "Show in Settings"
+    "message": "Show in settings"
   },
   "popupNoSelection": {
     "message": "Select a message to block or trust its sender here."
@@ -1731,13 +1791,13 @@
     "message": "On neither list."
   },
   "popupDecisionLabel": {
-    "message": "Decision about this message: $1, $2. Show in the log."
+    "message": "$1, $2. Decision about this message: show in the log."
   },
   "popupNoChange": {
     "message": "Nothing to change: the sender is on this list already."
   },
   "popupLastCommand": {
-    "message": "Last command, $1:"
+    "message": "Last command ($1):"
   },
   "popupSelectedMany_one": {
     "message": "$1 message selected"
@@ -1761,16 +1821,16 @@
     "message": "Trust"
   },
   "popupBlock": {
-    "message": "Block sender"
+    "message": "Block address"
   },
   "popupTrust": {
-    "message": "Trust sender"
+    "message": "Trust address"
   },
   "popupBlockMany": {
-    "message": "Block senders"
+    "message": "Block addresses"
   },
   "popupTrustMany": {
-    "message": "Trust senders"
+    "message": "Trust addresses"
   },
   "popupBlockDomainNamed": {
     "message": "Block the whole domain $1"
@@ -1785,7 +1845,7 @@
     "message": "This is one of your own addresses."
   },
   "popupUnknownSender": {
-    "message": "The original sender is not known. The message is moved, but no entry is added."
+    "message": "The original sender is not known. Blocking or trusting moves the message, but adds no entry."
   },
   "popupRecent": {
     "message": "Last decisions"

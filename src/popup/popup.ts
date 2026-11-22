@@ -11,7 +11,7 @@ import type { AccountFacts } from "../core/problems";
 import type { AccessPoint, Entry, LogEntry, Settings } from "../core/types";
 import { address, button, byId, errorText, h, iconButton, replace, setUnavailable, tNodes } from "../options/dom";
 import type { Child } from "../options/dom";
-import { formatFullTime, formatScore, formatShortTime } from "../options/format";
+import { formatFullTime, formatLogTime, formatScore, formatShortTime } from "../options/format";
 import { icon } from "../options/icons";
 import { logReader } from "../options/logData";
 import { loadShortcutKeys } from "../options/shortcutKeys";
@@ -161,8 +161,8 @@ function drawCommand(tabId: number | null): void {
       void send("dismissCommand", { id: record.id }).catch(() => undefined);
     }
   });
-  // A command that was not made here, in this panel, says when it was made.
-  const caption = shown.own ? "" : t("popupLastCommand", formatShortTime(record.time, Date.now()));
+  // A command that was not made here, in this panel, says when it was made: the time, and the date when that was not today.
+  const caption = shown.own ? "" : t("popupLastCommand", formatLogTime(record.time, Date.now()));
   commandBox.hidden = false;
   replace(commandBox, resultBox(record.lines, record.failed, caption, [undo, dismiss]));
 }
@@ -188,7 +188,7 @@ function commandButton(label: string, name: string, command: CommandName, tabId:
     if (element.getAttribute("aria-disabled") === "true") {
       return;
     }
-    for (const other of selectionBox.querySelectorAll("button")) {
+    for (const other of selectionBox.querySelectorAll(".row button")) {
       other.setAttribute("aria-disabled", "true");
     }
     void (async () => {
@@ -255,15 +255,18 @@ function decisionOf(sender: SenderInfo): HTMLElement | null {
 
 async function drawSelection(tabId: number | null, quiet = false): Promise<void> {
   let count = 0;
+  let limit = scoreState.limit;
   let sender: SenderInfo | null = null;
   if (tabId !== null) {
     try {
-      ({ count, sender } = await send("selection", { tabId }));
+      ({ count, limit, sender } = await send("selection", { tabId }));
     } catch {
       count = 0;
     }
   }
   selectionBox.hidden = false;
+  scoreState = { ...scoreState, count, limit };
+  drawScoreButton();
   if (count === 0) {
     // Right after installation the popup points at setup and nothing else.
     selectionBox.hidden = quiet;
@@ -409,8 +412,11 @@ function confirmScoring(tabId: number, count: number): void {
   send_.focus();
 }
 
+/** How many messages are selected, and whether a test is running already: what the test button needs to know. */
+let scoreState: { count: number; limit: number; scoring: boolean } = { count: 0, limit: Number.POSITIVE_INFINITY, scoring: false };
+
 function scoreButton(): HTMLButtonElement {
-  return button(t("popupScoreSelected"), () => {
+  const element = button(t("popupScoreSelected"), () => {
     void (async () => {
       try {
         const tabId = await activeTabId();
@@ -431,6 +437,24 @@ function scoreButton(): HTMLButtonElement {
       }
     })();
   });
+  element.dataset.role = "score";
+  drawScoreButton(element);
+  return element;
+}
+
+/** The test needs a selection and one run at a time. Until then the button is unavailable and its tooltip says what is missing. */
+function drawScoreButton(element: HTMLElement | null = scoreBox.querySelector<HTMLElement>('button[data-role="score"]')): void {
+  if (element === null) {
+    return;
+  }
+  setUnavailable(element, false);
+  if (scoreState.scoring) {
+    setUnavailable(element, true, t("errorScoringRunning"));
+  } else if (scoreState.count === 0) {
+    setUnavailable(element, true, t("popupNothingSelected"));
+  } else if (scoreState.count > scoreState.limit) {
+    setUnavailable(element, true, t("popupScoreTooMany", scoreState.limit));
+  }
 }
 
 function toggleButton(settings: Settings): HTMLButtonElement {
@@ -466,6 +490,7 @@ async function draw(): Promise<void> {
   }
   const hasAi = accessPoints.some((point) => point.enabled);
   const tabId = await activeTabId();
+  scoreState = { ...scoreState, scoring: status.scoring };
   // A command made with a shortcut or from the context menu since the popup was last open is shown with Undo.
   if (lastCommand === null || !lastCommand.own) {
     const { command } = await send("lastCommand", {}).catch(() => ({ command: null }));

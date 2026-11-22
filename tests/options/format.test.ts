@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { logEntryKey } from "../../src/core/keys";
-import { breakableParts, formatLogTime, formatScore, formatShortcut, formatShortTime, matchesSearch, parseEntryDetail } from "../../src/options/format";
+import { breakableParts, formatLogTime, formatScore, formatShortcut, formatShortTime, logTimeParts, matchesSearch, parseEntryDetail } from "../../src/options/format";
 import { folderDisplayName } from "../../src/options/model";
 
 describe("times", () => {
@@ -16,6 +16,15 @@ describe("times", () => {
   it("adds the time of day to other days in the log", () => {
     expect(formatLogTime(new Date(2026, 10, 21, 8, 5).getTime(), now, "en-GB")).toBe("08:05");
     expect(formatLogTime(new Date(2026, 10, 20, 8, 5).getTime(), now, "en-GB")).toBe("20/11, 08:05");
+  });
+
+  it("gives the log the date and the time of day as two parts, so that the date can stand above the time", () => {
+    expect(logTimeParts(new Date(2026, 10, 21, 8, 5).getTime(), now, "en-GB")).toEqual({ date: null, clock: "08:05" });
+    expect(logTimeParts(new Date(2026, 10, 20, 8, 5).getTime(), now, "en-GB")).toEqual({ date: "20/11", clock: "08:05" });
+    expect(logTimeParts(new Date(2025, 11, 31, 20, 35).getTime(), now, "pl")).toEqual({ date: "31.12.2025", clock: "20:35" });
+    // A 12-hour clock has an AM or PM that makes the time longer. It still is one part.
+    expect(logTimeParts(new Date(2025, 11, 31, 20, 35).getTime(), now, "en-US").date).toBe("12/31/2025");
+    expect(logTimeParts(new Date(2025, 11, 31, 20, 35).getTime(), now, "en-US").clock).toMatch(/^08:35\sPM$/);
   });
 
   it("writes scores with two decimals, the way the language of the strings writes numbers", () => {

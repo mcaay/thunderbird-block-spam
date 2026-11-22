@@ -55,6 +55,8 @@ export class FakeBrowser {
   readonly notificationIds: string[] = [];
   /** The toolbar button as the background last set it. */
   readonly badge: { text: string; title: string | null; color: string | null } = { text: "", title: null, color: null };
+  /** Folders of account1 next to the Inbox, Sent, Junk and Screening, when a test wants more. */
+  readonly extraFolders: tb.MailFolder[] = [];
   /** Messages opened in a tab, by their number. */
   readonly openedMessages: number[] = [];
   /** Tabs brought to the front. */
@@ -94,7 +96,7 @@ export class FakeBrowser {
       },
       folders: {
         query: async (query: { accountId?: string; specialUse?: string[] } = {}) =>
-          FOLDERS.filter(
+          [...FOLDERS, ...this.extraFolders].filter(
             (folder) =>
               (query.accountId === undefined || folder.accountId === query.accountId) &&
               (query.specialUse === undefined || query.specialUse.every((use) => folder.specialUse.includes(use))),
@@ -268,6 +270,11 @@ export class FakeBrowser {
       },
     };
     this.api = api as unknown as tb.Browser;
+  }
+
+  /** A plain folder of account1 without a role in Thunderbird. */
+  static folder(path: string): tb.MailFolder {
+    return { id: `f${path}`, accountId: ACCOUNT_ID, name: path.slice(path.lastIndexOf("/") + 1), path, specialUse: [], isRoot: false, isVirtual: false, isUnified: false, isTag: false };
   }
 
   /** A message header in a folder of account1, the Inbox unless another folder id is given. */

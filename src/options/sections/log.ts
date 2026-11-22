@@ -14,9 +14,9 @@ import { BUNDLED_PUBLIC_DOMAINS } from "../../data/publicDomains";
 import { stringsLocale, t, tCode } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
 import { attemptsLines } from "../diagnostic";
-import { address, button, byId, dialog, errorText, guard, h, option, reconcile, replace, setUnavailable } from "../dom";
+import { address, button, byId, dialog, errorText, guard, h, option, reconcile, replace, setUnavailable, tNodes } from "../dom";
 import type { Child } from "../dom";
-import { formatFullTime, formatLogTime, formatScore, matchesSearch, parseEntryDetail } from "../format";
+import { formatFullTime, formatScore, logTimeParts, matchesSearch, parseEntryDetail } from "../format";
 import { logReader } from "../logData";
 import { accountName, ownAddresses } from "../model";
 import type { Model } from "../model";
@@ -84,7 +84,23 @@ export function logSection(): Section {
   });
   const rows = h("tbody", { attrs: { role: "rowgroup" } });
   const more = h("div", { class: "row" });
-  const summary = h("p", { class: "description" });
+  /** How many entries are shown, or how many match the filter and the search, out of how many. */
+  const summary = h("p", { class: "description count-line", attrs: { role: "status" } });
+  // Nothing to clear in an empty log: the button is unavailable until there is.
+  const clear = button(t("logClear"), () =>
+    void dialog({
+      title: t("logClearTitle"),
+      body: [t("logClearText")],
+      confirmLabel: t("logClearConfirm"),
+      danger: true,
+      onConfirm: async () => {
+        await send("clearLog", {});
+        results.clear();
+        gone.clear();
+      },
+    }),
+  );
+  clear.disabled = true;
   const header = (label: string, cls: string): HTMLElement => h("th", { text: label, class: cls, attrs: { role: "columnheader", scope: "col" } });
 
   replace(
@@ -98,19 +114,7 @@ export function logSection(): Section {
       h("label", { for: "log-filter", text: t("logFilterLabel") }),
       filter,
       search,
-      button(t("logClear"), () =>
-        void dialog({
-          title: t("logClearTitle"),
-          body: [t("logClearText")],
-          confirmLabel: t("logClearConfirm"),
-          danger: true,
-          onConfirm: async () => {
-            await send("clearLog", {});
-            results.clear();
-            gone.clear();
-          },
-        }),
-      ),
+      clear,
     ),
     summary,
     h(
@@ -288,7 +292,8 @@ export function logSection(): Section {
     }
     const actButton = setUnavailable(button(current.label, () => act(entry, key, action), "small"), working);
     actButton.title = current.title;
-    actButton.setAttribute("aria-label", current.title);
+    // The name starts with the words on the button, then says exactly what it does.
+    actButton.setAttribute("aria-label", `${current.label}. ${current.title}`);
     actButton.dataset.focus = "act";
     return { control: actButton, feedback };
   }
@@ -325,12 +330,20 @@ export function logSection(): Section {
     const showAccount = (model?.accounts.length ?? 0) > 1;
     const cell = (cls: string, ...children: Child[]): HTMLElement => h("td", { class: cls, attrs: { role: "cell" } }, ...children);
     const controls = rowControls(entry, key, current);
+    const when = logTimeParts(entry.time, now);
     return h(
       "tr",
       { class: key === highlighted ? "highlight" : "", tabIndex: -1, attrs: { role: "row" } },
       cell(
         "col-time",
-        h("span", { text: formatLogTime(entry.time, now), title: formatFullTime(entry.time) }),
+        // The date of another day stands above the time, so the column is as wide as the longer of the two.
+        h(
+          "span",
+          { class: "when", title: formatFullTime(entry.time) },
+          when.date === null ? null : h("span", { class: "date", text: when.date }),
+          when.date === null ? null : " ",
+          h("span", { class: "clock", text: when.clock }),
+        ),
         // With several accounts, the account stands under the time: when and where.
         showAccount ? h("div", { class: "account description", text: entry.account, title: entry.account }) : null,
       ),
@@ -395,8 +408,14 @@ export function logSection(): Section {
         limit = (Math.floor(index / LOG_PAGE) + 1) * LOG_PAGE;
       }
     }
-    summary.textContent = entries.length === 0 ? "" : t("logCount", Math.min(matching.length, limit), matching.length);
+    // Without a filter the line counts the rows, with one it counts what matches. The button under the table offers the rest.
+    const filtered = filter.value !== "all" || needle !== "";
+    const count = entries.length === 0 ? "" : filtered ? t("matchCount", matching.length, entries.length) : t("logCount", Math.min(matching.length, limit), entries.length);
+    if (summary.textContent !== count) {
+      summary.textContent = count;
+    }
     summary.hidden = entries.length === 0;
+    clear.disabled = entries.length === 0;
     reconcile(
       rows,
       matching.length === 0
@@ -449,7 +468,9 @@ export function logSection(): Section {
   async function drawUndoHint(): Promise<void> {
     const { keys } = await loadShortcutKeys();
     const trust = keys.get("trust-address");
-    undoHint.textContent = trust === undefined ? t("logUndoHint") : t("logUndoHintKey", trust);
+    const block = keys.get("block-address");
+    // Which key undoes a decision depends on the decision: one trusts the sender, the other blocks it.
+    replace(undoHint, ...(trust === undefined || block === undefined ? [t("logUndoHint")] : tNodes("logUndoHintKey", h("kbd", { text: trust }), h("kbd", { text: block }))));
   }
 
   undoHint.textContent = t("logUndoHint");

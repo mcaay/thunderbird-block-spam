@@ -515,6 +515,62 @@ describe("stored data that is not valid", () => {
   });
 });
 
+describe("folders that cannot be right in a list", () => {
+  const folder = (path: string) => ({ accountId: "account1", path });
+
+  async function setup(settings: Record<string, unknown> = {}) {
+    const fake = new FakeBrowser({ [KEY_SETTINGS]: { ...defaultSettings(Date.now()), ...settings } });
+    const background = await loadBackground(fake, fakeFetch({}).fetch);
+    await settle();
+    const saved = (): ReturnType<typeof defaultSettings> => fake.storage[KEY_SETTINGS] as ReturnType<typeof defaultSettings>;
+    return { fake, background, saved };
+  }
+
+  it("refuses the Inbox as a Sent folder, Sent as a monitored folder and Junk as the screening folder, with a code", async () => {
+    const { background, saved } = await setup();
+    expect(await background.send("updateSettings", { patch: { sentFoldersAdded: [folder("/INBOX")] } })).toMatchObject({ ok: false, code: "folder-role" });
+    expect(await background.send("updateSettings", { patch: { monitoredFoldersAdded: [folder("/Sent")] } })).toMatchObject({ ok: false, code: "folder-role" });
+    expect(await background.send("updateSettings", { patch: { screeningFolders: [folder("/Junk")] } })).toMatchObject({ ok: false, code: "folder-role" });
+    expect(saved()).toMatchObject({ sentFoldersAdded: [], monitoredFoldersAdded: [], screeningFolders: [] });
+  });
+
+  it("gives a folder one job: the screening folder cannot be monitored as well", async () => {
+    const { background, saved } = await setup();
+    expect(await background.send("updateSettings", { patch: { screeningFolders: [folder("/Screening")] } })).toMatchObject({ ok: true });
+    expect(await background.send("updateSettings", { patch: { monitoredFoldersAdded: [folder("/Screening")] } })).toMatchObject({ ok: false, code: "folder-role" });
+    expect(saved()).toMatchObject({ monitoredFoldersAdded: [], screeningFolders: [folder("/Screening")] });
+  });
+
+  it("leaves a folder that is stored on its list, lets other settings change, and lets it be removed", async () => {
+    const { background, saved } = await setup({ sentFoldersAdded: [folder("/INBOX")] });
+    expect(await background.send("updateSettings", { patch: { observation: true } })).toMatchObject({ ok: true });
+    expect(await background.send("updateSettings", { patch: { sentFoldersAdded: [folder("/INBOX"), folder("/Screening")] } })).toMatchObject({ ok: true });
+    expect(saved().sentFoldersAdded).toEqual([folder("/INBOX"), folder("/Screening")]);
+    expect(await background.send("updateSettings", { patch: { sentFoldersAdded: [folder("/Screening")] } })).toMatchObject({ ok: true });
+    // Once removed, it is not taken back.
+    expect(await background.send("updateSettings", { patch: { sentFoldersAdded: [folder("/Screening"), folder("/INBOX")] } })).toMatchObject({ ok: false, code: "folder-role" });
+  });
+
+  it("makes an existing folder of that name the screening folder, unless it has another job", async () => {
+    // The fake answers a message key with the key itself, so that is the name of the folder.
+    const name = "/screeningFolderName";
+    const free = await setup();
+    free.fake.extraFolders.push(FakeBrowser.folder(name));
+    expect(await free.background.send("createScreeningFolder", { accountId: "account1" })).toEqual({ ok: true, result: { path: name } });
+    expect(free.saved().screeningFolders).toEqual([folder(name)]);
+
+    const monitored = await setup({ monitoredFoldersAdded: [folder(name)] });
+    monitored.fake.extraFolders.push(FakeBrowser.folder(name));
+    expect(await monitored.background.send("createScreeningFolder", { accountId: "account1" })).toMatchObject({ ok: false, code: "folder-role" });
+    expect(monitored.saved().screeningFolders).toEqual([]);
+
+    // Inside the Inbox, where some servers put it.
+    const nested = await setup();
+    nested.fake.extraFolders.push(FakeBrowser.folder(`/INBOX${name}`));
+    expect(await nested.background.send("createScreeningFolder", { accountId: "account1" })).toEqual({ ok: true, result: { path: `/INBOX${name}` } });
+  });
+});
+
 describe("list entries from the settings page", () => {
   async function setup(entries: unknown[] = []) {
     const fake = new FakeBrowser({ [KEY_SETTINGS]: defaultSettings(Date.now()), [KEY_ENTRIES]: entries });

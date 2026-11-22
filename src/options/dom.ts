@@ -116,18 +116,49 @@ export function button(label: string, onclick: (event: MouseEvent) => void, cls 
  * Marks a button as unavailable without taking it out of the tab order. A disabled
  * button loses the keyboard focus, and the page is redrawn while buttons are busy.
  * Handlers check isUnavailable themselves.
+ *
+ * Where it is not obvious why the button cannot act, `reason` says what is missing: as
+ * its tooltip, and as its description for a screen reader. The tooltip the button has
+ * while it is available comes back with it.
  */
-export function setUnavailable<T extends HTMLElement>(element: T, unavailable: boolean): T {
+export function setUnavailable<T extends HTMLElement>(element: T, unavailable: boolean, reason?: string): T {
   if (unavailable) {
     element.setAttribute("aria-disabled", "true");
-  } else {
-    element.removeAttribute("aria-disabled");
+    if (reason !== undefined) {
+      element.dataset.availableTitle ??= element.title;
+      element.title = reason;
+    }
+    return element;
+  }
+  element.removeAttribute("aria-disabled");
+  if (element.dataset.availableTitle !== undefined) {
+    element.title = element.dataset.availableTitle;
+    delete element.dataset.availableTitle;
+    if (element.title === "") {
+      element.removeAttribute("title");
+    }
   }
   return element;
 }
 
 export function isUnavailable(element: Element): boolean {
   return element.getAttribute("aria-disabled") === "true";
+}
+
+/**
+ * Runs the action of a button and keeps the button unavailable until it has ended, so
+ * that a second click cannot start it twice. The button stays where the focus is.
+ */
+export async function whileBusy(element: HTMLElement, action: () => Promise<unknown>): Promise<void> {
+  if (isUnavailable(element)) {
+    return;
+  }
+  setUnavailable(element, true);
+  try {
+    await action();
+  } finally {
+    setUnavailable(element, false);
+  }
 }
 
 /** A button that shows only an icon. The label is its accessible name and its tooltip. */
