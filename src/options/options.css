@@ -1172,15 +1172,16 @@ table.log tr:focus-visible {
 }
 
 /* The buttons stand on the center line of the name of the service, the first line of the row. */
+/* Test and Edit stand 8px apart like the buttons of every group. The icon buttons carry their own room around the icon and stand closer. */
 .service-actions {
   display: flex;
-  gap: 4px;
+  gap: 8px;
   align-items: center;
   margin-top: calc((1.4em - 2.2em) / 2);
 }
 
-.service-actions button.icon {
-  margin-inline-start: 0;
+.service-actions button.icon + button.icon {
+  margin-inline-start: -4px;
 }
 
 .service-extra {

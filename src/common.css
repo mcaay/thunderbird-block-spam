@@ -644,7 +644,7 @@ details[open] > summary::before {
 .bar-actions {
   display: flex;
   flex: none;
-  gap: 6px;
+  gap: 8px;
   align-self: flex-start;
 }
 

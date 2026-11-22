@@ -19,7 +19,7 @@ Pending. This is also the decision gate of specification section 8.6: the sign-i
 1. Settings, AI, choose "ChatGPT plan", Add. Confirm the consent dialog and the permission prompt.
 2. A Thunderbird tab opens `auth.openai.com`. Sign in and approve.
 3. While you sign in, the list of AI services shows a row "Signing in with ChatGPT" with the buttons for the browser and the field for the pasted address.
-4. Expected: the tab closes by itself, a "ChatGPT plan" service appears with your email address, "Using ChatGPT plan" and a model. The welcome message "You're using your ChatGPT plan" appears once.
+4. Expected: the tab closes by itself, a "ChatGPT plan" service appears with your email address, a model and the link "Manage usage". The welcome message "You're using your ChatGPT plan" appears once.
 5. Press Test on the service. Expected: a score.
 
 Also check:
@@ -29,9 +29,9 @@ Also check:
 - [ ] The OpenAI page works inside a Thunderbird tab (no blocked page, no endless bot check).
 - [ ] The paste fallback: start a sign-in, press "Open in my browser instead", finish in the browser, copy the address that starts with `http://127.0.0.1:1455/auth/callback` from the error page and paste it. Expected: the sign-in completes.
 - [ ] "Choose model" lists the models of the account and saving another model works.
-- [ ] A message from an unknown sender is scored through the plan (the log says "Scored by" with the name of the service).
+- [ ] A message from an unknown sender is scored through the plan (the reason line of the log entry names the service: "ChatGPT plan scored it above the cutoff" or "… did not score it above the cutoff").
 - [ ] After more than one hour a message is still scored (token refresh). Restart Thunderbird in between once.
-- [ ] "Sign out" ends the session (the app disappears from, or is disconnected in, ChatGPT settings), and "Continue with ChatGPT" on the same service signs in again without creating a second one. The sign-in row then appears inside the row of that service.
+- [ ] "Sign out", in the editor of the service ("Edit"), ends the session (the app disappears from, or is disconnected in, ChatGPT settings), and "Continue with ChatGPT" on the same service signs in again without creating a second one. The sign-in row then appears inside the row of that service.
 - [ ] Removing the service works and reports whether the session was ended.
 - [ ] A second ChatGPT service with another account can be added and takes over when the first reaches its limit.
 
@@ -164,7 +164,7 @@ Practical result: `messages.listInlineTextParts` returned exactly `[{"contentTyp
 ### B9. The screening flow
 
 - [ ] Under Incoming mail the screening folder of each account is shown only while "Mail without an AI verdict" is set to "Move it to the screening folder", directly under that menu. Choose another option: the folders are gone. Choose it again: the folders that were chosen are back.
-- [ ] "Create the folder “Screening”" there asks for the folder permission and creates a "Screening" folder. Afterwards the button is unavailable, and its tooltip says that the folder is the screening folder already. Where a folder of that name exists but is not chosen, the button reads "Use the folder “Screening”". If Thunderbird reports that folder creation is not available yet, create the folder by hand, choose it in the list and record this.
+- [ ] "Create the folder “Screening”" there asks for the folder permission and creates a "Screening" folder. Afterwards the button is gone and the folder is chosen in the menu of that account. The button is shown only while the account has no folder of that name: a folder that exists is chosen in the menu. If Thunderbird reports that folder creation is not available yet, create the folder by hand, choose it in the list and record this.
 - [ ] With "no AI verdict" set to the screening folder and no AI: mail from unknown senders lands there.
 - [ ] Write to one of those senders, or press a trust shortcut: their messages move from the screening folder to the Inbox.
 
@@ -180,7 +180,7 @@ Shell:
 
 Overview:
 
-- [ ] The state next to "Protection" and under the name of the add-on in the category list reads Off, "Switches on after the scan", On, "On, observing only", "On, 2 problems" (the number of warnings), "No mail account" or "Data problem". The one in the category list is on every pane and opens the Overview. Every warning leads to its fix ("Edit" of a service, "Choose a folder"; the warning about AI before the first scan points to setup step 1).
+- [ ] The state next to "Protection" and under the name of the add-on in the category list reads Off, "Switches on after the scan", On, "On, observing only" (with an eye in the neutral color of Off, not the green check of On), "On, 2 problems" (the number of warnings), "No mail account" or "Data problem". The one in the category list is on every pane and opens the Overview. Every warning leads to its fix ("Edit" of a service, "Choose a folder"; the warning about AI before the first scan points to setup step 1).
 - [ ] One warning per cause: with two accounts that have no Spam folder there is one warning that names both, and two AI services with a rejected key share one warning whose button shows the AI services.
 - [ ] Observation mode stands under "Protect incoming mail". Ticked while protection is off, it says that nothing is observed yet.
 - [ ] Setup step 1 while a long scan runs: a spinner, a progress bar that fills, Cancel, and no filled button on step 3. After Cancel the step shows its number again and "Scan again" is filled. Only after the scan has ended does the step show its check mark.
@@ -204,7 +204,7 @@ Lists:
 
 Log:
 
-- [ ] Entries appear by themselves, the filters (by decision, by time, and with several accounts by account) and the search by sender or subject work and say how many entries match ("Matching: 2 of 13."), "Clear log…" asks first and is unavailable while the log is empty.
+- [ ] Entries appear by themselves, the filters (by decision, by time, and with several accounts by account) and the search by sender or subject work and say how many entries match ("Matching: 2 of 13."), "Clear log…" stands at the end of the line that counts the entries, asks first and is unavailable while the log is empty.
 - [ ] An entry from another day shows its date above the time, an entry from another year the date with the year. Nothing paints over the sender, also with a 12-hour clock.
 - [ ] In a window narrower than 900 pixels the rows are stacked and every row starts its outcome at the same place, whatever the account is called.
 - [ ] The line above the filter names the two shortcuts: one trusts the sender of the selected message, the other blocks it.
@@ -326,6 +326,6 @@ Block and trust:
 - [ ] One mail account: the Lists pane shows no "Sharing between accounts", no "Applies to" menu and no "Applies to" column. With an entry of a removed account the column stays.
 - [ ] Overview: the status line stands directly under "Protection". "Check again" on the warning about a missing Spam folder answers "Checked at ...: the Spam folder is still missing." when nothing changed.
 - [ ] The warning about a missing Spam folder names Account Settings, "Spam Settings" and "Move new spam messages to:". Following it makes the warning go away after "Check again".
-- [ ] Incoming mail, "Mail without an AI verdict": first the sentence about which mail this is, then "What to do with it:", and the screening folders only with the third option.
+- [ ] Incoming mail, "Mail without an AI verdict" (the first group of the pane, above "Monitored folders"): first the sentence about which mail this is, then "What to do with it:", and the screening folders only with the third option.
 - [ ] The cutoff is a plain field: the arrow keys step it by 0.01, a value outside 0 to 1 is refused.
 
