@@ -1558,6 +1558,12 @@ dialog.modal p {
     box-shadow: none;
   }
 
+  /* The fill of a row under the pointer is made of the accent color, which forced colors leave as it is. It goes: the outline says the same, and a button in the row keeps its boundary of 3 to 1. */
+  tbody tr:hover,
+  .plain-list li:hover {
+    background-color: transparent;
+  }
+
   table.log tr.highlight > td,
   table.log tr.highlight > td:first-child,
   table.log tr.highlight > td:last-child {
