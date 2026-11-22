@@ -200,7 +200,8 @@ describe("strings", () => {
       ?.split("\n")
       .map((line) => line.slice(0, line.indexOf(":")));
     expect(headers).toEqual(["From", "Reply-To", "To", "Subject", "Date"]);
-    const words: Record<string, string> = { From: "the sender", "Reply-To": "Reply-To", To: "the recipients", Subject: "the subject", Date: "the date" };
+    // In a sentence the name of the header is written with a non-breaking hyphen, so that a line never ends inside it.
+    const words: Record<string, string> = { From: "the sender", "Reply-To": "Reply\u2011To", To: "the recipients", Subject: "the subject", Date: "the date" };
     for (const key of ["consentWhat", "aiHint"]) {
       for (const header of headers ?? []) {
         expect(messages[key]?.message, `${key}: ${header}`).toContain(words[header]);

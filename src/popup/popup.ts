@@ -422,7 +422,9 @@ function confirmScoring(tabId: number, count: number): void {
     void (async () => {
       try {
         const summary = await send("scoreSelected", { tabId });
-        showScoreMessage(summary.selected === 0 ? t("popupNothingSelected") : t("popupScoreDone", summary.scored, summary.failed), summary.selected === 0);
+        // How many got no score is said only when some did not: "Without a score: 0." would be noise.
+        const done = summary.failed > 0 ? t("popupScoreDoneFailed", summary.scored, summary.failed) : t("popupScoreDone", summary.scored);
+        showScoreMessage(summary.selected === 0 ? t("popupNothingSelected") : done, summary.selected === 0);
         log = (await logReader.load()).entries;
         drawRecent();
         await drawSelection(tabId);

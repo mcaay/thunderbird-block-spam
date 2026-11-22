@@ -180,7 +180,7 @@ The settings page and the popup were rebuilt after a UX and UI review, and revis
 - **The kind of an entry is inferred:** a value with "@" is an address, anything else a domain. The Kind menu and its column are gone, and the table shows the list, the scope, the source and the date.
 - **A wrong value is said under the field** that holds it, and the field keeps the focus.
 - **Removing an entry can be undone** from the confirmation above the table. The background puts back the exact entry (request `restoreEntries`), with its source and date. The focus moves to the remove button of the neighbouring row.
-- **"Sharing between accounts"** sets whether the entries made by learning, by AI and by blocking or trusting are shared by all accounts. It stands before the table, which can be thousands of rows long. An entry added with the form uses the form's own "Applies to", and the hint says so.
+- **"Sharing between accounts"** sets whether the entries made by learning, by AI and by blocking or trusting are shared by all accounts. It is set once, so it lives in Advanced as its first group (since review round 6), and "Learn more" of Lists says so with a link. An entry added with the form uses the form's own "Applies to", and the hint of the setting says so.
 - **"Show 200 more (3,801 left)"** says what the click shows and what is left.
 
 ### Log and undoing a decision
@@ -336,6 +336,18 @@ Two reviewers, 29 findings, fixed by three packages at the same time (Look, Logi
 - **The cutoff field** keeps `aria-valuenow` and `aria-valuetext` in step with its text (`cutoffNumber`). It stays a text field with the role spinbutton: a native number field would bring spin buttons and the decimal sign of the browser instead of the language of the strings.
 - **Tests changed on purpose:** `problems.test.ts` (the problem is `before-scan` with what acts), `background.test.ts` (the shape of the wish, the moved entries of a merge), `repo.test.ts` (new code prefixes). New: `tests/tb/stateText.test.ts`, `tests/options/roving.test.ts`.
 - **Not done:** the result line after "Test AI on selected messages" in the popup has no close button (the footer is being rebuilt by the Look package).
+
+**Wording package** (strings, and the one group that moved):
+
+- **"Sharing between accounts" moved from Lists to Advanced**, as its first group, with two or more mail accounts only. The lead of Advanced names it only while it is shown (`advancedLeadSharing`, otherwise `advancedLead`), because a sentence must be true in every state. In its hint "the form above" became a link to Lists, and with two or more accounts "Learn more" of Lists has one sentence with a link to Advanced. The two panes get no `shell`: the links set the fragment of the address, which opens the pane and moves the focus to its title like every other link.
+- **The status line no longer contradicts itself:** "Last check: 09:48. No new mail today yet."
+- **A service Thunderbird may not connect to yet** is said in plain words in both languages, without "host" and "this computer has not allowed".
+- **One term in the service editor:** the hints say "service" where they said provider, server or endpoint. A stored sign-in is "sign-ins" next to "keys" in every hint (Polish "dane logowania"), not "sign-in tokens". The rare errors of the ChatGPT sign-in say what happened without client ids, ID tokens and authorization codes.
+- **The popup's line after an AI test** names the messages without a score only when there are some (`popupScoreDoneFailed`).
+- **Compound words do not break at their hyphen.** "sign-in", "add-on", "server-side", "built-in", "right-click", "whole-domain", "Reply-To" and the Polish "e-mail" are written with the non-breaking hyphen U+2011 (as the escape `\u2011` in the locale files, so that it can be seen). Names and identifiers a user may type or copy keep the plain hyphen: model names, `--cors-origins`, and the names of presets, which become the default name of a service. The test that looks for the header names in the consent texts expects "Reply-To" with U+2011.
+- **A tooltip says what its button does, as a statement, in one form:** the tooltips of the log actions read like the popup's tooltips for the same commands ("Puts x on the white list."), and so does the tooltip of a column header.
+- **Plain words:** "collects no usage data" for telemetry, "keys pressed without Alt, Ctrl or a similar key" for keys without a modifier, "the part of the address in angle brackets" for the placeholder, and a paused service says that its limit of requests was reached.
+- **Polish read again:** "żądanie" for a request everywhere, "Twój adres" as the source of an entry, "za pośrednictwem" for a forwarding mailbox (it agrees with one message and with several), the consent buttons in the imperative ("Zaakceptuj i zapisz"), "Pokaż kolejne: N (pozostało: M)", which is right for every number. An empty search of the log says "No decision matches." instead of "No entry matches.": an entry is a line of a list.
 
 ## Known limits
 
