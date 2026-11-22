@@ -86,6 +86,8 @@ export function logSection(): Section {
     "select",
     {
       id: "log-filter",
+      // The label next to it says "Show:". The name says what is shown.
+      attrs: { "aria-label": t("logFilterName") },
       onchange: () => {
         limit = LOG_PAGE;
         highlighted = null;

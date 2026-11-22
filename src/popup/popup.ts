@@ -256,7 +256,8 @@ function decisionOf(sender: SenderInfo): HTMLElement | null {
       class: "decision own",
       // The tooltip has all of what the row shows, for when it is too long for its line, and the reason.
       title: `${outcome}\n${tCode("reason", entry.reason)}\n${formatFullTime(entry.time)}`,
-      attrs: { "aria-label": t("popupDecisionLabel", outcome, time) },
+      // The tooltip repeats what the row shows, for when it is cut. A screen reader hears the name and, as the description, only what the name does not say: the reason.
+      attrs: { "aria-label": t("popupDecisionLabel", outcome, time), "aria-description": tCode("reason", entry.reason) },
     },
     h("span", { class: `dot outcome-${entry.outcome}${entry.test || entry.observed ? " hollow" : ""}`, attrs: { "aria-hidden": "true" } }),
     h("span", { class: "what", text: outcome }),
@@ -371,7 +372,8 @@ function decisionRow(entry: LogEntry, now: number): HTMLElement {
       class: "decision",
       // The tooltip has all of what the row shows, for when it is too long for its line, and the subject and the reason.
       title: `${sender}\n${entry.subject}\n${outcome}\n${tCode("reason", entry.reason)}\n${formatFullTime(entry.time)}`,
-      attrs: { "aria-label": t("popupRowLabel", sender, outcome, time) },
+      // A screen reader hears the name and, as the description, only what the name does not say: the subject and the reason.
+      attrs: { "aria-label": t("popupRowLabel", sender, outcome, time), "aria-description": [entry.subject, tCode("reason", entry.reason)].filter((part) => part !== "").join(". ") },
     },
     h("span", { class: `dot outcome-${entry.outcome}${entry.test || entry.observed ? " hollow" : ""}`, attrs: { "aria-hidden": "true" } }),
     h("span", { class: "who", text: sender }),
@@ -507,7 +509,9 @@ function switchBox(settings: Settings, status: Status, hasAi: boolean): HTMLElem
     });
     cancel.dataset.focus = "toggle";
     cancel.classList.add("small");
-    return h("div", { class: "switch waiting" }, h("p", { class: "description", text: t("wishWaiting"), attrs: { role: "status" } }), cancel);
+    // Described by the sentence it stands under, so that the focus that lands on it reads both.
+    cancel.setAttribute("aria-describedby", "wish-waiting");
+    return h("div", { class: "switch waiting" }, h("p", { class: "description", id: "wish-waiting", text: t("wishWaiting"), attrs: { role: "status" } }), cancel);
   }
   const afterScan = !settings.protection && status.scan?.running === true && hasAi;
   const toggle = button(t(settings.protection ? "protectionSwitchOff" : "protectionSwitchOn"), () => {

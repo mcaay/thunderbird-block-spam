@@ -722,8 +722,14 @@
   "listsFilterLabel": {
     "message": "Pokaż:"
   },
+  "listsFilterName": {
+    "message": "Pokaż wpisy z listy"
+  },
   "listsSourceLabel": {
     "message": "Źródło:"
+  },
+  "listsSourceName": {
+    "message": "Źródło wpisów"
   },
   "listsAllSources": {
     "message": "Wszystkie źródła"
@@ -848,6 +854,9 @@
   "logFilterLabel": {
     "message": "Pokaż:"
   },
+  "logFilterName": {
+    "message": "Pokaż decyzje rodzaju"
+  },
   "logAll": {
     "message": "Wszystkie decyzje"
   },
@@ -858,7 +867,7 @@
     "message": "Obserwowane"
   },
   "logPeriodLabel": {
-    "message": "Czas"
+    "message": "Czas decyzji"
   },
   "period_all": {
     "message": "Dowolny czas"
@@ -879,7 +888,7 @@
     "message": "Starsze niż 30 dni"
   },
   "logAccountLabel": {
-    "message": "Konto"
+    "message": "Konto, którego dotyczą decyzje"
   },
   "logSearch": {
     "message": "Szukaj nadawcy lub tematu"
@@ -1089,13 +1098,13 @@
     "message": "Wpis $1 jest na białej liście. Wiadomość nie była przenoszona."
   },
   "logTitle_trust": {
-    "message": "Zaufaj $1"
+    "message": "Umieść $1 na białej liście"
   },
   "logTitle_trust_move": {
-    "message": "Zaufaj $1 i przenieś wiadomość z powrotem do Odebranych"
+    "message": "Umieść $1 na białej liście i przenieś wiadomość z powrotem do Odebranych"
   },
   "logTitle_block": {
-    "message": "Zablokuj $1 i przenieś wiadomość do Niechcianych"
+    "message": "Umieść $1 na czarnej liście i przenieś wiadomość do Niechcianych"
   },
   "logTitle_unblock": {
     "message": "Usuń $1 z czarnej listy: wpis $2 jest już na białej liście"
@@ -1104,10 +1113,10 @@
     "message": "Usuń $1 z czarnej listy i przenieś wiadomość z powrotem do Odebranych: wpis $2 jest już na białej liście"
   },
   "logTitle_move_inbox": {
-    "message": "Przenieś do Odebranych: wpis $1 jest już na białej liście, więc przenoszona jest tylko wiadomość"
+    "message": "Wpis $1 jest już na białej liście, więc tylko wiadomość wraca do Odebranych"
   },
   "logTitle_move_junk": {
-    "message": "Przenieś do Niechcianych: wpis $1 jest już na czarnej liście, więc przenoszona jest tylko wiadomość"
+    "message": "Wpis $1 jest już na czarnej liście, więc tylko wiadomość jest przenoszona do Niechcianych"
   },
   "logResult_trusted": {
     "message": "Wpis $1 jest teraz na białej liście."
@@ -1915,6 +1924,9 @@
   },
   "publicDomainLabel": {
     "message": "Domena:"
+  },
+  "publicDomainName": {
+    "message": "Domena dostawcy poczty lub firmy"
   },
   "publicInvalid": {
     "message": "Wpisz domenę, na przykład example.com."

@@ -722,8 +722,14 @@
   "listsFilterLabel": {
     "message": "Show:"
   },
+  "listsFilterName": {
+    "message": "Show entries of the list"
+  },
   "listsSourceLabel": {
     "message": "Source:"
+  },
+  "listsSourceName": {
+    "message": "Source of the entries"
   },
   "listsAllSources": {
     "message": "All sources"
@@ -848,6 +854,9 @@
   "logFilterLabel": {
     "message": "Show:"
   },
+  "logFilterName": {
+    "message": "Show decisions of the kind"
+  },
   "logAll": {
     "message": "All decisions"
   },
@@ -858,7 +867,7 @@
     "message": "Observed"
   },
   "logPeriodLabel": {
-    "message": "Time"
+    "message": "Time of the decisions"
   },
   "period_all": {
     "message": "Any time"
@@ -879,7 +888,7 @@
     "message": "Older than 30 days"
   },
   "logAccountLabel": {
-    "message": "Account"
+    "message": "Account of the decisions"
   },
   "logSearch": {
     "message": "Search sender or subject"
@@ -1089,13 +1098,13 @@
     "message": "$1 is on the white list. The message was never moved."
   },
   "logTitle_trust": {
-    "message": "Trust $1"
+    "message": "Put $1 on the white list"
   },
   "logTitle_trust_move": {
-    "message": "Trust $1 and move the message back to the Inbox"
+    "message": "Put $1 on the white list and move the message back to the Inbox"
   },
   "logTitle_block": {
-    "message": "Block $1 and move the message to the Spam folder"
+    "message": "Put $1 on the black list and move the message to the Spam folder"
   },
   "logTitle_unblock": {
     "message": "Remove $1 from the black list: $2 is already on the white list"
@@ -1104,10 +1113,10 @@
     "message": "Remove $1 from the black list and move the message back to the Inbox: $2 is already on the white list"
   },
   "logTitle_move_inbox": {
-    "message": "Move to Inbox: $1 is already trusted, so only the message is moved back"
+    "message": "$1 is already on the white list, so only the message is moved back to the Inbox"
   },
   "logTitle_move_junk": {
-    "message": "Move to Spam: $1 is already blocked, so only the message is moved"
+    "message": "$1 is already on the black list, so only the message is moved to the Spam folder"
   },
   "logResult_trusted": {
     "message": "$1 is on the white list now."
@@ -1915,6 +1924,9 @@
   },
   "publicDomainLabel": {
     "message": "Domain:"
+  },
+  "publicDomainName": {
+    "message": "Domain of a mail provider or of a company"
   },
   "publicInvalid": {
     "message": "Enter a domain such as example.com."

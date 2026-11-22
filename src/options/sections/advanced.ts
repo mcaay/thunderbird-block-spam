@@ -68,7 +68,8 @@ export function advancedSection(): Section {
   let model: Model | null = null;
 
   // Public mail providers.
-  const domain = h("input", { type: "text", id: "public-domain", placeholder: "example.com", oninput: () => describe(), attrs: { spellcheck: "false", autocomplete: "off" } });
+  // The label next to it says "Domain:". The name says of what.
+  const domain = h("input", { type: "text", id: "public-domain", placeholder: "example.com", oninput: () => describe(), attrs: { spellcheck: "false", autocomplete: "off", "aria-label": t("publicDomainName") } });
   const domainError = fieldError(domain, "public-domain-error");
   const verdict = h("p", { class: "verdict", attrs: { role: "status" } });
   const makePublic = button(t("publicMakePublic"), () => change(true));

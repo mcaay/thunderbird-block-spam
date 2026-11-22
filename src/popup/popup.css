@@ -121,6 +121,8 @@ section > p:last-child {
   display: flex;
   align-items: flex-start;
   gap: 8px;
+  /* The line that bounds it in high contrast has its place in every theme, so the block is of one height everywhere. */
+  border-bottom: 1px solid transparent;
   background-color: var(--bar-warning);
 }
 
@@ -471,6 +473,6 @@ p.result {
   }
 
   .notice {
-    border-bottom: 1px solid CanvasText;
+    border-bottom-color: CanvasText;
   }
 }

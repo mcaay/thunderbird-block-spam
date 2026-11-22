@@ -49,14 +49,15 @@ export function listsSection(): Section {
   const counts = h("p", { class: "counts" });
   const filter = h(
     "select",
-    { id: "entries-filter", onchange: () => reset() },
+    // The label next to it says "Show:". The name says what is shown.
+    { id: "entries-filter", onchange: () => reset(), attrs: { "aria-label": t("listsFilterName") } },
     option("all", t("listsBoth")),
     option("white", t("listWhite")),
     option("black", t("listBlack")),
   );
   const source = h(
     "select",
-    { id: "entries-source", onchange: () => reset() },
+    { id: "entries-source", onchange: () => reset(), attrs: { "aria-label": t("listsSourceName") } },
     option("all", t("listsAllSources")),
     ...SOURCES.map((name) => option(name, tCode("source", name))),
   );

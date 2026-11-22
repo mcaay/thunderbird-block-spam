@@ -372,7 +372,7 @@ textarea:focus-visible {
 /* A search field carries a magnifier, as the search fields of Thunderbird do. */
 /* Its height, the room for the magnifier and its fill are those of the search field of Thunderbird's Settings. */
 input[type="search"] {
-  min-height: 28px;
+  height: 28px;
   padding-inline-start: 30px;
   background-color: var(--search-field);
   background-image: var(--search);

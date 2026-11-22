@@ -644,6 +644,11 @@ h2 > .state {
   max-width: 360px;
 }
 
+/* A date field has one width, with its calendar button and without it (an unavailable one has none), so the button after it never moves. */
+input[type="date"] {
+  width: 9.5em;
+}
+
 /* A number is typed into a plain field, as wide as its two decimals need. */
 input.number,
 .row > input.number {
