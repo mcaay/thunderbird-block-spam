@@ -266,6 +266,12 @@ export function aiSection(shell: Shell): Section {
             }
           });
         } else if (preset !== null) {
+          if (editor !== null && editor.id === null && editor.dirty()) {
+            // The editor of a new service is open and holds typed text: it is not replaced by an empty one. The focus
+            // goes to it, where "Unsaved changes" stands next to Save, and Cancel keeps the text behind "Continue editing".
+            editor.focus();
+            return;
+          }
           openEditor(null, preset);
         }
       }),
@@ -1452,8 +1458,10 @@ export function aiSection(shell: Shell): Section {
       }
     },
     unsaved() {
-      // The prompt, an open editor with changes, and an editor that was left with changes: all of it is lost with the page.
-      return promptDirty() || editor?.dirty() === true || drafts.size > 0;
+      // The prompt, an open editor with changes, an editor that was left with changes, a cutoff that was typed and not
+      // saved yet, and a pasted sign-in address that was not sent yet: all of it is lost with the page.
+      const cutoffTyped = cutoffShown !== null && cutoff.value !== cutoffShown && !sameNumber(cutoff.value, cutoffShown);
+      return promptDirty() || editor?.dirty() === true || drafts.size > 0 || cutoffTyped || (pasted.isConnected && pasted.value.trim() !== "");
     },
     leave() {
       // What became of services that waited for the scan was said here and is history once the pane is left.

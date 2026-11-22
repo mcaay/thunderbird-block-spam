@@ -746,6 +746,9 @@
   "scopeAccount": {
     "message": "Only $1"
   },
+  "scopeGone": {
+    "message": "A removed account"
+  },
   "listsAddedWhite": {
     "message": "Added $1 to the white list."
   },

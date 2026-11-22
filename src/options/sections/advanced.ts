@@ -298,7 +298,9 @@ export function advancedSection(): Section {
       drawLabelsState();
     },
     unsaved() {
-      return labelsDirty();
+      // The labels, and the address of a mailbox that was typed and not added yet, are lost with the page. The domain
+      // field is a question the page answers while it is typed: nothing of it is waiting to be saved.
+      return labelsDirty() || mailbox.value.trim() !== "";
     },
     leave() {
       domainNotice.clear();

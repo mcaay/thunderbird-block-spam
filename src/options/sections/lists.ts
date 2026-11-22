@@ -256,7 +256,11 @@ export function listsSection(): Section {
   }
 
   function scopeLabel(entry: Entry): string {
-    return entry.scope === SCOPE_ALL || model === null ? t("scopeAll") : accountName(model, entry.scope);
+    if (entry.scope === SCOPE_ALL || model === null) {
+      return t("scopeAll");
+    }
+    // An entry can outlive its account: it is said to belong to an account that was removed, not shown by an internal name.
+    return model.accounts.some((account) => account.id === entry.scope) ? accountName(model, entry.scope) : t("scopeGone");
   }
 
   function listLabel(entry: Entry): string {
@@ -410,6 +414,10 @@ export function listsSection(): Section {
         drawScopeTitle();
       }
       draw();
+    },
+    unsaved() {
+      // An address that was typed and not added yet is lost with the page.
+      return addValue.value.trim() !== "";
     },
     leave() {
       removed.clear();
