@@ -56,8 +56,9 @@ body:dir(rtl) {
   line-height: 1.3;
   text-decoration: none;
   border-radius: 2px;
-  /* A state that is long in some language wraps under the name instead of leaving the list. */
+  /* A state that is long in some language wraps under the name instead of leaving the list, into lines of like length. */
   white-space: normal;
+  text-wrap: balance;
 }
 
 .brand .state > .icon {
@@ -216,6 +217,7 @@ details.more > .more-body p {
   display: flex;
   align-items: center;
   gap: 5.5px;
+  min-height: calc(1.8em + 2px);
   margin: 4px 0;
   line-height: 1.8;
 }
@@ -459,8 +461,8 @@ h2 > .state {
 /* One grid for all accounts, so that the folder menus line up under each other. */
 .screening {
   display: grid;
-  /* Both columns have one width whatever the accounts and their folders are called: a long name wraps, as an address does. */
-  grid-template-columns: 220px 220px auto minmax(0, 1fr);
+  /* Both columns have one width whatever the accounts and their folders are called. The first takes an account name that is an email address of forty characters in one line; a longer one wraps, as an address does. */
+  grid-template-columns: 280px 220px auto minmax(0, 1fr);
   gap: 6px 8px;
   align-items: center;
   margin: 6px 0;
@@ -863,7 +865,7 @@ table.log .when .clock {
   white-space: nowrap;
 }
 
-/* What was done stays together: when the line is too long for the column, it moves to the next line whole, after the comma. */
+/* Wide enough for the decision with its badges, and for what was done about the message, each in one line in both languages. */
 table.log .col-outcome {
   width: 280px;
 }
@@ -960,6 +962,11 @@ table.log .detail {
 
 .outcome-no-verdict {
   color: var(--warning);
+}
+
+/* What was done about the message: a line of its own under the decision, which starts with a capital letter like the lines under it. */
+.outcome-done::first-letter {
+  text-transform: uppercase;
 }
 
 .outcome-line .badge {

@@ -351,7 +351,7 @@ export function logSection(): Section {
     const subject = entry.subject === "" ? t("logNoSubject") : entry.subject;
     const sender = entry.sender === "" ? t("logUnknownSender") : entry.sender;
     const actionText = entry.action === "none" ? "" : entry.observed ? tCode("actionObserved", entry.action) : tCode("action", entry.action);
-    // A badge never stands alone on a line: it stays with the word before it.
+    // A badge never stands alone on a line: it stays with the word of the decision.
     const badges: Child[] = [];
     if (entry.observed) {
       badges.push(" ", h("span", { class: "badge", text: t("logObservedBadge") }));
@@ -360,15 +360,9 @@ export function logSection(): Section {
       badges.push(" ", h("span", { class: "badge", text: t("logTestBadge") }));
     }
     const outcomeLabel = h("span", { class: `outcome outcome-${entry.outcome}`, text: tCode("outcome", entry.outcome) });
-    const outcomeParts: Child[] =
-      actionText === ""
-        ? [badges.length === 0 ? outcomeLabel : h("span", { class: "keep" }, outcomeLabel, ...badges)]
-        : [
-            // What was done stays together with its badges: it moves to the next line whole, after the comma.
-            h("span", { class: "keep" }, outcomeLabel, h("span", { class: "outcome-action", text: "," })),
-            " ",
-            h("span", { class: "keep" }, h("span", { class: "outcome-action", text: actionText }), ...badges),
-          ];
+    // The decision in one word, with its badges, and under it what was done about the message. Two short lines that
+    // fit their column in every language, instead of one long line that wraps where it happens to run out.
+    const outcomeParts: Child[] = [h("span", { class: "keep outcome-head" }, outcomeLabel, ...badges)];
     const showAccount = (model?.accounts.length ?? 0) > 1;
     const cell = (cls: string, ...children: Child[]): HTMLElement => h("td", { class: cls, attrs: { role: "cell" } }, ...children);
     const controls = rowControls(entry, key, current);
@@ -409,6 +403,7 @@ export function logSection(): Section {
           entry.score === null
             ? null
             : h("span", { class: "score-inline", text: entry.accessPoint === "" ? score : `${score} (${entry.accessPoint})`, title: t("logScoreTitle", score) }),
+          actionText === "" ? null : h("div", { class: "outcome-done", text: actionText }),
         ),
         // An entry of a list is named by its address or domain, which breaks like one.
         ...detailLines(entry).map((line) => h("div", { class: "detail description" }, ...addressed(line))),

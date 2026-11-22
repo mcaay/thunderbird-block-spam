@@ -184,8 +184,11 @@ export function overviewSection(shell: Shell): Section {
   function requestProtection(on: boolean): void {
     repaired.clear();
     void guard(async () => {
-      const scanning = on && model !== null && model.status.scan?.running === true && model.accessPoints.some((point) => point.enabled);
-      if (scanning || (on && model !== null && aiBeforeScan(model))) {
+      // Asked of the background at this moment: a scan can have started or ended since the page last heard of it.
+      const status = on && model !== null ? await send("getStatus", {}).catch(() => model?.status ?? null) : null;
+      const current = model !== null && status !== null ? { ...model, status } : model;
+      const scanning = on && current !== null && current.status.scan?.running === true && current.accessPoints.some((point) => point.enabled);
+      if (scanning || (on && current !== null && aiBeforeScan(current))) {
         // Nothing is switched on before the answer, and the box says so while the question is open.
         protection.input.checked = false;
         const choice = await dialog(

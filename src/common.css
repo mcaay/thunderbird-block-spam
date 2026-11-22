@@ -58,8 +58,9 @@
   --checkbox-off: light-dark(#ffffff, #222128);
   --checkbox-off-border: light-dark(#c7c7ce, #8f8f9d);
   --checkbox-off-checked: light-dark(#c7c7ce, #8f8f9d);
-  --checkbox-checked-hover: hsl(from AccentColor h s calc(l * 0.87));
-  --checkbox-checked-active: hsl(from AccentColor h s calc(l * 0.745));
+  /* The ticked box under the pointer and while pressed: the accent color made darker the way the platform does it (for the accent #007aff: #0066de and #0051be). */
+  --checkbox-checked-hover: hsl(from AccentColor calc(h + 1) s calc(l * 0.87));
+  --checkbox-checked-active: hsl(from AccentColor calc(h + 3) s calc(l * 0.745));
   --checkbox-gap: light-dark(transparent, #ffffff);
   --link: light-dark(#1373d9, #4cb1f9);
   --link-active: light-dark(#105bbc, #2493ef);
@@ -143,7 +144,7 @@ h1 {
 
 /* A group label: 32px after the group before it, as in Thunderbird's Settings. */
 h2 {
-  margin: 32px 0 6.5px;
+  margin: 32px 0 5.6px;
   font-size: 1.1em;
   font-weight: 600;
   line-height: 1.4;
@@ -567,7 +568,7 @@ details[open] > summary::before {
 
 /* The icon, the first line of the text and the label of the button share one center line. */
 .bar > .icon {
-  margin-top: 4px;
+  margin-top: 4.5px;
   color: var(--icon-information);
 }
 
@@ -714,6 +715,11 @@ details[open] > summary::before {
   display: inline-block;
   max-width: 100%;
   overflow-wrap: anywhere;
+}
+
+/* An address that needs two lines is divided into lines of like length, so that no line holds only its ending. */
+.address {
+  text-wrap: balance;
 }
 
 .address .glue,

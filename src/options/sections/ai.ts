@@ -414,11 +414,13 @@ export function aiSection(shell: Shell): Section {
     if (current === null || settings === null || settings === undefined || !settings.protection || current.accessPoints.some((point) => point.enabled)) {
       return { answer: "on", asked: false };
     }
-    const scanning = current.status.scan?.running === true;
-    if (!scanning && !nothingLearned(current)) {
+    // Asked of the background at this moment: a scan can have started since the page last heard of it.
+    const status = await send("getStatus", {}).catch(() => current.status);
+    const scanning = status.scan?.running === true;
+    if (!scanning && !nothingLearned({ ...current, status })) {
       return { answer: "on", asked: false };
     }
-    if (!waiting && current.status.wish.services.length > 0) {
+    if (!waiting && status.wish.services.length > 0) {
       return { answer: "after-scan", asked: false };
     }
     const choice = await dialog(

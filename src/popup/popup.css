@@ -175,9 +175,26 @@ section > p:last-child {
   margin: 0 -6px 4px;
 }
 
+/* The decision about the selected message is said in full: a long one takes a second line instead of being cut. */
 .selection > .decision.own .what {
+  overflow: visible;
   font-size: 1em;
+  white-space: normal;
   color: inherit;
+}
+
+/* With two lines the dot and the time stay with the first one. */
+.selection > .decision.own {
+  align-content: center;
+  align-items: start;
+}
+
+.selection > .decision.own > .dot {
+  margin-top: 4.5px;
+}
+
+.selection > .decision.own > .when {
+  margin-top: 1px;
 }
 
 /*
@@ -304,9 +321,10 @@ p.result {
   display: grid;
   /*
    * The sender identifies the row: it gets all the room the outcome leaves and never
-   * less than 45 percent of the row. Only an outcome longer than the rest is cut.
+   * less than 30 percent of the row, which leaves the longest outcome of both languages
+   * ("Przepuszczona 0,02 (obserwacja)") whole. Only an outcome longer than that is cut.
    */
-  grid-template-columns: 8px minmax(45%, 1fr) minmax(0, auto) auto;
+  grid-template-columns: 8px minmax(30%, 1fr) minmax(0, auto) auto;
   gap: 0 7px;
   align-items: center;
   width: 100%;
