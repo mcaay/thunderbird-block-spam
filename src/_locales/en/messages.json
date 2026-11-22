@@ -1293,7 +1293,7 @@
     "message": "API keys and sign\u2011ins are stored unencrypted in your Thunderbird profile. They are never written to the log and never exported."
   },
   "privacyText": {
-    "message": "Nothing else leaves this computer, apart from messages you score yourself as a test. There is no telemetry and no other network request."
+    "message": "Nothing else leaves this computer, apart from messages you score yourself as a test. Block Spam collects no usage data and makes no other network request."
   },
   "servicesTitle": {
     "message": "AI services"
@@ -1902,7 +1902,7 @@
     "message": "The keys B and W on their own"
   },
   "bareKeysHint": {
-    "message": "Thunderbird lets an add\u2011on capture keys without a modifier only if the add\u2011on is given full access to Thunderbird and your computer. Block Spam never asks for that."
+    "message": "Thunderbird lets an add\u2011on capture keys pressed without Alt, Ctrl or a similar key only if the add\u2011on is given full access to Thunderbird and your computer. Block Spam never asks for that."
   },
   "bareKeysSteps": {
     "message": "If you accept that, install the separate add\u2011on Block Spam Keys, which asks for it:"

@@ -1293,7 +1293,7 @@
     "message": "Klucze API i dane logowania są przechowywane w profilu programu Thunderbird bez szyfrowania. Nigdy nie trafiają do dziennika ani do eksportu."
   },
   "privacyText": {
-    "message": "Nic innego nie opuszcza tego komputera, poza wiadomościami, które samodzielnie oceniasz w ramach testu. Nie ma telemetrii ani żadnych innych połączeń sieciowych."
+    "message": "Nic innego nie opuszcza tego komputera, poza wiadomościami, które samodzielnie oceniasz w ramach testu. Block Spam nie zbiera danych o użyciu i nie nawiązuje żadnych innych połączeń sieciowych."
   },
   "servicesTitle": {
     "message": "Usługi AI"
@@ -1902,7 +1902,7 @@
     "message": "Same klawisze B i W"
   },
   "bareKeysHint": {
-    "message": "Thunderbird pozwala dodatkom przechwytywać klawisze bez modyfikatora tylko wtedy, gdy dodatek otrzyma pełny dostęp do programu Thunderbird i do komputera. Block Spam nigdy o to nie prosi."
+    "message": "Thunderbird pozwala dodatkom przechwytywać klawisze naciskane bez klawisza Alt, Ctrl lub podobnego tylko wtedy, gdy dodatek otrzyma pełny dostęp do programu Thunderbird i do komputera. Block Spam nigdy o to nie prosi."
   },
   "bareKeysSteps": {
     "message": "Jeśli to akceptujesz, zainstaluj osobny dodatek Block Spam Keys, który o to prosi:"
@@ -1959,7 +1959,7 @@
     "message": "Skrzynki przekazujące"
   },
   "forwardingHint": {
-    "message": "Niektóre skrzynki przekazują pocztę we własnym imieniu, więc wiadomość pokazuje jako nadawcę skrzynkę przekazującą. Dodaj je tutaj: ich wiadomości są wtedy oceniane według pierwotnego nadawcy."
+    "message": "Niektóre skrzynki przekazują pocztę we własnym imieniu, więc wiadomość pokazuje jako nadawcę skrzynkę przekazującą. Dodaj je tutaj: ich wiadomości są wtedy rozpatrywane według pierwotnego nadawcy."
   },
   "forwardingHowTo": {
     "message": "Jak to rozpoznać: jeśli przekazana wiadomość pokazuje jako nadawcę pierwotnego autora, niczego nie musisz konfigurować. Jeśli pokazuje skrzynkę, która ją przekazała, dodaj tę skrzynkę tutaj, wystarczy raz."
