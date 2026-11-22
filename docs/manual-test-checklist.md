@@ -70,7 +70,7 @@ The local IMAP test handled ordinary new deliveries immediately. A message alrea
 
 Pending. On macOS Option plus a letter can type a character.
 
-- [ ] On macOS, select a message and press `Option` + `B`. Expected: a notification "Blocked: ..." and the message in Junk.
+- [ ] On macOS, select a message and press `Option` + `B`. Expected: a notification "Blocked: ..." and the message in the Spam folder.
 - [ ] Repeat with `Option` + `Shift` + `B`, `Option` + `W`, `Option` + `Shift` + `W`.
 - [ ] Repeat on Windows or Linux with `Alt`.
 
@@ -107,16 +107,16 @@ Pending for every provider. One Test and one real message each:
 
 ### B2. New mail
 
-- [ ] Protection on, no AI: mail from a whitelisted sender stays, mail from a blacklisted sender goes to Junk, mail from an unknown sender follows the "no AI verdict" setting (try all three values).
-- [ ] With an AI service: an obvious cold email is scored above the cutoff, the sender's domain appears on the black list (source "AI") and the message is in Junk. A normal first message stays in the Inbox and nothing is remembered about its sender.
+- [ ] Protection on, no AI: mail from a whitelisted sender stays, mail from a blacklisted sender goes to the Spam folder, mail from an unknown sender follows the "no AI verdict" setting (try all three values).
+- [ ] With an AI service: an obvious cold email is scored above the cutoff, the sender's domain appears on the black list (source "AI") and the message is in the Spam folder. A normal first message stays in the Inbox and nothing is remembered about its sender.
 - [ ] Mail that was already in the Inbox before protection was switched on is not touched.
-- [ ] A message from a blacklisted sender with a `Date` header years in the past, sent while protection is on, still goes to Junk when it arrives (the new mail event reads its `Received` header).
+- [ ] A message from a blacklisted sender with a `Date` header years in the past, sent while protection is on, still goes to the Spam folder when it arrives (the new mail event reads its `Received` header).
 - [ ] Observation mode: nothing is moved, nothing is added by the AI, the log shows what would have happened.
 - [ ] A message whose display name is an encoded word that decodes to another address, for example `From: =?UTF-8?Q?ceo=40partner=2Eexample_=3Cceo=40partner=2Eexample=3E?= <spam@evil.example>`: the log must show `spam@evil.example` as the sender. If it shows `ceo@partner.example`, the decoded author string is parsed again, and the sender has to be read from the undecoded `From` header instead.
 
 ### B3. Mail read on a phone first
 
-- [ ] With Thunderbird running, open a new message from a blacklisted sender on a phone first. Expected: Thunderbird still moves it to Junk.
+- [ ] With Thunderbird running, open a new message from a blacklisted sender on a phone first. Expected: Thunderbird still moves it to the Spam folder.
 - [ ] Close Thunderbird for more than an hour, receive mail meanwhile, read it on the phone, start Thunderbird. Expected: the messages are handled after startup.
 
 ### B4. Mail sent from a phone
@@ -142,7 +142,7 @@ Pending for every provider. One Test and one real message each:
 Practical result: `messages.listInlineTextParts` returned exactly `[{"contentType":"text/plain","content":"OUTER_BODY_SENTINEL"}]` for the attached-message fixture. The attached body was absent. The S5 trusted-decoy bypass was also reproduced and then fixed: the forwarder's labelled body line is now read before an attached message.
 
 - [ ] Transparent forward (alias or server redirect): the message shows the original author. It is handled like direct mail, without configuration.
-- [ ] Wrapped forward (for example an Outlook or Exchange "Forward" rule, or Google Groups): the message shows the forwarding mailbox. Add that mailbox under Forwarding mailboxes. Expected: the log shows the original sender "forwarded by" the mailbox, a spam forward goes to Junk, the black list gets the original sender and never the forwarding mailbox.
+- [ ] Wrapped forward (for example an Outlook or Exchange "Forward" rule, or Google Groups): the message shows the forwarding mailbox. Add that mailbox under Forwarding mailboxes. Expected: the log shows the original sender "forwarded by" the mailbox, a spam forward goes to the Spam folder, the black list gets the original sender and never the forwarding mailbox.
 - [ ] Check each source of the original sender if you can produce it: the `X-Original-From` header, an attached message, a "From:" line in the text.
 - [ ] Select a message that was forwarded as an attachment. In the background page's console (Tools, Developer Tools, Debug Add-ons, Block Spam, Inspect) run `const [m] = (await browser.mailTabs.getSelectedMessages()).messages; await browser.messages.listInlineTextParts(m.id)` and check that the text of the attached message is not part of the result. The fix for review finding S5 relies on this: the forwarder's "From:" line is read before an attached message, which is safe only while an attached message cannot add text to the body. Repeat this check on a new Thunderbird version.
 - [ ] A wrapped forward that carries an attached message from a trusted address is still judged by the sender named in the forwarder's "From:" line.
@@ -153,10 +153,10 @@ Practical result: `messages.listInlineTextParts` returned exactly `[{"contentTyp
 - [ ] The pane "Block and trust" shows the four commands with their keys: as `⌥B`, `⌥⇧B` and so on on macOS, as `Alt+B` elsewhere. The old address of the pane (`#shortcuts`) still opens it.
 - [ ] Block address, block domain, trust address, trust domain on one message and on several selected messages.
 - [ ] In a message tab and in a message window.
-- [ ] Trust on a message in Junk moves it back to the Inbox.
+- [ ] Trust on a message in the Spam folder moves it back to the Inbox.
 - [ ] Smart on: block domain on a `gmail.com` sender blocks only the address. Smart off: it blocks `gmail.com`.
 - [ ] A message sent by yourself is ignored.
-- [ ] The desktop notification is titled "Block Spam", names what was added and how many messages were moved ("Blocked: name@example.com", "Moved to Junk: 1"), and says that the command can be undone from the Block Spam button in the toolbar.
+- [ ] The desktop notification is titled "Block Spam", names what was added and how many messages were moved ("Blocked: name@example.com", "Moved to the Spam folder: 1"), and says that the command can be undone from the Block Spam button in the toolbar.
 - [ ] After a shortcut, open the popup: the command stands at its top with the time it was made, Undo and Dismiss. Undo removes the entry, puts back an entry the command had replaced, and moves the message back. After Thunderbird was left alone for a minute (the background page is suspended) the command is still offered.
 - [ ] The shortcuts can be changed under "Manage Extension Shortcuts", and the settings page shows the new binding.
 - [ ] The shortcuts work in observation mode and while protection is off.
@@ -181,7 +181,7 @@ Shell:
 Overview:
 
 - [ ] The state next to "Protection" and under the name of the add-on in the category list reads Off, "Switches on after the scan", On, "On, observing only", "On, 2 problems" (the number of warnings), "No mail account" or "Data problem". The one in the category list is on every pane and opens the Overview. Every warning leads to its fix ("Edit" of a service, "Choose a folder"; the warning about AI before the first scan points to setup step 1).
-- [ ] One warning per cause: with two accounts that have no Junk folder there is one warning that names both, and two AI services with a rejected key share one warning whose button shows the AI services.
+- [ ] One warning per cause: with two accounts that have no Spam folder there is one warning that names both, and two AI services with a rejected key share one warning whose button shows the AI services.
 - [ ] Observation mode stands under "Protect incoming mail". Ticked while protection is off, it says that nothing is observed yet.
 - [ ] Setup step 1 while a long scan runs: a spinner, a progress bar that fills, Cancel, and no filled button on step 3. After Cancel the step shows its number again and "Scan again" is filled. Only after the scan has ended does the step show its check mark.
 - [ ] A scan in an account whose Sent folders are empty says that no sent mail was found and links to the Sent folders.
@@ -208,18 +208,18 @@ Log:
 - [ ] An entry from another day shows its date above the time, an entry from another year the date with the year. Nothing paints over the sender, also with a 12-hour clock.
 - [ ] In a window narrower than 900 pixels the rows are stacked and every row starts its outcome at the same place, whatever the account is called.
 - [ ] The line above the filter names the two shortcuts: one trusts the sender of the selected message, the other blocks it.
-- [ ] "Trust domain" (or "Trust address" for a sender at a public provider) on a Spam or Blocked row puts the sender on the white list, moves the message from Junk back to the Inbox and says so in the row. Undo appears where the button was and takes both back.
-- [ ] "Block domain" on a Passed row blocks the domain ("Block address" at a public provider) and moves the message to Junk. On a Trusted row the button reads "Block address".
+- [ ] "Trust domain" (or "Trust address" for a sender at a public provider) on a Spam or Blocked row puts the sender on the white list, moves the message from the Spam folder back to the Inbox and says so in the row. Undo appears where the button was and takes both back.
+- [ ] "Block domain" on a Passed row blocks the domain ("Block address" at a public provider) and moves the message to the Spam folder. On a Trusted row the button reads "Block address".
 - [ ] "Show message" opens the message of the row in a tab. For a message that was deleted, the row says under its decision that it was not found, and the link is gone.
 - [ ] A row of a test has no button. A row of an observed decision changes the lists and moves nothing.
 - [ ] After the message was deleted, the button still changes the list and the row says that the message was not found.
-- [ ] An observed decision reads "would go to Junk", a detail line reads like "Added to the black list: example.com", and the name of the AI service stands under the score.
+- [ ] An observed decision reads "would go to the Spam folder", a detail line reads like "Added to the black list: example.com", and the name of the AI service stands under the score.
 - [ ] A decision without a verdict says what went wrong in the language of the interface ("The service answered with error 500.") and quotes only the service's own message.
 
 Learning and Incoming mail:
 
 - [ ] The folder lists are plain rows with a trash can. "Add folder" is unavailable until a folder is chosen.
-- [ ] The folder menus offer only folders that can be right: no Inbox, Junk, Trash, Drafts, Templates or Outbox as a Sent folder, no Sent, Junk, Trash, Drafts, Templates or Outbox as a monitored folder, neither of these as the screening folder, and no folder that is on one of the other two lists. A folder that was stored before stays listed and can be removed. An account with nothing left to offer says so in one line.
+- [ ] The folder menus offer only folders that can be right: no Inbox, Spam, Trash, Drafts, Templates or Outbox as a Sent folder, no Sent, Spam, Trash, Drafts, Templates or Outbox as a monitored folder, neither of these as the screening folder, and no folder that is on one of the other two lists. A folder that was stored before stays listed and can be removed. An account with nothing left to offer says so in one line.
 - [ ] "Mail without an AI verdict" set to the screening folder while an account has none: a line above the folders names the account.
 - [ ] With an AI service switched on and protection off, the AI pane says under the services that no new mail is sent to an AI service yet, and "Show setup" leads to the step that is left. With no AI service switched on, the cutoff and the prompt each say that they are not used yet.
 - [ ] Without any mail account in Thunderbird, both panes say so in one line and "Scan sent mail" is unavailable.
@@ -310,5 +310,22 @@ Block and trust:
 
 - [ ] Leave Thunderbird running for a day with protection on. The log keeps filling, the Error Console stays free of "Block Spam" errors.
 - [ ] Work offline: nothing is moved or scored wrongly, and mail is handled once the account is online again.
-- [ ] An account without a Junk folder: a warning appears on the Overview with "Check again", and its spam stays where it is.
+- [ ] An account without a Spam folder: a warning appears on the Overview with "Check again", and its spam stays where it is.
 - [ ] Two accounts with per-account entries: an entry of one account does not affect the other.
+
+## After review round 5
+
+- [ ] Protection on, nothing scanned, no AI service: add a service and press Save (or tick the box of a service that is off). Expected: the question "Scan your sent mail first?" with "Cancel", "Use it anyway" and "Scan first". "Scan first" saves the service switched off, starts the scan, the row says "Switches on after the scan" with "Don’t switch on", and the service is on when the scan has finished. Cancel leaves the editor open with everything that was typed.
+- [ ] The same while a scan runs: the question is "Wait for the scan to finish?". Cancel the scan while the service waits: the row says that the service was not switched on and why.
+- [ ] "Use it anyway": the service is on, and the warning about mail from people you already write to stands on the Overview and on the AI pane ("is sent"), on the AI pane with "Scan sent mail".
+- [ ] Close and reopen the settings page, and restart Thunderbird, while a service waits: it still waits, and the scan starts again after a restart.
+- [ ] Log: a row "Blocked" for an address inside a trusted domain offers "Unblock address" and only removes the black entry. A row for a blocked address elsewhere offers "Trust address" and does not trust the domain. Undo restores the lists exactly.
+- [ ] Popup: "Block" for the whole domain of a sender whose address is on the white list says "Removed from the white list: ..." in its result, and the tooltip of the button says so beforehand.
+- [ ] AI: change a field in the editor of a service and press Escape, Cancel or "Edit" of another row. Expected: a line "The changes to ... are not saved." with "Continue editing", which opens the editor with everything that was typed. Closing the tab asks first.
+- [ ] Export and import: "Merge lists" of a file whose entries are on the other list here reports them as moved and offers Undo. Undo restores the lists exactly. "Replace everything" asks first and says that it cannot be undone.
+- [ ] One mail account: the Lists pane shows no "Sharing between accounts", no "Applies to" menu and no "Applies to" column. With an entry of a removed account the column stays.
+- [ ] Overview: the status line stands directly under "Protection". "Check again" on the warning about a missing Spam folder answers "Checked at ...: the Spam folder is still missing." when nothing changed.
+- [ ] The warning about a missing Spam folder names Account Settings, "Spam Settings" and "Move new spam messages to:". Following it makes the warning go away after "Check again".
+- [ ] Incoming mail, "Mail without an AI verdict": first the sentence about which mail this is, then "What to do with it:", and the screening folders only with the third option.
+- [ ] The cutoff is a plain field: the arrow keys step it by 0.01, a value outside 0 to 1 is refused.
+

@@ -31,8 +31,9 @@ The rule everything else follows from: **the AI is consulted only when the sende
 ## How it works
 
 - **WHITE LIST.** Everyone you write to goes on the white list: the whole domain for a company (`betis.eu`), the single address at a public mail provider (`someone@gmail.com`). The list is learned from your sent mail, without AI.
-- **BLACK LIST.** Senders you block, and senders the AI scored as spam. Their mail goes to the account's Junk folder.
-- **Unknown senders** (on neither list) are scored by the AI. A score above the cutoff blacklists the sender and moves the message to Junk. Any other score leaves the message alone, and nothing is remembered about the sender.
+- **BLACK LIST.** Senders you block, and senders the AI scored as spam. Their mail goes to the account's Spam folder.
+- The folder that Thunderbird 153 calls **Spam** in English (Niechciane in Polish, Junk in older versions) is the one meant by "the Spam folder" here and in the add-on.
+- **Unknown senders** (on neither list) are scored by the AI. A score above the cutoff blacklists the sender and moves the message to the Spam folder. Any other score leaves the message alone, and nothing is remembered about the sender.
 - An address entry always beats a domain entry: a blocked newsletter address stays blocked inside a trusted company domain, and a trusted person passes inside a blocked domain.
 
 Nothing is ever deleted. Every failure leaves mail where it is.
@@ -103,20 +104,20 @@ The Overview of the settings page lists three steps, each with its button. Until
 
 Consider ticking **observation mode**, the option right under the protection switch, first and watching the log for a few days. It can be ticked before protection is on.
 
-The state of protection is shown in the same words everywhere: under the name of the add-on on every pane of the settings page (a click on it opens the Overview), in the popup, and as the tooltip of the Block Spam button in the toolbar. It is one of: Off, "Switches on after the scan", On, "On, observing only", "On, 2 problems", "No mail account", "Data problem". Once protection is on, the Overview also shows the time of the last check, today's figures and whether the AI services work. When something needs you (a rejected key, accounts without a Junk folder), there is one warning per cause, each with a button that leads to the fix; accounts or services that share a cause are named together. You do not have to open anything to notice: the Block Spam button in the toolbar gets a badge and its tooltip counts and names the problems (its label stays "Block Spam"), and a desktop notification tells you once when an AI service first needs attention.
+The state of protection is shown in the same words everywhere: under the name of the add-on on every pane of the settings page (a click on it opens the Overview), in the popup, and as the tooltip of the Block Spam button in the toolbar. It is one of: Off, "Switches on after the scan", On, "On, observing only", "On, 2 problems", "No mail account", "Data problem". Once protection is on, the Overview also shows the time of the last check, today's figures and whether the AI services work. When something needs you (a rejected key, accounts without a Spam folder), there is one warning per cause, each with a button that leads to the fix; accounts or services that share a cause are named together. You do not have to open anything to notice: the Block Spam button in the toolbar gets a badge and its tooltip counts and names the problems (its label stays "Block Spam"), and a desktop notification tells you once when an AI service first needs attention.
 
 The settings page opens from the toolbar popup (Settings), or from Add-ons and Themes.
 
 
 ## Block and trust
 
-All of these do the same two things: put the sender on a list and move the message (Block to Junk, Trust back to the Inbox from Junk or from a screening folder).
+All of these do the same two things: put the sender on a list and move the message (Block to the Spam folder, Trust back to the Inbox from the Spam folder or from a screening folder).
 
 - **Toolbar popup.** Select one or more messages and click the Block Spam button in the toolbar. For one message the popup says which list entry decides its sender and what Block Spam decided about the message, with "Block address" and "Trust address" and a quieter pair for the whole domain. Afterwards it says what was added and offers Undo.
 - **Context menu.** Right-click a message in the message list and choose Block Spam.
 - **Keyboard shortcuts:**
-	- `Alt` + `B` ⮕ add the address to the BLACK LIST and move the message to Junk
-	- `Alt` + `Shift` + `B` ⮕ add the domain to the BLACK LIST and move the message to Junk
+	- `Alt` + `B` ⮕ add the address to the BLACK LIST and move the message to the Spam folder
+	- `Alt` + `Shift` + `B` ⮕ add the domain to the BLACK LIST and move the message to the Spam folder
 	- `Alt` + `W` ⮕ add the address to the WHITE LIST and move the message back to the Inbox
 	- `Alt` + `Shift` + `W` ⮕ add the domain to the WHITE LIST and move the message back to the Inbox
 	- On macOS `Alt` is the Option key, and the settings page shows the keys as `⌥B` and so on. All four can be changed in Thunderbird under "Manage Extension Shortcuts".
