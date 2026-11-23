@@ -1674,7 +1674,7 @@
     "message": "The model name as the service spells it. “Load models” lists the models it offers."
   },
   "modelHint_anthropic": {
-    "message": "A Claude model id, for example claude-opus-5-5, or claude-haiku-5-5 for lower cost."
+    "message": "A Claude model id, for example claude-sonnet-5-5, or claude-haiku-5-5 for lower cost."
   },
   "modelHint_chatgpt": {
     "message": "“Load models” lists the models of your ChatGPT account."

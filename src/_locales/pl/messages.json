@@ -1674,7 +1674,7 @@
     "message": "Nazwa modelu w zapisie usługi. Przycisk „Wczytaj modele” pokazuje modele, które usługa oferuje."
   },
   "modelHint_anthropic": {
-    "message": "Identyfikator modelu Claude, na przykład claude-opus-5-5, albo tańszy claude-haiku-5-5."
+    "message": "Identyfikator modelu Claude, na przykład claude-sonnet-5-5, albo tańszy claude-haiku-5-5."
   },
   "modelHint_chatgpt": {
     "message": "Przycisk „Wczytaj modele” pokazuje modele dostępne na koncie ChatGPT."

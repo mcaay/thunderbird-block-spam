@@ -130,7 +130,7 @@ export const PRESETS: readonly Preset[] = [
     id: "anthropic",
     type: "anthropic",
     endpoint: ANTHROPIC_MESSAGES_URL,
-    model: "claude-opus-5-5",
+    model: "claude-sonnet-5-5",
     keyRequired: true,
     group: "chat",
     keyUrl: "https://console.anthropic.com/settings/keys",

@@ -340,7 +340,7 @@ describe("OpenAI-compatible chat adapter", () => {
 });
 
 describe("Anthropic adapter", () => {
-  const point = accessPoint({ type: "anthropic", endpoint: ANTHROPIC_MESSAGES_URL, model: "claude-opus-5-5", apiKey: "sk-ant-key" });
+  const point = accessPoint({ type: "anthropic", endpoint: ANTHROPIC_MESSAGES_URL, model: "claude-sonnet-5-5", apiKey: "sk-ant-key" });
 
   function message(content: unknown[], stopReason = "end_turn"): Handler {
     return () => jsonResponse({ id: "msg_1", type: "message", role: "assistant", content, stop_reason: stopReason, stop_details: null });
@@ -354,13 +354,32 @@ describe("Anthropic adapter", () => {
     expect(sent?.headers["x-api-key"]).toBe("sk-ant-key");
     expect(sent?.headers["anthropic-version"]).toBe("2026-10-21");
     expect(sent?.headers["anthropic-dangerous-direct-browser-access"]).toBe("true");
+    expect(sent?.headers["anthropic-beta"]).toBe("server-side-fallback-2026-07-01");
     expect(sent?.json).toEqual({
-      model: "claude-opus-5-5",
-      max_tokens: 4096,
+      model: "claude-sonnet-5-5",
+      max_tokens: 16000,
       system: `${PROMPT}\n\n${OUTPUT_LINE}`,
       messages: [{ role: "user", content: PAYLOAD }],
-      output_config: { effort: "low" },
+      output_config: { effort: "medium" },
+      fallbacks: "default",
     });
+  });
+
+  it("asks for a refusal fallback only from the models that accept one", async () => {
+    const { http, deps: d } = deps(message([{ type: "text", text: "0.1" }]));
+    await scoreAnthropic({ ...point, model: "claude-haiku-5-5" }, PROMPT, PAYLOAD, d);
+    expect(http.requests[0]?.headers).not.toHaveProperty("anthropic-beta");
+    expect(http.requests[0]?.json).not.toHaveProperty("fallbacks");
+    expect(http.requests[0]?.json).toMatchObject({ model: "claude-haiku-5-5", output_config: { effort: "medium" } });
+  });
+
+  it("reads the score of the model that answered after a fallback", async () => {
+    const blocks = [
+      { type: "fallback", from: { model: "claude-sonnet-5-5" }, to: { model: "claude-sonnet-5" } },
+      { type: "text", text: "0.93" },
+    ];
+    const { deps: d } = deps(message(blocks));
+    expect(await scoreAnthropic(point, PROMPT, PAYLOAD, d)).toBe(0.93);
   });
 
   it("sends no sampling parameters and no thinking configuration", async () => {
