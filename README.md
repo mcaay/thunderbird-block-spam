@@ -17,9 +17,9 @@ The following solution solves this problem completely without letting the AI rea
 If yes, you are free to use AI.
 If not, you may still benefit from this plugin without the AI, but it will only solve the problem partially.
 
-![[IDEA.png]]
+![IDEA](IDEA.png)
 
-This diagram is an obsidian canvas: [[IDEA.canvas]]
+This diagram is an obsidian canvas: [IDEA.canvas](IDEA.canvas)
 
 
 ## Extra features
