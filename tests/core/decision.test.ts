@@ -285,14 +285,36 @@ describe("decision for one message", () => {
       expect(h.log()).toMatchObject([{ outcome: "blocked", action: "none", reason: "no-junk-folder" }]);
     });
 
-    it("logs a sender that cannot be parsed", async () => {
+    it("scores a message whose sender cannot be parsed, like mail from any unknown sender", async () => {
       const h = await protectedHarness();
       h.state.accessPoints = [accessPoint()];
+      h.ai.replies["*"] = 0.93;
+      const msg = h.mail.put(INBOX1, { author: "undisclosed sender", date: arrived(h) });
+      await h.engine.tick();
+      expect(h.ai.calls).toHaveLength(1);
+      expect(h.mail.ids(INBOX1)).toEqual([]);
+      expect(h.mail.ids(JUNK1)).toEqual([msg.id]);
+      // There is no address, so nothing goes on the black list.
+      expect([...h.state.entries.values()].filter((entry) => entry.source === "ai")).toEqual([]);
+      expect(h.log()).toMatchObject([{ outcome: "spam", action: "junk", reason: "ai-above", detail: "", sender: "", via: "", score: 0.93 }]);
+    });
+
+    it("lets a message whose sender cannot be parsed pass when its score is not above the cutoff", async () => {
+      const h = await protectedHarness();
+      h.state.accessPoints = [accessPoint()];
+      h.ai.replies["*"] = 0.1;
       const msg = h.mail.put(INBOX1, { author: "undisclosed sender", date: arrived(h) });
       await h.engine.tick();
       expect(h.mail.ids(INBOX1)).toEqual([msg.id]);
-      expect(h.ai.calls).toHaveLength(0);
-      expect(h.log()).toMatchObject([{ outcome: "error", action: "none", reason: "sender-unparsed", detail: "undisclosed sender", sender: "" }]);
+      expect(h.log()).toMatchObject([{ outcome: "passed", action: "none", reason: "ai-below", sender: "" }]);
+    });
+
+    it("handles a message whose sender cannot be parsed by the setting for mail without a verdict when no AI service is on", async () => {
+      const h = await protectedHarness();
+      const msg = h.mail.put(INBOX1, { author: "undisclosed sender", date: arrived(h) });
+      await h.engine.tick();
+      expect(h.mail.ids(INBOX1)).toEqual([msg.id]);
+      expect(h.log()).toMatchObject([{ outcome: "no-verdict", action: "none", reason: "no-ai", sender: "" }]);
     });
   });
 

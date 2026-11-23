@@ -1104,7 +1104,7 @@
     "message": "Wszystkie usługi AI zawiodły"
   },
   "reason_sender_unparsed": {
-    "message": "Nie udało się odczytać nadawcy"
+    "message": "Nie udało się odczytać nadawcy z pola „Od”"
   },
   "reason_no_junk_folder": {
     "message": "Konto nie ma folderu Niechciane"

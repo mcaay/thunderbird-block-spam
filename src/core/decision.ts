@@ -194,10 +194,10 @@ export async function decideMessage(deps: DecisionDeps, message: MessageInfo): P
     return entry;
   };
 
-  // A message whose From cannot be parsed stays where it is.
-  if (effective.sender === null && effective.forwarder === null) {
-    return finish("error", "none", REASONS.senderUnparsed, message.author);
-  }
+  // A message whose From cannot be parsed has no sender to look up on the lists. By the
+  // owner's decision it is mail from an unknown sender like any other: it is scored, or
+  // handled by the setting for mail without a verdict. No list entry is written for it,
+  // because there is no address to put on a list.
 
   const byList = (match: Entry): Promise<LogEntry> =>
     match.list === "white"

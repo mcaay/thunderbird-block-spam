@@ -1104,7 +1104,7 @@
     "message": "All AI services failed"
   },
   "reason_sender_unparsed": {
-    "message": "The sender could not be read"
+    "message": "The sender could not be read from the “From” field"
   },
   "reason_no_junk_folder": {
     "message": "The account has no Spam folder"

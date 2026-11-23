@@ -202,7 +202,7 @@ If you accept that permission, install the separate companion add-on `block-spam
 
 ## Privacy and permissions
 
-- What leaves the computer: the text shown under [What the AI receives](#what-the-ai-receives), only to AI services you added, only for unknown senders, plus messages you explicitly score as a test. There is no telemetry and no other network request.
+- What leaves the computer: the text shown under [What the AI receives](#what-the-ai-receives), only to AI services you added, only for unknown senders, plus messages you explicitly score as a test. A message whose From field cannot be read has no sender to look up, so it counts as mail from an unknown sender, also when it comes from someone on your white list. There is no telemetry and no other network request.
 - Lists, settings and the log are stored locally in the Thunderbird profile. API keys and sign-in tokens are stored there unencrypted. They are never written to the log and never exported.
 - Required permissions: see your accounts and folders, read messages, move messages, the compose window (to learn recipients when you send), storage, alarms, notifications, and the context menu entry.
 - Optional permissions, asked for when a feature is first used: creating a screening folder, the host of each AI service, and reading the sign-in redirect for the ChatGPT plan.

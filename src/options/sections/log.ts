@@ -197,6 +197,14 @@ export function logSection(): Section {
    * limited to one account. Who scored stands under the score.
    */
   function detailLines(entry: LogEntry): string[] {
+    const lines = decisionLines(entry);
+    // Neither a sender nor a forwarding mailbox: the From field could not be read, and the
+    // message was handled as mail from an unknown sender. The row says why no sender is shown.
+    const unread = entry.sender === "" && entry.via === "" && entry.reason !== "sender-unparsed";
+    return unread ? [...lines, tCode("reason", "sender-unparsed")] : lines;
+  }
+
+  function decisionLines(entry: LogEntry): string[] {
     // A score names the service that gave it, in the sentence that says why: no column depends on the length of that name.
     const scored = entry.accessPoint !== "" && (entry.reason === "ai-above" || entry.reason === "ai-below");
     const reason = scored ? t(entry.reason === "ai-above" ? "logScoredAbove" : "logScoredNotAbove", entry.accessPoint) : tCode("reason", entry.reason);
