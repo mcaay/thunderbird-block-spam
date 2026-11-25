@@ -19,6 +19,8 @@ If not, you may still benefit from this plugin without the AI, but it will only 
 
 ![IDEA](IDEA.png)
 
+![IDEA outgoing](IDEA-outgoing.png)
+
 This diagram is an obsidian canvas: [IDEA.canvas](IDEA.canvas)
 
 
