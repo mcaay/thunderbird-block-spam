@@ -1496,9 +1496,6 @@
   "preset_chatgpt": {
     "message": "ChatGPT"
   },
-  "preset_claude_plan": {
-    "message": "Claude"
-  },
   "presetHint_jev": {
     "message": "The decision model of TypeSafe. It can answer with nothing but a probability, and it is the cheapest and fastest choice."
   },
@@ -1533,13 +1530,10 @@
     "message": "A provider that is not on this list, for example Mistral, Groq or DeepSeek, or a server of your own. It works with every service that accepts requests in the format of the OpenAI API, and most do. You enter the address, the model and the key."
   },
   "presetHint_anthropic": {
-    "message": "Claude, with an Anthropic API key."
+    "message": "Claude, with an Anthropic API key. The Max, Ultra and Team plans include a monthly API credit that such a key spends."
   },
   "presetHint_chatgpt": {
     "message": "ChatGPT Plus, Pro or Business. You sign in on the page of OpenAI. No API key is needed, and the use counts against your plan."
-  },
-  "presetHint_claude_plan": {
-    "message": "Claude Max, Ultra or Team. These plans include a monthly API credit, and the use is paid from it. In Claude, under Settings and Billing, you link a Claude Console organization, create an API key in it and enter the key here. Anthropic lets only its own apps sign in with a plan."
   },
   "getKey": {
     "message": "Get a key"

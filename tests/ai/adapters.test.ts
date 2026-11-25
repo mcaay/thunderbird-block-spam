@@ -438,7 +438,6 @@ describe("presets and definitions", () => {
     expect(byId.custom).toMatchObject({ type: "openai-chat", endpoint: "" });
     expect(byId.anthropic).toMatchObject({ type: "anthropic", endpoint: "https://api.anthropic.com/v1/messages" });
     expect(byId.chatgpt).toMatchObject({ type: "chatgpt", endpoint: "https://api.openai.com/v1/responses" });
-    expect(byId["claude-plan"]).toMatchObject({ type: "anthropic", endpoint: "https://api.anthropic.com/v1/messages", keyRequired: true });
     expect(new Set(PRESETS.map((preset) => preset.id)).size).toBe(PRESETS.length);
   });
 
@@ -448,7 +447,8 @@ describe("presets and definitions", () => {
       ["decision", ["jev", "openrouter-decisions", "cloudflare-clef", "openai-decisions"]],
       // The entry for a provider that is not listed stands last.
       ["api", ["openai", "anthropic", "gemini", "openrouter", "custom"]],
-      ["subscription", ["chatgpt", "claude-plan"]],
+      // Only a subscription whose provider officially lets other programs sign in with it.
+      ["subscription", ["chatgpt"]],
       ["local", ["local-systemone", "ollama", "lmstudio"]],
     ]);
   });

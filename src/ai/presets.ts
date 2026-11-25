@@ -10,6 +10,7 @@ import { OPENAI_DECISIONS_URL } from "./openaiDecisions";
 /**
  * How the settings page groups the presets, in the order it shows the groups. The groups say how the
  * service is paid for and reached: an API key, a subscription the user already has, or this computer.
+ * A subscription is listed only when its provider officially lets other programs sign in with it.
  */
 export const PRESET_GROUPS = ["decision", "api", "subscription", "local"] as const;
 export type PresetGroup = (typeof PRESET_GROUPS)[number];
@@ -95,6 +96,9 @@ export const PRESETS: readonly Preset[] = [
     keyRequired: true,
     group: "api",
     keyUrl: "https://console.anthropic.com/settings/keys",
+    // The monthly API credit of Claude Max, Ultra and Team is spent with such a key. It is no sign-in with a plan,
+    // so this entry is not among the subscriptions.
+    docsUrl: "https://support.claude.com/en/articles/17154008-monthly-api-credits-for-max-ultra-and-team-plans",
   },
   {
     id: "gemini",
@@ -146,18 +150,6 @@ export const PRESETS: readonly Preset[] = [
     keyRequired: false,
     group: "subscription",
     docsUrl: "https://help.openai.com/en/articles/20001542-using-your-chatgpt-plan-in-other-apps-and-sites",
-  },
-  {
-    // The API credit that Claude Max, Ultra and Team include: the Anthropic API with a key of the linked Console
-    // organization. Anthropic lets only its own programs sign in with a plan, so there is no sign-in here.
-    id: "claude-plan",
-    type: "anthropic",
-    endpoint: ANTHROPIC_MESSAGES_URL,
-    model: "claude-sonnet-5-5",
-    keyRequired: true,
-    group: "subscription",
-    keyUrl: "https://console.anthropic.com/settings/keys",
-    docsUrl: "https://support.claude.com/en/articles/17154008-monthly-api-credits-for-max-ultra-and-team-plans",
   },
 ];
 
