@@ -139,6 +139,10 @@ export function overviewSection(shell: Shell): Section {
 
   replace(
     body,
+    // The page is read from the top, so it stands in the order of doing: the steps of setup first, protection after them.
+    // Once setup is complete it is one line that opens.
+    h("h2", { text: t("setupTitle") }),
+    setup,
     h("h2", {}, t("protectionTitle"), " ", state),
     statusLine,
     // What needs attention follows the state directly, before the switch and its options: the outcome of something that waited, then the warnings.
@@ -161,8 +165,6 @@ export function overviewSection(shell: Shell): Section {
       h("div", { class: "description indent", id: "observation-hint" }, ...tNodes("observationHint", paneLink("log", t("catLog"), () => shell.go("log")))),
       observationNote,
     ),
-    h("h2", { text: t("setupTitle") }),
-    setup,
     h("h2", { text: t("byHandTitle") }),
     byHand,
   );
