@@ -298,6 +298,14 @@ describe("manifest of the main add-on", () => {
     }
   });
 
+  it("lets the pages read the stored settings only with the defaults of settings added since", () => {
+    // Settings stored by an older version lack what a later one added. A page that took them as they are
+    // failed after an update until the background saved them again.
+    for (const file of sourceFiles.filter((name) => !name.startsWith(path.join("src", "core")) && name !== path.join("src", "background.ts"))) {
+      expect(read(file), file).not.toMatch(/\[KEY_SETTINGS\] as Settings/);
+    }
+  });
+
   it("is the only add-on of the project, and takes no commands from another add-on", () => {
     // Decided by the owner on 2026-11-25: nothing here ever asks for full access, so there is no second add-on
     // with an Experiment (it captured the bare keys B and W), and nothing listens to messages of other add-ons.

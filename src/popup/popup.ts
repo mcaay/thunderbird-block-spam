@@ -7,6 +7,7 @@
 import type { CommandName } from "../core/commandNames";
 import type { SenderInfo } from "../core/engine";
 import { KEY_ACCESS_POINTS, KEY_ENTRIES, KEY_SETTINGS, logEntryKey } from "../core/keys";
+import { storedSettings } from "../core/settings";
 import { findProblems, protectionState, scanIsComplete } from "../core/problems";
 import type { AccountFacts, Problem } from "../core/problems";
 import type { AccessPoint, Entry, LogEntry, Settings } from "../core/types";
@@ -589,7 +590,8 @@ async function draw(): Promise<void> {
     loadShortcutKeys().catch(() => shortcuts),
   ]);
   shortcuts = keys;
-  const settings = status.fatal === null ? ((stored[KEY_SETTINGS] as Settings | undefined) ?? null) : null;
+  // Settings stored by an older version lack the settings added since: they are read with their defaults.
+  const settings = status.fatal === null ? storedSettings(stored[KEY_SETTINGS]) : null;
   watchWish(status.wish.waiting);
   if (status.fatal !== null || settings === null) {
     // Stored data that failed validation is not read any further.

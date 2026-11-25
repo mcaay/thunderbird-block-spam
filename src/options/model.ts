@@ -6,6 +6,7 @@ import { chosenFolders, resolveMonitoredFolders, resolveSentFolders } from "../c
 import type { ChosenFolders } from "../core/folders";
 import { folderKey } from "../core/ports";
 import { KEY_ACCESS_POINTS, KEY_ENTRIES, KEY_META, KEY_SETTINGS } from "../core/keys";
+import { storedSettings } from "../core/settings";
 import type { AccessPoint, Entry, FolderRef, Settings } from "../core/types";
 import { send } from "../tb/protocol";
 import type { Status } from "../tb/protocol";
@@ -109,7 +110,8 @@ export async function loadModel(): Promise<Model> {
   const lastTick = (stored[KEY_META] as { lastTick?: unknown } | undefined)?.lastTick;
   return {
     status,
-    settings: status.fatal === null ? ((stored[KEY_SETTINGS] as Settings | undefined) ?? null) : null,
+    // Settings stored by an older version lack the settings added since: they are read with their defaults.
+    settings: status.fatal === null ? storedSettings(stored[KEY_SETTINGS]) : null,
     entries: status.fatal === null ? ((stored[KEY_ENTRIES] as Entry[] | undefined) ?? []) : [],
     accessPoints: status.fatal === null ? ((stored[KEY_ACCESS_POINTS] as AccessPoint[] | undefined) ?? []) : [],
     accounts,

@@ -11,6 +11,7 @@ import {
   isSettingName,
   validateAccessPoints,
   validateEntries,
+  storedSettings,
   validateSettings,
   ValidationError,
   withDefaults,
@@ -312,6 +313,13 @@ describe("settings and state", () => {
     expect(accountSwitches).toEqual([]);
     expect(validateSettings(older).accountSwitches).toEqual([]);
     expect(invalidSettings(older)).toEqual([]);
+  });
+
+  it("gives the pages settings of an older version with the defaults of what was added since", () => {
+    const { accountSwitches, periodicCheck, ...older } = defaultSettings(NOW);
+    expect(storedSettings(older)).toEqual({ ...older, accountSwitches, periodicCheck });
+    expect(storedSettings({ ...older, cutoff: 7 })).toBeNull();
+    expect(storedSettings(undefined)).toBeNull();
   });
 
   it("reads settings that were stored before the check every 5 minutes was an option: it runs", () => {

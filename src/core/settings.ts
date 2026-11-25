@@ -208,6 +208,19 @@ export function isSettingName(value: unknown): value is SettingName {
   return typeof value === "string" && (SETTING_NAMES as string[]).includes(value);
 }
 
+/**
+ * The stored settings as the pages read them: checked like the background checks them, so that a setting
+ * added by a later version, which settings stored by an older one lack, has its default. Null when they are
+ * not valid; the background then reports the problem.
+ */
+export function storedSettings(value: unknown): Settings | null {
+  try {
+    return validateSettings(value);
+  } catch {
+    return null;
+  }
+}
+
 export function validateSettings(value: unknown): Settings {
   const record = asRecord(value, "settings");
   const settings: Partial<Record<SettingName, unknown>> = {};
