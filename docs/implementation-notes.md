@@ -4,7 +4,7 @@ Decisions made while implementing `docs/specs/2026-11-21-thunderbird-block-spam-
 
 ## What was and was not verified
 
-- **Verified by tests:** all of `src/core` and `src/ai` with fake mail and HTTP layers, the companion's key logic in a sandbox, and repository rules (strings, manifest, layering). Run `npm run check`.
+- **Verified by tests:** all of `src/core` and `src/ai` with fake mail and HTTP layers, and repository rules (strings, manifest, layering). Run `npm run check`.
 - **Verified in a browser:** the built background page and settings page were run together in a Chromium browser against a fake of the Thunderbird API, including a scan, new mail, shortcuts, an access point with consent, and a complete ChatGPT sign-in against a fake OpenAI (code exchange, ID token signature check with WebCrypto, model list, streamed score). `npm run harness` builds that setup in `dist/harness`; the comment at the top of `scripts/harness.mjs` says how to open it.
 - **Verified in Thunderbird 153.7.0 on macOS:** isolated profiles, loopback IMAP/SMTP accounts and mock AI servers, including installation prompts, mail moves, learning, shortcuts, background suspension, imports and recovery. The practical report and evidence are in `reviews/2026-11-21-practical-test/report.md` (git-ignored). Real AI services and ChatGPT sign-in remain unverified. See `docs/manual-test-checklist.md` for the checklist and remaining checks.
 - **Build step 1** (the ChatGPT sign-in prototype against a real account, the decision gate of specification section 8.6) was not run. The flow is implemented from OpenAI's documentation, including the paste-the-address fallback.
@@ -28,7 +28,6 @@ Where the documentation left a question open, the source code of Thunderbird (`t
 - `permissions.request` is refused outside a user input handler and ignores `data_collection` while the preference is off.
 - Every extension API call that reaches the parent process resets the idle timer of a non-persistent background page, and `runtime.getPlatformInfo` is such a call. This is what the 20 second keep-alive relies on.
 - `messages.getHeaders`, `sendInfo.details` of `compose.onAfterSend`, the inclusive date comparison of `messages.query`, the folders that `messages.onNewMailReceived` reports by default (the Inbox and folders without a special use), and `messages.move` resolving after the move has finished.
-- `ExtensionSupport.registerWindowListener` also reports windows that are already open, and the tab mode names `mail3PaneTab` and `mailMessageTab`, both used by the companion.
 
 ## Where the documentation changed the design
 
@@ -122,17 +121,14 @@ Where the documentation left a question open, the source code of Thunderbird (`t
 - **An account is exported by the address of its default identity**; an account without an identity by its name. When two local accounts share an address, the first one is used.
 - **A file with invalid settings is rejected in both import modes**, also in Merge, which reads only the entries. The settings are checked item by item as the settings page checks them, so an invalid address among the forwarding mailboxes rejects the file instead of being dropped silently, and every access point definition must pass the checks of Save, without the key. The endpoint of a provider-bound type is replaced by its fixed one.
 - **Imported access points that need a key** are marked as needing attention until the key is entered.
-- **Add-on ids** are `block-spam@thunderbird-block-spam` and `block-spam-keys@thunderbird-block-spam`. They can be changed before the first public release; changing an id later starts with empty storage.
+- **The add-on id** is `block-spam@thunderbird-block-spam`. It can be changed before the first public release; changing an id later starts with empty storage.
 - **The license file names "Block Spam contributors"** as the copyright holder. Change it if you prefer your own name.
 - **The XPI is written by a small ZIP writer** in `scripts/zip.mjs` with fixed timestamps, so builds are reproducible and need no extra dependency.
 - **`@types/node` is a development dependency**, used only to type check the tests. The add-on code is checked without Node types.
 
-### Companion add-on
+### No companion add-on
 
-- **The companion uses Manifest V2 with a persistent background page.** It must hold a key listener for as long as Thunderbird runs. In Manifest V3 that needs persistent-event plumbing inside the Experiment, which cannot be verified without a running Thunderbird. The main add-on is Manifest V3.
-- **It listens for `keydown` and `keypress`** in the capture phase of the window and consumes both, so that Thunderbird's own handling of `B` and `W` does not run.
-- **It leaves the keys alone** in text fields, in editable documents, in web content, outside mail tabs and while a menu or panel is open.
-- **It acts only on trusted key events.** A `keydown` that a script dispatched (`event.isTrusted` false) is ignored, so nothing but a real key press reaches the privileged code's commands.
+- **The companion add-on for the bare keys `B` and `W` is removed** (the owner's decision, 2026-11-25). It needed an Experiment, and with it full access to Thunderbird and the computer. Nothing in the project asks for that now, and the add-on has no `runtime.onMessageExternal` listener.
 
 ## Interface
 
@@ -229,8 +225,7 @@ The settings page and the popup were rebuilt after a UX and UI review, and revis
 
 ### Block and trust
 
-- **The pane lists every way to block or trust by hand:** the four commands with their keys and "Change shortcuts…", Smart, the toolbar button, the context menu and the log, and the bare keys.
-- **The companion add-on is packaged inside the main add-on as a file** (`companion/block-spam-keys-<version>.xpi`; the build makes the companion first and copies its packed file). The button "Save the companion add-on file…" hands it to Thunderbird for saving, next to the steps to install it. The main add-on never loads or installs it, and its own manifest and code stay free of any Experiment. Once the project has a public home, the bundled file should be replaced by a link to it.
+- **The pane lists every way to block or trust by hand:** the four commands with their keys and "Change shortcuts…", Smart, the toolbar button, the context menu and the log. Under the shortcuts it says why a key on its own cannot be a shortcut.
 
 ### Language
 
@@ -423,4 +418,3 @@ What changed in layout and look, and why:
 - A sender's display name is not used anywhere, also not for the AI.
 - For a forwarding mailbox the forwarder's labelled body line is read before the From of an attached message (review finding S5). The specification first ordered them the other way round. An inline forward carries the original's attachments, and the practical test reproduced an attached message from a trusted address deciding the sender and bypassing the AI. The new order is safe because in Thunderbird 153.7.0 `messages.listInlineTextParts` returned only the outer body for a message with an attached `message/rfc822`, so an attached message cannot plant a labelled line (checklist B7). Remaining limit: when a forwarding mailbox writes its header block with a label that is not in the label table, the first labelled line of the text can come from the original sender. The label of each forwarding mailbox belongs in the table under Forwarding mailboxes.
 - The tick finds mail by its `Date` header, which the sender writes. Mail dated more than 48 hours before the previous tick, or before protection was switched on, is handled only by the fast path, which looks at the arrival time in the newest `Received` header. If the new mail event does not fire for such a message, it is not handled.
-- The companion suppresses `B` and `W` also when the main add-on is disabled. Remove or disable the companion in that case.

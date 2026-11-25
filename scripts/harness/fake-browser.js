@@ -340,7 +340,6 @@
         return clone(await replies[0]);
       },
       onMessage,
-      onMessageExternal: makeEvent(),
       onInstalled: makeEvent(),
       onStartup: makeEvent(),
     },

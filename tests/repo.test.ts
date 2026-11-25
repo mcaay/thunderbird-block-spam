@@ -1,7 +1,7 @@
 // Checks that hold for the repository as a whole: strings, the manifest, layering
 // and rules from the design specification that are easy to break by accident.
 
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { inflateRawSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
@@ -214,7 +214,6 @@ describe("strings", () => {
       ...filesUnder("src", [".ts", ".html", ".css", ".json", ".svg"]),
       ...filesUnder("tests", [".ts"]),
       ...filesUnder("scripts", [".mjs"]),
-      ...filesUnder("companion", [".js", ".json", ".md"]),
       ...filesUnder("docs", [".md"]),
       "README.md",
       "THIRD_PARTY_LICENSES.md",
@@ -296,6 +295,16 @@ describe("manifest of the main add-on", () => {
     expect(text).not.toContain("<all_urls>");
     for (const file of sourceFiles) {
       expect(read(file), file).not.toMatch(/connectNative|sendNativeMessage|ChromeUtils|Services\./);
+    }
+  });
+
+  it("is the only add-on of the project, and takes no commands from another add-on", () => {
+    // Decided by the owner on 2026-11-25: nothing here ever asks for full access, so there is no second add-on
+    // with an Experiment (it captured the bare keys B and W), and nothing listens to messages of other add-ons.
+    expect(existsSync(path.join(root, "companion"))).toBe(false);
+    expect(read("scripts/build.mjs")).not.toMatch(/companion|block-spam-keys/);
+    for (const file of sourceFiles) {
+      expect(read(file), file).not.toMatch(/experiment_apis|onMessageExternal|onConnectExternal/);
     }
   });
 

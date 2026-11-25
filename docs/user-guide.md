@@ -121,7 +121,7 @@ All of these do the same two things: put the sender on a list and move the messa
 	- `Alt` + `W` ⮕ add the address to the WHITE LIST and move the message back to the Inbox
 	- `Alt` + `Shift` + `W` ⮕ add the domain to the WHITE LIST and move the message back to the Inbox
 	- On macOS `Alt` is the Option key, and the settings page shows the keys as `⌥B` and so on. All four can be changed in Thunderbird under "Manage Extension Shortcuts".
-	- The bare keys `B` and `W` need the optional companion add-on, see [Bare keys B and W](#bare-keys-b-and-w).
+	- A key on its own, such as `B`, cannot be a shortcut: Thunderbird allows that only to add-ons with full access to Thunderbird and your computer, and Block Spam never asks for it.
 - **Log.** Settings, Log lists every decision. The button in a row undoes that decision, and the row offers Undo for the button itself. A click on one of the last decisions in the popup opens that entry in the log.
 
 **Undo.** Every block or trust made by hand can be taken back: the popup shows the last command at its top with Undo, also when the command was made with a shortcut or from the context menu, until it is undone, dismissed or replaced by the next one. Undo restores the lists exactly and moves the messages back, and the popup then says which list the sender is on again and where the message is.
@@ -193,13 +193,6 @@ Spam that reaches you through another mailbox's automatic forwarding or copy rul
 - If it shows **the mailbox that forwarded it** (for example an Outlook or Exchange "Forward" rule, or Google Groups), add that mailbox once under Settings, Advanced, Forwarding mailboxes. Block Spam then finds the original sender in the message and never passes on the forwarding mailbox's own trust.
 
 
-## Bare keys B and W
-
-Thunderbird lets an add-on capture keys without a modifier only through an Experiment API, and every add-on that contains an Experiment must ask for full access to Thunderbird and your computer. Block Spam never does.
-
-If you accept that permission, install the separate companion add-on `block-spam-keys-<version>.xpi` (Add-ons and Themes, gear menu, "Install Add-on From File"). The file is packaged inside Block Spam: the pane Settings, Block and trust has the button "Save the companion add-on file…" next to these steps. A build also writes it to `dist/`. It contains only the key capture: `B`, `Shift` + `B`, `W` and `Shift` + `W` in mail windows, never in text fields. See [companion/README.md](companion/README.md). It is best effort: Thunderbird plans to stop running Experiments on the Release channel from the 2027 ESR.
-
-
 ## Privacy and permissions
 
 - What leaves the computer: the text shown under [What the AI receives](#what-the-ai-receives), only to AI services you added, only for unknown senders, plus messages you explicitly score as a test. A message whose From field cannot be read has no sender to look up, so it counts as mail from an unknown sender, also when it comes from someone on your white list. There is no telemetry and no other network request.
@@ -224,7 +217,6 @@ npm run check
 `npm run check` runs the type check, the unit tests and the build. The build writes:
 
 - `dist/block-spam-<version>.xpi`, the add-on
-- `dist/block-spam-keys-<version>.xpi`, the optional companion for bare keys
 
 The code is TypeScript bundled with esbuild, with one runtime dependency (`tldts`, for the Public Suffix List). Third-party licenses are listed in [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
 

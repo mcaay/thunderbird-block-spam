@@ -261,7 +261,6 @@ export class FakeBrowser {
           this.pageEvents.push(message);
         },
         onMessage: new FakeEvent(),
-        onMessageExternal: new FakeEvent(),
         onInstalled: new FakeEvent(),
         onStartup: new FakeEvent(),
       },

@@ -912,15 +912,6 @@ export function dialog(options: DialogOptions): Promise<DialogResult> {
   });
 }
 
-/** Offers a file that is packaged with the add-on for saving, under the given name. */
-export function savePackaged(path: string, filename: string): void {
-  const link = h("a", { href: browser.runtime.getURL(path) });
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-}
-
 /** Offers a text file for download. */
 export function download(filename: string, text: string): void {
   const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));

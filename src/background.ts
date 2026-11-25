@@ -45,7 +45,7 @@ import { hold, withKeepAlive } from "./tb/keepAlive";
 import { collect, messagePages, messagesOfTab, ThunderbirdMail } from "./tb/mail";
 import { commandLines, undoneLines } from "./tb/commandText";
 import { noVerdictOutcomeText, problemNames, servicesOutcomeText, wishOutcomeText } from "./tb/stateText";
-import { COMPANION_ID, KEY_PENDING_SIGN_IN } from "./tb/protocol";
+import { KEY_PENDING_SIGN_IN } from "./tb/protocol";
 import type {
   CommandRecord,
   CommandSource,
@@ -633,8 +633,8 @@ browser.compose.onAfterSend.addListener((_tab, sendInfo) => {
 });
 
 // ---------------------------------------------------------------------------
-// The four commands: shortcuts, the context menu of the message list, the buttons of
-// the toolbar popup, and the optional companion add-on all run the same code.
+// The four commands: shortcuts, the context menu of the message list and the buttons
+// of the toolbar popup all run the same code.
 
 async function notifyCommand(record: CommandRecord): Promise<void> {
   // The notification cannot carry a button on every platform: it says where Undo is.
@@ -728,7 +728,7 @@ async function recordCommand(command: CommandName, messages: MessageInfo[], sour
   return record;
 }
 
-/** A command from a shortcut, the context menu or the companion: a desktop notification confirms it. */
+/** A command from a shortcut or the context menu: a desktop notification confirms it. */
 async function runCommand(command: CommandName, messages: MessageInfo[], source: CommandSource): Promise<void> {
   const record = await recordCommand(command, messages, source);
   if (record !== null) {
@@ -786,19 +786,6 @@ browser.menus.onClicked.addListener((info) => {
   void (async () => runCommand(command, await collect(selected), "menu"))().catch((error) =>
     console.error("Block Spam: the menu command failed", error),
   );
-});
-
-browser.runtime.onMessageExternal.addListener((message, sender) => {
-  // Only the companion add-on is accepted, and only the four command names.
-  const command = (message as { command?: unknown } | null)?.command;
-  if (sender.id !== COMPANION_ID || !isCommandName(command)) {
-    return undefined;
-  }
-  return (async () => {
-    const [tab] = await browser.tabs.query({ active: true, lastFocusedWindow: true });
-    await runCommand(command, await messagesOfTab(tab), "keys");
-    return { ok: true };
-  })();
 });
 
 // ---------------------------------------------------------------------------

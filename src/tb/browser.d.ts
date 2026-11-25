@@ -251,7 +251,6 @@ declare namespace tb {
       openOptionsPage(): Promise<void>;
       sendMessage(message: unknown): Promise<unknown>;
       onMessage: WebExtEvent<(message: unknown, sender: MessageSender) => Promise<unknown> | undefined>;
-      onMessageExternal: WebExtEvent<(message: unknown, sender: MessageSender) => Promise<unknown> | undefined>;
       onInstalled: WebExtEvent<(details: { reason: string }) => void>;
       onStartup: WebExtEvent<() => void>;
     };

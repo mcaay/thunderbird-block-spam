@@ -2003,26 +2003,8 @@
   "otherWaysLogLink": {
     "message": "Otwórz dziennik"
   },
-  "bareKeysTitle": {
-    "message": "Same klawisze B i W"
-  },
   "bareKeysHint": {
-    "message": "Thunderbird pozwala dodatkom przechwytywać klawisze naciskane bez klawisza Alt, Ctrl lub podobnego tylko wtedy, gdy dodatek otrzyma pełny dostęp do programu Thunderbird i do komputera. Block Spam nigdy o to nie prosi."
-  },
-  "bareKeysSteps": {
-    "message": "Jeśli to akceptujesz, zainstaluj osobny dodatek Block Spam Keys, który o to prosi:"
-  },
-  "bareKeysStepSave": {
-    "message": "Zapisz jego plik na komputerze:"
-  },
-  "bareKeysSave": {
-    "message": "Zapisz plik dodatku towarzyszącego…"
-  },
-  "bareKeysStepInstall": {
-    "message": "Otwórz Dodatki i motywy, kliknij przycisk z kołem zębatym („Narzędzia dla wszystkich dodatków”), wybierz „Zainstaluj dodatek z pliku…” i wskaż zapisany plik."
-  },
-  "bareKeysCaptures": {
-    "message": "Od tej chwili dodatek przechwytuje klawisze $1 w oknach poczty i przekazuje je do Block Spam."
+    "message": "Niestety sam klawisz, na przykład B, nie może być skrótem: Thunderbird pozwala dodatkom przechwytywać klawisze naciskane bez klawisza Alt, Ctrl lub podobnego tylko wtedy, gdy dodatek otrzyma pełny dostęp do programu Thunderbird i do komputera. Block Spam nigdy o to nie prosi."
   },
   "publicTitle": {
     "message": "Publiczni dostawcy poczty"

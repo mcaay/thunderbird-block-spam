@@ -13,7 +13,7 @@ The privacy rule everything else follows from: **the AI is consulted only when t
 
 ## 2. Scope
 
-One release contains everything below. A second, optional add-on provides bare-key shortcuts (section 7.2).
+One release contains everything below, in one add-on.
 
 In scope:
 
@@ -28,7 +28,7 @@ In scope:
 
 Non-goals:
 
-- Experiment APIs or native messaging in the main add-on. It never asks for full access to Thunderbird and the computer.
+- Experiment APIs or native messaging. Nothing in this project ever asks for full access to Thunderbird and the computer.
 - Signing in with Claude or Google subscriptions inside the add-on (section 8.7 lists the supported alternatives).
 - Server-side filtering, synchronization between computers (export and import cover this), running a model inside the add-on.
 - Sender authentication (SPF, DKIM, DMARC), analysis of attachments or remote content.
@@ -179,13 +179,11 @@ The commands act on the selected messages of the active mail tab, or on the mess
 
 Shortcuts work in observation mode and while protection is off.
 
-### 7.2 Bare keys B and W (optional companion add-on)
+### 7.2 Bare keys B and W (not offered)
 
-Thunderbird only lets an add-on capture keys without a modifier through an Experiment API, and every add-on that contains one must ask for full access to Thunderbird and the computer at installation. The main add-on therefore never does this.
+Thunderbird only lets an add-on capture keys without a modifier through an Experiment API, and every add-on that contains one must ask for full access to Thunderbird and the computer at installation.
 
-Users who accept that permission can install a separate companion add-on from this repository. It contains only an Experiment that captures `B`, `Shift+B`, `W` and `Shift+W` in mail windows (never in text fields), suppresses Thunderbird's own action for those keys, and sends the matching command name to the main add-on with `runtime.sendMessage`. The main add-on accepts the four command names in `runtime.onMessageExternal` from the companion's extension id only.
-
-The companion is best effort: Thunderbird plans to stop running Experiments on the Release channel from the 2027 ESR.
+Decided by the owner on 2026-11-25: the project never ships anything that asks for that permission. There is no bare-key shortcut and no companion add-on (one was built for it and then removed), and the add-on accepts no messages from other add-ons. The settings page says under the shortcuts that a key on its own, such as B, cannot be a shortcut, and why.
 
 ## 8. AI scoring
 
@@ -309,7 +307,7 @@ One page with these sections:
 - **Learning.** Sent folders per account, the manual scan with its date range, progress and Cancel.
 - **Incoming mail.** Monitored folders per account, the "no AI verdict" setting, the screening folder per account with a button to create one, the "new entries" scope setting.
 - **AI.** Access points (add from a preset, edit, remove, reorder, enable, test), the prompt editor with "Restore default", the cutoff.
-- **Shortcuts.** The current bindings, the Smart switch, how to rebind, how to get bare keys.
+- **Shortcuts.** The current bindings, the Smart switch, how to rebind, why a key on its own cannot be a shortcut.
 - **Log.** The last 5000 decisions, filter by outcome, Clear.
 - **Data.** Export and import.
 
@@ -378,7 +376,7 @@ Unit tests (vitest) cover all of `src/core` and `src/ai` with fake mail and HTTP
 - each adapter: request shape, score parsing, refusals, invalid output;
 - export and import in both modes.
 
-Manual checklist in a real Thunderbird with an IMAP account: new mail, mail read on a phone first, mail sent from a phone, the manual scan with dates, transparent and wrapped forwards, shortcuts, the screening flow, a long scan surviving background suspension, each access point type, ChatGPT sign-in, the companion add-on.
+Manual checklist in a real Thunderbird with an IMAP account: new mail, mail read on a phone first, mail sent from a phone, the manual scan with dates, transparent and wrapped forwards, shortcuts, the screening flow, a long scan surviving background suspension, each access point type, ChatGPT sign-in.
 
 ## 14. Project structure and build order
 
@@ -390,7 +388,6 @@ src/background.ts
 src/options/   settings page
 src/popup/     toolbar popup
 src/data/      public domain list
-companion/     the optional bare-key add-on
 tests/
 ```
 
@@ -405,7 +402,7 @@ Build order within the single release:
 5. AI chain and adapters.
 6. Settings page and popup.
 7. Export and import.
-8. Companion add-on.
+8. Companion add-on (removed on 2026-11-25, see section 7.2).
 9. README update and the manual checklist.
 
 ## 15. Checks against real services
@@ -425,7 +422,7 @@ These facts come from documentation and source reading and are confirmed with a 
 
 The README is updated in step 9 to match:
 
-- Default shortcuts are Alt+B and Alt+W, with Shift for the domain; bare `B` and `W` need the companion add-on.
+- Default shortcuts are Alt+B and Alt+W, with Shift for the domain; bare `B` and `W` would need full access to Thunderbird and the computer, so they are not offered (section 7.2).
 - New features: trust shortcuts, Smart setting, forwarded mail handling, observation mode, log, export and import.
 - "Use your AI subscriptions" means ChatGPT sign-in, Claude plan API credits, or a local bridge.
 - Decision models limit the AI to a score but are not immune to manipulation of that score (section 8.1). In the only benchmark found (Polish and English, published by the author of basal) decision models reached 62 to 85 percent accuracy and LLMs 98 to 99 percent, so observation mode is the recommended first step.
@@ -465,7 +462,7 @@ Added on 2026-11-22. Not yet confirmed by the owner. After the code review the i
 | 8.3 | Decided by the owner on 2026-11-23: the Anthropic preset defaults to `claude-sonnet-5-5`, and requests to Anthropic ask for medium effort. On the models that accept it they also ask for the server-side refusal fallback. |
 | 9.1 | Decided by the owner on 2026-11-25: the Overview stands in the order of doing. The setup steps (scan the sent mail, add an AI service, switch protection on) come first, the protection group with its state and its switch follows. Complete setup is one line that opens. |
 | 8.3, 8.7 | Decided by the owner on 2026-11-25: the menu "Add a service" groups the services by how they are reached: decision models, "API" (OpenAI, Claude, Gemini, OpenRouter, and "Other provider" for any service that accepts requests in the format of the OpenAI API), "Subscriptions" (ChatGPT by sign-in, Claude through the monthly API credit of Max, Ultra and Team with a key of the linked Console organization) and "On this computer". The add-on still never handles Claude sign-in tokens and never imitates Claude Code. |
-| 7.2 | The companion add-on for bare keys is packaged inside the main add-on and saved to a file with a button on the Block and trust pane. |
+| 7.2 | Decided by the owner on 2026-11-25: the companion add-on for bare keys is removed. Nothing in the project asks for full access to Thunderbird and the computer. The Block and trust pane says under the shortcuts why a key on its own, such as B, cannot be a shortcut. |
 | 11 | One more required permission: `menus`, for the commands in the context menu of the message list. Optional host permissions cover `https://*/*` and the two loopback addresses, each host still being granted when its service is saved. |
 
 Open points from the last review, not fixed (details in `reviews/2026-11-21-ux-ui/coordinator/round-8/`):

@@ -21,7 +21,7 @@ import type { MovingAction, NoVerdictOutcome, ServicesOutcome, WishOutcome } fro
 import type { Entry, EntryKind, ListName, LogEntry } from "../core/types";
 
 /** Where a block or trust command came from. */
-export type CommandSource = "popup" | "shortcut" | "menu" | "keys";
+export type CommandSource = "popup" | "shortcut" | "menu";
 
 /** What a block or trust command did. The popup shows it, with Undo while it can be taken back. */
 export interface CommandRecord {
@@ -245,5 +245,4 @@ export async function send<Name extends RequestName>(
   return reply.result;
 }
 
-export const COMPANION_ID = "block-spam-keys@thunderbird-block-spam";
 export const KEY_PENDING_SIGN_IN = "pendingSignIn";

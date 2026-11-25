@@ -8,7 +8,7 @@ Legend: each item has the steps, what should happen, and what to do when it does
 
 The interface calls a connection to an AI an "AI service". The specification and the code say "access point".
 
-The settings page and the popup were looked at in Thunderbird 153.7.0 in both themes, in English and in Polish; the captures are in `reviews/2026-11-21-ux-ui/round-2/` (git-ignored). Sections B10 to B14 list what to check by hand, in particular what a headless test instance cannot show: the popup panel and the context menu as drawn by the system, the desktop notification, a screen reader, Windows and Linux.
+The settings page and the popup were looked at in Thunderbird 153.7.0 in both themes, in English and in Polish; the captures are in `reviews/2026-11-21-ux-ui/round-2/` (git-ignored). Sections B10 to B13 list what to check by hand, in particular what a headless test instance cannot show: the popup panel and the context menu as drawn by the system, the desktop notification, a screen reader, Windows and Linux.
 
 ## A. Checks against real services (specification section 15)
 
@@ -264,7 +264,7 @@ Export and import:
 
 Block and trust:
 
-- [ ] "Save the companion add-on file…" saves `block-spam-keys-<version>.xpi`, and the saved file installs (see B12).
+- [ ] Under the shortcuts the pane says that a key on its own, such as B, cannot be a shortcut. Nothing on it offers a second add-on.
 
 ### B11. The popup
 
@@ -284,22 +284,12 @@ Block and trust:
 - [ ] After a shortcut, the popup shows the command with its time, and with its date too when the command is not from today.
 - [ ] With the keyboard: after "Trust address", Undo, Cancel or the protection switch, the focus is on a control of the popup, never lost.
 
-### B12. The companion add-on
-
-- [ ] `dist/block-spam-keys-<version>.xpi`, or the file saved from the pane "Block and trust", installs and asks for full access.
-- [ ] `B`, `Shift` + `B`, `W`, `Shift` + `W` in the message list, in a message tab and in a message window run the four commands.
-- [ ] Thunderbird's own action for `B` (previous message) and `W` (watch thread) no longer happens.
-- [ ] The keys type normally in the quick filter, in the global search, in the compose window and in the settings page of an add-on.
-- [ ] The keys do nothing in the calendar and address book tabs.
-- [ ] With the companion disabled or removed, `B` and `W` are Thunderbird's own again.
-- [ ] After updating the companion, the new version is active without restarting Thunderbird.
-
-### B13. The context menu
+### B12. The context menu
 
 - [ ] Right-click a message in the message list: the menu has a "Block Spam" entry with "Block the sender's address", "Block the sender's domain", "Trust the sender's address" and "Trust the sender's domain".
 - [ ] Each of them does what its shortcut does, for one message and for several selected messages, and the notification says what was added.
 
-### B14. Language and accessibility
+### B13. Language and accessibility
 
 - [ ] In a Polish Thunderbird everything is Polish: the settings page, the popup, the context menu, the notifications, the name and the description in the Add-ons Manager and the commands under "Manage Extension Shortcuts". Counts are right ("1 wpis", "2 wpisy", "5 wpisów").
 - [ ] In a Thunderbird in a third language the add-on is English throughout, with English counts and numbers.

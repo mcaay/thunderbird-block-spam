@@ -2003,26 +2003,8 @@
   "otherWaysLogLink": {
     "message": "Open the log"
   },
-  "bareKeysTitle": {
-    "message": "The keys B and W on their own"
-  },
   "bareKeysHint": {
-    "message": "Thunderbird lets an add\u2011on capture keys pressed without Alt, Ctrl or a similar key only if the add\u2011on is given full access to Thunderbird and your computer. Block Spam never asks for that."
-  },
-  "bareKeysSteps": {
-    "message": "If you accept that, install the separate add\u2011on Block Spam Keys, which asks for it:"
-  },
-  "bareKeysStepSave": {
-    "message": "Save its file to your computer:"
-  },
-  "bareKeysSave": {
-    "message": "Save the companion add\u2011on file…"
-  },
-  "bareKeysStepInstall": {
-    "message": "Open Add\u2011ons and Themes, click the gear button (“Tools for all add\u2011ons”), choose “Install Add\u2011on From File…” and pick the saved file."
-  },
-  "bareKeysCaptures": {
-    "message": "From then on it captures $1 in mail windows and passes them on to Block Spam."
+    "message": "Unfortunately a key on its own, such as B, cannot be a shortcut: Thunderbird lets an add\u2011on capture keys pressed without Alt, Ctrl or a similar key only if the add\u2011on is given full access to Thunderbird and your computer. Block Spam never asks for that."
   },
   "publicTitle": {
     "message": "Public mail providers"
