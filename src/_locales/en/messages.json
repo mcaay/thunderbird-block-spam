@@ -1427,11 +1427,11 @@
   "presetGroup_decision": {
     "message": "Decision models: cheapest and fastest"
   },
-  "presetGroup_chat": {
-    "message": "Chat models: most accurate"
+  "presetGroup_api": {
+    "message": "API"
   },
-  "presetGroup_plan": {
-    "message": "Your ChatGPT plan"
+  "presetGroup_subscription": {
+    "message": "Subscriptions"
   },
   "presetGroup_local": {
     "message": "On this computer"
@@ -1467,13 +1467,16 @@
     "message": "LM Studio"
   },
   "preset_custom": {
-    "message": "Other OpenAI-compatible service"
+    "message": "Other provider (you enter its address)"
   },
   "preset_anthropic": {
     "message": "Claude (Anthropic)"
   },
   "preset_chatgpt": {
-    "message": "ChatGPT plan"
+    "message": "ChatGPT"
+  },
+  "preset_claude_plan": {
+    "message": "Claude"
   },
   "presetHint_jev": {
     "message": "The decision model of TypeSafe. It can answer with nothing but a probability, and it is the cheapest and fastest choice."
@@ -1506,13 +1509,16 @@
     "message": "A model that LM Studio runs on this computer. No mail leaves the computer."
   },
   "presetHint_custom": {
-    "message": "Any service or local bridge that speaks the OpenAI chat format. You enter its address."
+    "message": "A provider that is not on this list, for example Mistral, Groq or DeepSeek, or a server of your own. It works with every service that accepts requests in the format of the OpenAI API, and most do. You enter the address, the model and the key."
   },
   "presetHint_anthropic": {
-    "message": "Claude, with an Anthropic API key. The Max, Ultra and Team plans include monthly API credits."
+    "message": "Claude, with an Anthropic API key."
   },
   "presetHint_chatgpt": {
     "message": "ChatGPT Plus, Pro or Business. You sign in on the page of OpenAI. No API key is needed, and the use counts against your plan."
+  },
+  "presetHint_claude_plan": {
+    "message": "Claude Max, Ultra or Team. These plans include a monthly API credit, and the use is paid from it. In Claude, under Settings and Billing, you link a Claude Console organization, create an API key in it and enter the key here. Anthropic lets only its own apps sign in with a plan."
   },
   "getKey": {
     "message": "Get a key"

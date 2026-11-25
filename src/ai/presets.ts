@@ -7,8 +7,11 @@ import { CHATGPT_ORIGINS } from "./chatgptAuth";
 import { originPattern, validateEndpoint } from "./http";
 import { OPENAI_DECISIONS_URL } from "./openaiDecisions";
 
-/** How the settings page groups the presets, in the order it shows the groups. */
-export const PRESET_GROUPS = ["decision", "chat", "plan", "local"] as const;
+/**
+ * How the settings page groups the presets, in the order it shows the groups. The groups say how the
+ * service is paid for and reached: an API key, a subscription the user already has, or this computer.
+ */
+export const PRESET_GROUPS = ["decision", "api", "subscription", "local"] as const;
 export type PresetGroup = (typeof PRESET_GROUPS)[number];
 
 export interface Preset {
@@ -81,8 +84,17 @@ export const PRESETS: readonly Preset[] = [
     endpoint: "https://api.openai.com/v1",
     model: "gpt-6-luna",
     keyRequired: true,
-    group: "chat",
+    group: "api",
     keyUrl: "https://platform.openai.com/api-keys",
+  },
+  {
+    id: "anthropic",
+    type: "anthropic",
+    endpoint: ANTHROPIC_MESSAGES_URL,
+    model: "claude-sonnet-5-5",
+    keyRequired: true,
+    group: "api",
+    keyUrl: "https://console.anthropic.com/settings/keys",
   },
   {
     id: "gemini",
@@ -90,7 +102,7 @@ export const PRESETS: readonly Preset[] = [
     endpoint: "https://generativelanguage.googleapis.com/v1beta/openai",
     model: "gemini-4-hydrogen",
     keyRequired: true,
-    group: "chat",
+    group: "api",
     keyUrl: "https://aistudio.google.com/apikey",
   },
   {
@@ -99,7 +111,7 @@ export const PRESETS: readonly Preset[] = [
     endpoint: "https://openrouter.ai/api/v1",
     model: "openai/gpt-6-luna",
     keyRequired: true,
-    group: "chat",
+    group: "api",
     keyUrl: "https://openrouter.ai/keys",
   },
   {
@@ -124,16 +136,7 @@ export const PRESETS: readonly Preset[] = [
     endpoint: "",
     model: "",
     keyRequired: false,
-    group: "chat",
-  },
-  {
-    id: "anthropic",
-    type: "anthropic",
-    endpoint: ANTHROPIC_MESSAGES_URL,
-    model: "claude-sonnet-5-5",
-    keyRequired: true,
-    group: "chat",
-    keyUrl: "https://console.anthropic.com/settings/keys",
+    group: "api",
   },
   {
     id: "chatgpt",
@@ -141,8 +144,20 @@ export const PRESETS: readonly Preset[] = [
     endpoint: CHATGPT_RESPONSES_URL,
     model: "",
     keyRequired: false,
-    group: "plan",
+    group: "subscription",
     docsUrl: "https://help.openai.com/en/articles/20001542-using-your-chatgpt-plan-in-other-apps-and-sites",
+  },
+  {
+    // The API credit that Claude Max, Ultra and Team include: the Anthropic API with a key of the linked Console
+    // organization. Anthropic lets only its own programs sign in with a plan, so there is no sign-in here.
+    id: "claude-plan",
+    type: "anthropic",
+    endpoint: ANTHROPIC_MESSAGES_URL,
+    model: "claude-sonnet-5-5",
+    keyRequired: true,
+    group: "subscription",
+    keyUrl: "https://console.anthropic.com/settings/keys",
+    docsUrl: "https://support.claude.com/en/articles/17154008-monthly-api-credits-for-max-ultra-and-team-plans",
   },
 ];
 

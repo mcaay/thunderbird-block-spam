@@ -16,7 +16,7 @@ The settings page and the popup were looked at in Thunderbird 153.7.0 in both th
 
 Pending. This is also the decision gate of specification section 8.6: the sign-in prototype against a real account was not run.
 
-1. Settings, AI, choose "ChatGPT plan", Add. Confirm the consent dialog and the permission prompt.
+1. Settings, AI, choose "ChatGPT" under "Subscriptions", Add. Confirm the consent dialog and the permission prompt.
 2. A Thunderbird tab opens `auth.openai.com`. Sign in and approve.
 3. While you sign in, the list of AI services shows a row "Signing in with ChatGPT" with the buttons for the browser and the field for the pasted address.
 4. Expected: the tab closes by itself, a "ChatGPT plan" service appears with your email address, a model and the link "Manage usage". The welcome message "You're using your ChatGPT plan" appears once.

@@ -18,7 +18,7 @@ import {
 } from "../../src/ai/http";
 import { listOpenAiChatModels, scoreOpenAiChat } from "../../src/ai/openaiChat";
 import { OPENAI_DECISIONS_URL, scoreOpenAiDecisions } from "../../src/ai/openaiDecisions";
-import { checkDefinition, FIXED_ENDPOINTS, newAccessPoint, normalizeDefinition, PRESETS } from "../../src/ai/presets";
+import { checkDefinition, FIXED_ENDPOINTS, newAccessPoint, normalizeDefinition, PRESET_GROUPS, PRESETS } from "../../src/ai/presets";
 import { readSystemOneAnswer, scoreSystemOne } from "../../src/ai/systemOne";
 import { AccessPointError } from "../../src/core/chain";
 import { OUTPUT_LINE } from "../../src/core/score";
@@ -438,7 +438,19 @@ describe("presets and definitions", () => {
     expect(byId.custom).toMatchObject({ type: "openai-chat", endpoint: "" });
     expect(byId.anthropic).toMatchObject({ type: "anthropic", endpoint: "https://api.anthropic.com/v1/messages" });
     expect(byId.chatgpt).toMatchObject({ type: "chatgpt", endpoint: "https://api.openai.com/v1/responses" });
+    expect(byId["claude-plan"]).toMatchObject({ type: "anthropic", endpoint: "https://api.anthropic.com/v1/messages", keyRequired: true });
     expect(new Set(PRESETS.map((preset) => preset.id)).size).toBe(PRESETS.length);
+  });
+
+  it("groups the menu by how a service is reached: decision models, an API key, a subscription, this computer", () => {
+    const menu = PRESET_GROUPS.map((group) => [group, PRESETS.filter((preset) => preset.group === group).map((preset) => preset.id)]);
+    expect(menu).toEqual([
+      ["decision", ["jev", "openrouter-decisions", "cloudflare-clef", "openai-decisions"]],
+      // The entry for a provider that is not listed stands last.
+      ["api", ["openai", "anthropic", "gemini", "openrouter", "custom"]],
+      ["subscription", ["chatgpt", "claude-plan"]],
+      ["local", ["local-systemone", "ollama", "lmstudio"]],
+    ]);
   });
 
   it("only uses https endpoints, except on loopback addresses", () => {
