@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { chosenFolders, folderCandidates, mayJoin, refusedFolders, screeningFolderPaths } from "../../src/core/folders";
+import {
+  accountProtected,
+  accountProtectedSince,
+  chosenFolders,
+  folderCandidates,
+  mayJoin,
+  refusedFolders,
+  resolveMonitoredFolders,
+  resolveProtectedFolders,
+  screeningFolderPaths,
+  withAccountSwitch,
+} from "../../src/core/folders";
 import type { FolderFacts } from "../../src/core/folders";
 import { defaultSettings } from "../../src/core/settings";
 import type { FolderRef, Settings } from "../../src/core/types";
@@ -117,5 +128,27 @@ describe("a change of the folder lists", () => {
 describe("the screening folder Block Spam creates", () => {
   it("is at the top of the account, or inside its Inbox", () => {
     expect(screeningFolderPaths("Screening", [ref(INBOX), { accountId: "home", path: "/Inbox" }], ACCOUNT)).toEqual(["/Screening", "/INBOX/Screening"]);
+  });
+});
+
+describe("protection per account", () => {
+  it("protects every account until the user switches one off", () => {
+    expect(accountProtected(settings(), ACCOUNT)).toBe(true);
+    const off = settings({ accountSwitches: withAccountSwitch([], ACCOUNT, false, 5) });
+    expect(accountProtected(off, ACCOUNT)).toBe(false);
+    expect(accountProtected(off, "home")).toBe(true);
+    // The mail of an account that is switched off is not handled. The list the user edits still holds its folders.
+    const inboxes = [ref(INBOX), { accountId: "home", path: "/Inbox" }];
+    expect(resolveProtectedFolders(inboxes, off)).toEqual([{ accountId: "home", path: "/Inbox" }]);
+    expect(resolveMonitoredFolders(inboxes, off)).toEqual(inboxes);
+  });
+
+  it("remembers when an account was switched on again, with one entry per account", () => {
+    const off = withAccountSwitch([], ACCOUNT, false, 5);
+    const on = withAccountSwitch(off, ACCOUNT, true, 9);
+    expect(on).toEqual([{ accountId: ACCOUNT, on: true, at: 9 }]);
+    expect(accountProtectedSince({ accountSwitches: off }, ACCOUNT)).toBe(0);
+    expect(accountProtectedSince({ accountSwitches: on }, ACCOUNT)).toBe(9);
+    expect(accountProtectedSince({ accountSwitches: on }, "home")).toBe(0);
   });
 });

@@ -124,6 +124,15 @@ describe("problems that keep protection from working as set up", () => {
     expect(actsOnUnknownSenders({ sent: false, moved: "screening" })).toBe(true);
   });
 
+  it("asks nothing of an account whose protection is switched off", () => {
+    const accounts = [account("work", { hasJunk: false }), account("home", { hasJunk: false })];
+    const settings = { ...defaultSettings(NOW), noVerdictAction: "screening" as const, accountSwitches: [{ accountId: "work", on: false, at: NOW }] };
+    expect(findProblems(input({ accounts, settings }))).toEqual([
+      { kind: "no-junk", accountIds: ["home"] },
+      { kind: "no-screening", accountIds: ["home"] },
+    ]);
+  });
+
   it("names every monitored account without a Junk folder, as one problem", () => {
     const accounts = [account("work", { hasJunk: false }), account("home"), account("feeds", { inboxes: [], hasJunk: false })];
     // An account without an Inbox and without added folders is not monitored at all.

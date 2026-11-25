@@ -6,6 +6,7 @@ import { DEFAULT_CUTOFF } from "./score";
 import type {
   AccessPoint,
   AccessPointType,
+  AccountSwitch,
   ChatGptAuth,
   Entry,
   FolderRef,
@@ -58,6 +59,7 @@ export function defaultSettings(now: number): Settings {
     sentFoldersAdded: [],
     sentFoldersRemoved: [],
     monitoredFoldersAdded: [],
+    accountSwitches: [],
     screeningFolders: [],
     chatgptWelcomeShown: false,
   };
@@ -149,6 +151,28 @@ function validateScreeningFolders(value: unknown, path: string): FolderRef[] {
   return screeningFolders;
 }
 
+/**
+ * Settings stored before per-account protection existed have no such list: every account is protected then.
+ * A list that is stored is checked like any other value.
+ */
+function validateAccountSwitches(value: unknown, path: string): AccountSwitch[] {
+  if (value === undefined) {
+    return [];
+  }
+  const switches = asArray(value, path, (element, at) => {
+    const record = asRecord(element, at);
+    const accountId = asString(record.accountId, `${at}.accountId`);
+    if (accountId === "") {
+      fail(`${at}.accountId`, "an account id");
+    }
+    return { accountId, on: asBoolean(record.on, `${at}.on`), at: asNumber(record.at, `${at}.at`) };
+  });
+  if (new Set(switches.map((item) => item.accountId)).size !== switches.length) {
+    fail(path, "at most one entry per account");
+  }
+  return switches;
+}
+
 /** One check per setting, so that a stored value that is not valid can be named, and repaired, on its own. */
 const SETTINGS_FIELDS: { [Name in keyof Settings]: (value: unknown, path: string) => Settings[Name] } = {
   schemaVersion: validateSchemaVersion,
@@ -168,6 +192,7 @@ const SETTINGS_FIELDS: { [Name in keyof Settings]: (value: unknown, path: string
   sentFoldersAdded: (value, path) => asArray(value, path, asFolderRef),
   sentFoldersRemoved: (value, path) => asArray(value, path, asFolderRef),
   monitoredFoldersAdded: (value, path) => asArray(value, path, asFolderRef),
+  accountSwitches: validateAccountSwitches,
   screeningFolders: validateScreeningFolders,
   chatgptWelcomeShown: asBoolean,
 };

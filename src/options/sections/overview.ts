@@ -2,6 +2,7 @@
 // mode as its option, a status line and warnings (one per cause), the three setup
 // steps, and the ways to block and trust by hand.
 
+import { accountProtected } from "../../core/folders";
 import { DEFAULT_FORWARD_LABELS } from "../../core/forward";
 import { scanStep } from "../../core/problems";
 import type { Remedy } from "../../core/problems";
@@ -47,6 +48,7 @@ const SETTING_LABELS: Partial<Record<SettingName, () => string>> = {
   sentFoldersAdded: () => t("sentFoldersTitle"),
   sentFoldersRemoved: () => t("sentFoldersTitle"),
   monitoredFoldersAdded: () => t("monitoredTitle"),
+  accountSwitches: () => t("incomingAccountsTitle"),
   screeningFolders: () => t("screeningTitle"),
 };
 
@@ -78,6 +80,7 @@ function settingDefault(name: string): string {
     case "sentFoldersAdded":
     case "sentFoldersRemoved":
     case "monitoredFoldersAdded":
+    case "accountSwitches":
     case "screeningFolders":
       return t("settingDefaultList");
     default:
@@ -508,6 +511,11 @@ export function overviewSection(shell: Shell): Section {
             : t("statusToday", tn("statusChecked", today.checked), tn("statusJunk", today.junk), tn("statusScored", today.scored)),
         );
       }
+    }
+    // Said only when an account is left out, so that "on" is not read as "everywhere".
+    const protectedAccounts = current.accounts.filter((account) => accountProtected(settings, account.id)).length;
+    if (on && protectedAccounts < current.accounts.length) {
+      parts.push(t("statusAccounts", protectedAccounts, current.accounts.length));
     }
     const health = aiHealth(current.accessPoints, Date.now());
     const waitingServices = current.status.wish.services.length;

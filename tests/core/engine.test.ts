@@ -4,7 +4,7 @@ import type { ScanProgress } from "../../src/core/engine";
 import { entryKey } from "../../src/core/lists";
 import { Engine } from "../../src/core/engine";
 import { reload } from "../helpers/fakes";
-import { accessPoint, DAY, harness, HOUR, INBOX1, INBOX2, JUNK1, SCREEN1, SENT1, SENT2, unauthorized } from "../helpers/harness";
+import { accessPoint, DAY, harness, HOUR, INBOX1, INBOX2, JUNK1, JUNK2, SCREEN1, SENT1, SENT2, unauthorized } from "../helpers/harness";
 import type { Harness } from "../helpers/harness";
 
 const MINUTE = 60 * 1000;
@@ -48,6 +48,46 @@ describe("tick", () => {
     await h.engine.tick();
     expect(h.mail.ids(INBOX1)).toEqual([before.id]);
     expect(h.mail.ids(JUNK1)).toEqual([after.id]);
+  });
+
+  it("leaves the mail of an account alone whose protection is switched off", async () => {
+    const h = await harness();
+    await h.engine.tick();
+    h.state.addEntry({ list: "black", kind: "domain", value: "blocked.example", scope: "all", source: "manual" }, 1);
+    h.clock.now += HOUR;
+    h.protect();
+    h.state.settings.accountSwitches = [{ accountId: "account2", on: false, at: h.clock.now }];
+    const first = h.mail.put(INBOX1, { author: "a@blocked.example", date: h.clock.now + MINUTE });
+    const second = h.mail.put(INBOX2, { author: "b@blocked.example", date: h.clock.now + MINUTE });
+    h.clock.now += 5 * MINUTE;
+    await h.engine.tick();
+    expect(h.mail.ids(JUNK1)).toEqual([first.id]);
+    expect(h.mail.ids(INBOX2)).toEqual([second.id]);
+    // The new mail event is not acted on either.
+    const third = h.mail.put(INBOX2, { author: "c@blocked.example", date: h.clock.now + MINUTE });
+    await h.engine.handleNewMail(INBOX2, await pages([third]));
+    expect(h.mail.ids(INBOX2)).toEqual([second.id, third.id]);
+    expect(h.log()).toHaveLength(1);
+  });
+
+  it("never handles mail that arrived in an account before it was switched on again", async () => {
+    const h = await harness();
+    await h.engine.tick();
+    h.state.addEntry({ list: "black", kind: "domain", value: "blocked.example", scope: "all", source: "manual" }, 1);
+    h.clock.now += HOUR;
+    h.protect();
+    h.state.settings.accountSwitches = [{ accountId: "account2", on: false, at: h.clock.now }];
+    const during = h.mail.put(INBOX2, { author: "a@blocked.example", date: h.clock.now + MINUTE });
+    h.clock.now += 10 * MINUTE;
+    h.state.settings.accountSwitches = [{ accountId: "account2", on: true, at: h.clock.now }];
+    const after = h.mail.put(INBOX2, { author: "b@blocked.example", date: h.clock.now + MINUTE });
+    h.clock.now += 5 * MINUTE;
+    await h.engine.tick();
+    expect(h.mail.ids(INBOX2)).toEqual([during.id]);
+    expect(h.mail.ids(JUNK2)).toEqual([after.id]);
+    // The new mail event for the older message changes nothing: it is dated before the account was switched on again.
+    await h.engine.handleNewMail(INBOX2, await pages([during]));
+    expect(h.mail.ids(INBOX2)).toEqual([during.id]);
   });
 
   it("handles mail from the very second protection was switched on", async () => {

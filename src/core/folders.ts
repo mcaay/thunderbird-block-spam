@@ -1,7 +1,7 @@
 // Which folders are watched: defaults from special uses, adjusted by the user.
 
 import { folderKey } from "./ports";
-import type { FolderRef, Settings } from "./types";
+import type { AccountSwitch, FolderRef, Settings } from "./types";
 
 function unique(folders: readonly FolderRef[]): FolderRef[] {
   const seen = new Set<string>();
@@ -25,6 +25,33 @@ export function resolveSentFolders(defaults: readonly FolderRef[], settings: Set
 /** The Inbox of every account, plus folders the user added. */
 export function resolveMonitoredFolders(inboxes: readonly FolderRef[], settings: Settings): FolderRef[] {
   return unique([...inboxes, ...settings.monitoredFoldersAdded]);
+}
+
+// ---------------------------------------------------------------------------
+// Protection per account. Every account is protected unless the user switched it off.
+
+/** False only for an account whose protection the user switched off. */
+export function accountProtected(settings: Pick<Settings, "accountSwitches">, accountId: string): boolean {
+  return settings.accountSwitches.find((item) => item.accountId === accountId)?.on !== false;
+}
+
+/** When the user switched the account on again. 0 for an account that was never switched off, or is off. */
+export function accountProtectedSince(settings: Pick<Settings, "accountSwitches">, accountId: string): number {
+  const item = settings.accountSwitches.find((candidate) => candidate.accountId === accountId);
+  return item !== undefined && item.on ? item.at : 0;
+}
+
+/** The switches with this account switched at the given time. */
+export function withAccountSwitch(switches: readonly AccountSwitch[], accountId: string, on: boolean, now: number): AccountSwitch[] {
+  return [...switches.filter((item) => item.accountId !== accountId), { accountId, on, at: now }];
+}
+
+/**
+ * The folders whose new mail is handled: the monitored folders of the accounts that are protected.
+ * What is done by hand (a shortcut, the log) does not ask this: it works in every account.
+ */
+export function resolveProtectedFolders(inboxes: readonly FolderRef[], settings: Settings): FolderRef[] {
+  return resolveMonitoredFolders(inboxes, settings).filter((folder) => accountProtected(settings, folder.accountId));
 }
 
 // ---------------------------------------------------------------------------

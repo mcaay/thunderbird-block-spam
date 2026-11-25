@@ -62,10 +62,24 @@ export interface Settings {
   sentFoldersAdded: FolderRef[];
   sentFoldersRemoved: FolderRef[];
   monitoredFoldersAdded: FolderRef[];
+  /**
+   * The accounts whose protection the user switched by hand, at most one entry per account.
+   * An account without an entry is protected, so a new account is protected from the start.
+   */
+  accountSwitches: AccountSwitch[];
   /** At most one screening folder per account. */
   screeningFolders: FolderRef[];
   /** The first-sign-in confirmation for ChatGPT plan use was shown. */
   chatgptWelcomeShown: boolean;
+}
+
+/** The protection of one account, switched by hand on the settings page. */
+export interface AccountSwitch {
+  accountId: string;
+  /** False: the new mail of this account is never checked, sent to an AI service or moved. */
+  on: boolean;
+  /** When it was switched (epoch milliseconds). Mail that arrived before an account was switched on again is never handled. */
+  at: number;
 }
 
 export type AccessPointType = "systemone" | "openai-decisions" | "openai-chat" | "anthropic" | "chatgpt";

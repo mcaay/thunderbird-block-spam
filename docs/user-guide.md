@@ -48,6 +48,7 @@ Nothing is ever deleted. Every failure leaves mail where it is.
 	- with a button that scans the entire `sent` folder to prefill the WHITE LIST in one go (without using AI). This pretty much guarantees that AI will never read confidential emails from your customers. You can limit the scan with a `start date` and an `end date`.
 	- the correct `sent` folders are chosen automatically, and you can add or remove folders (e.g. if you have rules that split sent emails into different folders).
 - Incoming mail is checked when it arrives, at startup and every 5 minutes, also when it was read on another device first.
+- Every account is protected until you untick it under Settings, Incoming mail. Block Spam then leaves the new mail of that account alone: it is never checked, sent to an AI service or moved.
 - Block and trust a sender in one step, see [Block and trust](#block-and-trust):
 	- with the buttons of the toolbar popup, for the selected messages,
 	- with the "Block Spam" entry in the context menu of the message list,

@@ -2,7 +2,7 @@
 // that follows from it. The settings page shows one warning with a fix per problem, and
 // the popup and the toolbar button count and name them.
 
-import { resolveMonitoredFolders } from "./folders";
+import { resolveProtectedFolders } from "./folders";
 import { aiHealth } from "./stats";
 import type { AccessPoint, FolderRef, Settings } from "./types";
 
@@ -132,8 +132,9 @@ export function findProblems(input: ProblemInput): Problem[] {
   if (input.onlyOwnAddresses && actsOnUnknownSenders(effects)) {
     problems.push({ kind: "before-scan", ...effects });
   }
+  // An account whose protection is switched off needs neither a Junk folder nor a screening folder.
   const monitored = accounts.filter(
-    (account) => resolveMonitoredFolders(account.inboxes, settings).some((folder) => folder.accountId === account.id),
+    (account) => resolveProtectedFolders(account.inboxes, settings).some((folder) => folder.accountId === account.id),
   );
   const withoutJunk = monitored.filter((item) => !item.hasJunk).map((account) => account.id);
   if (withoutJunk.length > 0) {

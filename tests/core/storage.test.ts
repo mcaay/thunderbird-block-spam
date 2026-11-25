@@ -298,10 +298,20 @@ describe("settings and state", () => {
       { ...base, sentFoldersAdded: [{ accountId: "a" }] },
       { ...base, screeningFolders: [{ accountId: "a", path: "/X" }, { accountId: "a", path: "/Y" }] },
       { ...base, forwardLabels: undefined },
+      { ...base, accountSwitches: [{ accountId: "a", on: true }] },
+      { ...base, accountSwitches: [{ accountId: "", on: false, at: 1 }] },
+      { ...base, accountSwitches: [{ accountId: "a", on: false, at: 1 }, { accountId: "a", on: true, at: 2 }] },
     ];
     for (const value of broken) {
       expect(() => validateSettings(value)).toThrowError(ValidationError);
     }
+  });
+
+  it("reads settings that were stored before protection per account existed: every account is protected", () => {
+    const { accountSwitches, ...older } = defaultSettings(NOW);
+    expect(accountSwitches).toEqual([]);
+    expect(validateSettings(older).accountSwitches).toEqual([]);
+    expect(invalidSettings(older)).toEqual([]);
   });
 
   it("names the settings whose stored value is not valid, each on its own", () => {

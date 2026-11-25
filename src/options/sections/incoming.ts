@@ -1,10 +1,10 @@
-// Incoming mail: monitored folders, and what happens to mail without an AI verdict. The
+// Incoming mail: which accounts are protected, their monitored folders, and what happens to mail without an AI verdict. The
 // screening folder of each account is the dependent part of the option that moves such
 // mail there: it stands under the menu, and only while that option is chosen. Under the
 // menu the pane says what the choice does right now, and guards it with "scan first".
 
 import type { SettingsPatch } from "../../core/edit";
-import { folderCandidates, mayJoin, screeningFolderPaths } from "../../core/folders";
+import { accountProtected, folderCandidates, mayJoin, screeningFolderPaths } from "../../core/folders";
 import { folderKey } from "../../core/ports";
 import { aiHealth } from "../../core/stats";
 import type { Settings } from "../../core/types";
@@ -102,7 +102,7 @@ export function incomingSection(shell: Shell): Section {
     h("div", { class: "row" }, h("label", { for: "no-verdict", text: t("noVerdictLabel") }), noVerdict),
     // Directly under the menu, and only while the option that uses them is chosen.
     dependent,
-    h("h2", { text: t("monitoredTitle") }),
+    h("h2", { text: t("incomingAccountsTitle") }),
     description(t("monitoredHint")),
     noAccounts,
     monitored,
@@ -147,9 +147,13 @@ export function incomingSection(shell: Shell): Section {
       return;
     }
     const folderName = t("screeningFolderName");
+    // An account whose protection is switched off needs no screening folder. One it still has stays listed, so that it can be changed.
+    const listed = current.accounts.filter(
+      (account) => accountProtected(settings, account.id) || settings.screeningFolders.some((folder) => folder.accountId === account.id),
+    );
     reconcile(
       screening,
-      current.accounts.map((account) => {
+      listed.map((account) => {
         const chosen = settings.screeningFolders.find((folder) => folder.accountId === account.id) ?? null;
         const others = settings.screeningFolders.filter((folder) => folder.accountId !== account.id);
         const roles = chosenIn(account, settings);
@@ -354,7 +358,9 @@ export function incomingSection(shell: Shell): Section {
     if (settings === null) {
       return;
     }
-    const without = current.accounts.filter((account) => !settings.screeningFolders.some((folder) => folder.accountId === account.id)).map((account) => account.name);
+    const without = current.accounts
+      .filter((account) => accountProtected(settings, account.id) && !settings.screeningFolders.some((folder) => folder.accountId === account.id))
+      .map((account) => account.name);
     const show = (settings.noVerdictAction === "screening" || current.status.wish.noVerdict === "screening") && without.length > 0;
     const signature = show ? without.join("\n") : "";
     if (noVerdictNote.dataset.signature !== signature) {
@@ -413,6 +419,15 @@ export function incomingSection(shell: Shell): Section {
           onAdd: (_account, folder) => {
             changed.clear();
             void guard(() => update({ monitoredFoldersAdded: [...settings.monitoredFoldersAdded, folder] }));
+          },
+          accountSwitch: {
+            label: t("accountProtect"),
+            on: (account) => accountProtected(settings, account.id),
+            offNote: t("accountUnprotected"),
+            onChange: (account, on) => {
+              changed.clear();
+              void guard(() => send("setAccountProtection", { accountId: account.id, on }));
+            },
           },
         }),
       );

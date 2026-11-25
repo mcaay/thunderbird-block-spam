@@ -44,6 +44,8 @@ export interface Requests {
   getStatus: { request: Record<string, never>; result: Status };
   /** Switches protection now. A wish that waited for the scan is settled by it. */
   setProtection: { request: { on: boolean }; result: null };
+  /** Protection of one account. Every account is protected until it is switched off here. */
+  setAccountProtection: { request: { accountId: string; on: boolean }; result: null };
   /**
    * Switches protection on when the scan of the sent mail has finished without an error: the scan that is
    * running, or else a scan of everything that is started here. The wish is stored and survives a restart.

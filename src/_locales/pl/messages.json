@@ -1311,7 +1311,19 @@
     "message": "Monitorowane foldery"
   },
   "monitoredHint": {
-    "message": "Folder Odebrane każdego konta jest zawsze monitorowany. Dodaj foldery, do których nowa poczta trafia bezpośrednio, na przykład za sprawą reguły na serwerze."
+    "message": "Każde konto jest chronione, dopóki go nie odznaczysz. Folder Odebrane chronionego konta jest zawsze monitorowany. Dodaj foldery, do których nowa poczta trafia bezpośrednio, na przykład za sprawą reguły na serwerze."
+  },
+  "incomingAccountsTitle": {
+    "message": "Konta i monitorowane foldery"
+  },
+  "accountProtect": {
+    "message": "Chroń to konto"
+  },
+  "accountUnprotected": {
+    "message": "Block Spam nie rusza nowej poczty tego konta: nie jest sprawdzana, wysyłana do usługi AI ani przenoszona. Ręczne blokowanie i ufanie nadal tu działa."
+  },
+  "statusAccounts": {
+    "message": "Chronione konta: $1 z $2."
   },
   "monitoredAlways": {
     "message": "zawsze"

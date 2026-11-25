@@ -7,7 +7,7 @@ import { applyCommand, commandEffect, COMMANDS, commandTarget } from "./commands
 import type { CommandMessage, CommandName, CommandPlan } from "./commands";
 import { decideMessage, errorText, MessageReader, REASONS, scorePayload } from "./decision";
 import type { DecisionDeps } from "./decision";
-import { resolveMonitoredFolders, resolveSentFolders } from "./folders";
+import { accountProtected, accountProtectedSince, resolveMonitoredFolders, resolveProtectedFolders, resolveSentFolders } from "./folders";
 import { learnRecipients, syncIdentities } from "./learning";
 import { entryKey, matchSender } from "./lists";
 import { applyLogAction, expectsMove } from "./logAction";
@@ -380,13 +380,19 @@ export class Engine {
   /** Handles monitored folders: every message dated from the window start on that was not processed yet. */
   private async handleMonitoredFolders(context: Context, started: number): Promise<void> {
     const { state, mail } = this.deps;
-    const since = Math.max(wholeSecond(state.settings.protectionOnAt ?? started), (state.lastTick ?? started) - WINDOW_MS);
-    for (const folder of resolveMonitoredFolders(context.inboxes, state.settings)) {
+    const sinceAll = Math.max(wholeSecond(state.settings.protectionOnAt ?? started), (state.lastTick ?? started) - WINDOW_MS);
+    for (const folder of resolveProtectedFolders(context.inboxes, state.settings)) {
+      // An account that was switched on again by hand: mail that arrived in it before that moment is never touched.
+      const since = Math.max(sinceAll, wholeSecond(accountProtectedSince(state.settings, folder.accountId)));
       try {
-        for await (const page of mail.messagesSince(folder, since)) {
+        pages: for await (const page of mail.messagesSince(folder, since)) {
           for (const message of page) {
             if (!state.settings.protection) {
               return;
+            }
+            if (!accountProtected(state.settings, folder.accountId)) {
+              // Switched off while its mail was being handled: the rest of the account is left alone.
+              break pages;
             }
             await this.handleIncoming(context, message);
           }
@@ -407,14 +413,16 @@ export class Engine {
       return;
     }
     const context = await this.context();
-    const monitored = resolveMonitoredFolders(context.inboxes, state.settings);
+    // A folder of an account whose protection is switched off is not among them.
+    const monitored = resolveProtectedFolders(context.inboxes, state.settings);
     if (!monitored.some((candidate) => sameFolder(candidate, folder))) {
       return;
     }
-    const protectionOnAt = wholeSecond(state.settings.protectionOnAt ?? 0);
+    // The later of the two moments: protection as a whole, and this account when it was switched on again by hand.
+    const protectionOnAt = Math.max(wholeSecond(state.settings.protectionOnAt ?? 0), wholeSecond(accountProtectedSince(state.settings, folder.accountId)));
     for await (const page of pages) {
       for (const message of page) {
-        if (!state.settings.protection) {
+        if (!state.settings.protection || !accountProtected(state.settings, folder.accountId)) {
           return;
         }
         if (message.date === 0 || message.date >= protectionOnAt || (await this.arrivedSince(message, protectionOnAt))) {

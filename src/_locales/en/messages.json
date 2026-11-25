@@ -1311,7 +1311,19 @@
     "message": "Monitored folders"
   },
   "monitoredHint": {
-    "message": "The Inbox of every account is always monitored. Add folders that receive new mail directly, for example through a server\u2011side rule."
+    "message": "Every account is protected until you untick it. The Inbox of a protected account is always monitored. Add folders that receive new mail directly, for example through a server\u2011side rule."
+  },
+  "incomingAccountsTitle": {
+    "message": "Accounts and monitored folders"
+  },
+  "accountProtect": {
+    "message": "Protect this account"
+  },
+  "accountUnprotected": {
+    "message": "Block Spam leaves the new mail of this account alone: it is never checked, sent to an AI service or moved. Blocking and trusting by hand still work here."
+  },
+  "statusAccounts": {
+    "message": "Protected accounts: $1 of $2."
   },
   "monitoredAlways": {
     "message": "always"

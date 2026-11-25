@@ -218,6 +218,23 @@ describe("scoring selected messages", () => {
   });
 });
 
+describe("protection per account", () => {
+  it("stores the switch of one account with its moment, and refuses a switch without an account", async () => {
+    const fake = new FakeBrowser({ [KEY_SETTINGS]: defaultSettings(Date.now()) });
+    const background = await loadBackground(fake, fakeFetch({}).fetch);
+    await settle();
+    const switches = () => (fake.storage[KEY_SETTINGS] as { accountSwitches: { accountId: string; on: boolean; at: number }[] }).accountSwitches;
+    const before = Date.now();
+    expect(await background.send("setAccountProtection", { accountId: "account2", on: false })).toEqual({ ok: true, result: null });
+    expect(switches()).toMatchObject([{ accountId: "account2", on: false }]);
+    expect(switches()[0]?.at).toBeGreaterThanOrEqual(before);
+    expect(await background.send("setAccountProtection", { accountId: "account2", on: true })).toEqual({ ok: true, result: null });
+    expect(switches()).toMatchObject([{ accountId: "account2", on: true }]);
+    expect(await background.send("setAccountProtection", { accountId: "", on: false })).toMatchObject({ ok: false });
+    expect(switches()).toHaveLength(1);
+  });
+});
+
 describe("block and trust without shortcuts", () => {
   async function setup(selected: tb.MessageHeader[]) {
     const fake = new FakeBrowser({ [KEY_SETTINGS]: defaultSettings(Date.now()) });

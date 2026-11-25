@@ -21,7 +21,7 @@ import { COMMANDS, isCommandName, undoneEntries } from "./core/commands";
 import type { CommandName } from "./core/commands";
 import { errorText } from "./core/decision";
 import { applySettingsPatch, manualEntry } from "./core/edit";
-import { chosenFolders, mayJoin, refusedFolders, screeningFolderPaths } from "./core/folders";
+import { chosenFolders, mayJoin, refusedFolders, screeningFolderPaths, withAccountSwitch } from "./core/folders";
 import type { FolderFacts } from "./core/folders";
 import { Engine } from "./core/engine";
 import type { CommandOutcome, CommandUndo, LogActionUndo, ScanProgress } from "./core/engine";
@@ -1043,6 +1043,18 @@ const handlers: Handlers = {
     // Switched by hand: a wish that waited for the scan is settled by this, and what the last one came to is history.
     // AI services that wait for the scan go on waiting.
     await saveWish({ ...wish, waiting: null, outcome: null });
+    return null;
+  },
+
+  async setAccountProtection({ accountId, on }) {
+    const { state } = need();
+    const id = asString(accountId, "accountId");
+    if (id === "") {
+      throw new ValidationError("accountId: expected an account id");
+    }
+    // The moment is taken here: mail that arrived in an account before it was switched on again is never touched.
+    state.settings.accountSwitches = withAccountSwitch(state.settings.accountSwitches, id, on === true, Date.now());
+    await state.saveSettings();
     return null;
   },
 

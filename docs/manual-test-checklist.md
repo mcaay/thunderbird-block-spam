@@ -319,7 +319,8 @@ Block and trust:
 - [ ] One mail account: the Advanced pane shows no "Sharing between accounts" and its lead sentence does not name it, "Learn more" of Lists has no sentence about it, and the Lists pane shows no "Applies to" menu and no "Applies to" column. With an entry of a removed account the column stays.
 - [ ] Overview: the status line stands directly under "Protection". "Check again" on the warning about a missing Spam folder answers "Checked at ...: the Spam folder is still missing." when nothing changed.
 - [ ] The warning about a missing Spam folder names Account Settings, "Spam Settings" and "Move new spam messages to:". Following it makes the warning go away after "Check again".
-- [ ] Incoming mail, "Mail without an AI verdict" (the first group of the pane, above "Monitored folders"): first the sentence about which mail this is, then "What to do with it:", and the screening folders only with the third option.
+- [ ] Incoming mail, "Accounts and monitored folders": every account has the switch "Protect this account", ticked. Unticked, the account shows one sentence in place of its folders, its new mail stays untouched (also mail from a blocked sender), and the Overview says "Protected accounts: 1 of 2." Ticked again, mail that arrived meanwhile is still left alone and new mail is handled.
+- [ ] Incoming mail, "Mail without an AI verdict" (the first group of the pane, above "Accounts and monitored folders"): first the sentence about which mail this is, then "What to do with it:", and the screening folders only with the third option.
 - [ ] The cutoff is a plain field: the arrow keys step it by 0.01, a value outside 0 to 1 is refused.
 
 ## After review round 6: logic

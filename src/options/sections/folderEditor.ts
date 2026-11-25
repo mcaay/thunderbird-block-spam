@@ -2,7 +2,7 @@
 // another folder. Used for Sent folders and for monitored folders.
 
 import { t } from "../../tb/i18n";
-import { addressed, description, h, named, option, removeButton } from "../dom";
+import { addressed, checkRow, description, h, named, option, removeButton } from "../dom";
 import type { Keyed, RemovedRows } from "../dom";
 import type { AccountView, FolderView } from "../model";
 import type { FolderRef } from "../../core/types";
@@ -23,6 +23,14 @@ export interface FolderEditorOptions {
   /** `row` is the row of the folder: it is handed to `removed`, which keeps it in its place. */
   onRemove: (account: AccountView, folder: FolderView, row: HTMLElement) => void;
   onAdd: (account: AccountView, folder: FolderRef) => void;
+  /** A switch for the whole account, under its name. While it is off, a sentence stands in place of the folders. */
+  accountSwitch?: {
+    label: string;
+    on: (account: AccountView) => boolean;
+    /** Said in place of the folders of an account that is switched off. */
+    offNote: string;
+    onChange: (account: AccountView, on: boolean) => void;
+  };
 }
 
 /** One block per account. Blocks are rebuilt only when their folders change, so a pending choice survives a redraw. */
@@ -39,8 +47,31 @@ export function folderEditors(accounts: readonly AccountView[], options: FolderE
     const keys = options.removed.order(chosen.map((folder) => prefix + folder.path), prefix);
     return {
       key: account.id,
-      signature: JSON.stringify([account.name, chosen, candidates, chosen.map((folder) => options.removable(account, folder)), keys, options.removed.signature(prefix)]),
+      signature: JSON.stringify([
+        account.name,
+        chosen,
+        candidates,
+        chosen.map((folder) => options.removable(account, folder)),
+        keys,
+        options.removed.signature(prefix),
+        options.accountSwitch?.on(account) ?? null,
+      ]),
       build: () => {
+        const accountSwitch = options.accountSwitch;
+        const on = accountSwitch === undefined || accountSwitch.on(account);
+        let switchRow: HTMLElement | null = null;
+        if (accountSwitch !== undefined) {
+          const check = checkRow(`${options.id}-on-${account.id}`, accountSwitch.label, (checked) => accountSwitch.onChange(account, checked));
+          check.input.checked = on;
+          // The block is drawn again when the switch changes: the focus goes back to the switch.
+          check.input.dataset.focus = "switch";
+          // Every account has such a switch: the name says whose it is.
+          named(check.input, account.name, accountSwitch.label);
+          switchRow = check.row;
+        }
+        if (accountSwitch !== undefined && !on) {
+          return h("div", { class: "account-block" }, h("h3", {}, ...addressed(account.name)), switchRow, description(accountSwitch.offNote, null, "indent"));
+        }
         const selectId = `${options.id}-add-${account.id}`;
         const select = h(
           "select",
@@ -97,6 +128,7 @@ export function folderEditors(accounts: readonly AccountView[], options: FolderE
           "div",
           { class: "account-block" },
           h("h3", {}, ...addressed(account.name)),
+          switchRow,
           // Nothing listed and nothing to add is one line, not two that say the same of an account without a usable folder.
           rows.length === 0 && candidates.length === 0 ? description(t("noFolderUsable")) : null,
           // An empty list is one line of text, not an empty box.
