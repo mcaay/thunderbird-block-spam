@@ -1305,7 +1305,7 @@
     "message": "Choose a folder to add for $1"
   },
   "incomingHint": {
-    "message": "While protection is on, new mail in monitored folders is checked when it arrives, when Thunderbird starts and every 5 minutes, also when it was read on another device first."
+    "message": "While protection is on, new mail in monitored folders is checked when it arrives, when Thunderbird starts and every 5 minutes. The check every 5 minutes is there because of other devices: Thunderbird does not report mail as new once you have read it on your phone, and mail you send from your phone teaches the white list the same way. It reads only what Thunderbird has already fetched."
   },
   "monitoredTitle": {
     "message": "Monitored folders"

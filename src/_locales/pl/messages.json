@@ -1305,7 +1305,7 @@
     "message": "Wybierz folder do dodania dla konta $1"
   },
   "incomingHint": {
-    "message": "Gdy ochrona jest włączona, nowa poczta w monitorowanych folderach jest sprawdzana, gdy nadejdzie, po uruchomieniu programu Thunderbird i co 5 minut, także wtedy, gdy wcześniej przeczytano ją na innym urządzeniu."
+    "message": "Gdy ochrona jest włączona, nowa poczta w monitorowanych folderach jest sprawdzana, gdy nadejdzie, po uruchomieniu programu Thunderbird i co 5 minut. Sprawdzanie co 5 minut jest potrzebne ze względu na inne urządzenia: Thunderbird nie zgłasza jako nowej poczty, którą wcześniej przeczytano na telefonie, a poczta wysłana z telefonu tak samo uczy białą listę. Odczytywane jest tylko to, co Thunderbird już pobrał."
   },
   "monitoredTitle": {
     "message": "Monitorowane foldery"
