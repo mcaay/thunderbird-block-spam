@@ -200,6 +200,7 @@ declare namespace tb {
     alarms: {
       create(name: string, alarmInfo: { periodInMinutes?: number; delayInMinutes?: number }): void | Promise<void>;
       get(name: string): Promise<{ name: string } | undefined>;
+      clear(name: string): Promise<boolean>;
       onAlarm: WebExtEvent<(alarm: { name: string }) => void>;
     };
     menus: {

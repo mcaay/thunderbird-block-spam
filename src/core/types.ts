@@ -53,6 +53,11 @@ export interface Settings {
   noVerdictAction: NoVerdictAction;
   /** Domain shortcuts use the smart target instead of always the registrable domain. */
   smart: boolean;
+  /**
+   * The check every 5 minutes. It is there for mail that another device handled first. Switched off, mail is
+   * checked when it arrives and when Thunderbird starts.
+   */
+  periodicCheck: boolean;
   cutoff: number;
   prompt: string;
   publicDomainsAdded: string[];

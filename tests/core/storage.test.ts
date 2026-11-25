@@ -314,6 +314,14 @@ describe("settings and state", () => {
     expect(invalidSettings(older)).toEqual([]);
   });
 
+  it("reads settings that were stored before the check every 5 minutes was an option: it runs", () => {
+    const { periodicCheck, ...older } = defaultSettings(NOW);
+    expect(periodicCheck).toBe(true);
+    expect(validateSettings(older).periodicCheck).toBe(true);
+    expect(invalidSettings(older)).toEqual([]);
+    expect(invalidSettings({ ...older, periodicCheck: "no" })).toEqual(["periodicCheck"]);
+  });
+
   it("names the settings whose stored value is not valid, each on its own", () => {
     const base = defaultSettings(NOW);
     expect(invalidSettings(base)).toEqual([]);

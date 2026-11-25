@@ -108,7 +108,7 @@ Three triggers run the same idempotent job:
 - Thunderbird startup,
 - an alarm every 5 minutes (the tick).
 
-The alarm always runs, because learning (section 4.5) does not depend on protection. Incoming mail is handled only while protection is on. Protection is off after installation and is switched on by the user (section 9.1).
+The alarm runs whether protection is on or off, because learning (section 4.5) does not depend on protection. Decided by the owner on 2026-11-25: the alarm is an option, "Also check every 5 minutes" on the Incoming mail pane, on by default. Switched off, no alarm is set: mail is checked when it arrives and when Thunderbird starts, so mail that another device handled first, and anything the events missed, waits for the next start. Switching it on again checks at once. The option is local state: it is neither exported nor imported. Incoming mail is handled only while protection is on. Protection is off after installation and is switched on by the user (section 9.1).
 
 Monitored folders default to the Inbox of every account; the user can add folders per account.
 
@@ -465,6 +465,7 @@ Added on 2026-11-22. Not yet confirmed by the owner. After the code review the i
 | 9.1 | Decided by the owner on 2026-11-25: the Overview stands in the order of doing. The setup steps (scan the sent mail, add an AI service, switch protection on) come first, the protection group with its state and its switch follows. Complete setup is one line that opens. |
 | 8.3, 8.7 | Decided by the owner on 2026-11-25: the menu "Add a service" groups the services by how they are reached: decision models, "API" (OpenAI, Claude, Gemini, OpenRouter, and "Other provider" for any service that accepts requests in the format of the OpenAI API), "Subscriptions" (ChatGPT by sign-in, Claude through the monthly API credit of Max, Ultra and Team with a key of the linked Console organization) and "On this computer". The add-on still never handles Claude sign-in tokens and never imitates Claude Code. |
 | 5.1 | Decided by the owner on 2026-11-25: protection per account. The Incoming mail pane lists every account with the switch "Protect this account", ticked by default, above its monitored folders. An account that is unticked shows one sentence in place of its folders, needs no Junk or screening folder, and the Overview then says how many accounts are protected. |
+| 5.1 | Decided by the owner on 2026-11-25: the check every 5 minutes is an option. The Incoming mail pane says when mail is checked, and directly under that sentence stands the switch "Also check every 5 minutes" with its reasons: Thunderbird's signals for new and sent mail can miss a message, and they do not cover what another device did first. While it is off, the Overview says so next to the time of the last check. |
 | 7.2 | Decided by the owner on 2026-11-25: the companion add-on for bare keys is removed. Nothing in the project asks for full access to Thunderbird and the computer. The Block and trust pane says under the shortcuts why a key on its own, such as B, cannot be a shortcut. |
 | 11 | One more required permission: `menus`, for the commands in the context menu of the message list. Optional host permissions cover `https://*/*` and the two loopback addresses, each host still being granted when its service is saved. |
 

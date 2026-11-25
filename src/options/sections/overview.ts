@@ -39,6 +39,7 @@ const SETTING_LABELS: Partial<Record<SettingName, () => string>> = {
   newEntryScope: () => t("newEntriesTitle"),
   noVerdictAction: () => t("noVerdictTitle"),
   smart: () => t("smartTitle"),
+  periodicCheck: () => t("periodicLabel"),
   cutoff: () => t("cutoffTitle"),
   prompt: () => t("promptTitle"),
   publicDomainsAdded: () => t("publicAddedTitle"),
@@ -67,6 +68,7 @@ function settingDefault(name: string): string {
     case "observation":
       return t("settingOff");
     case "smart":
+    case "periodicCheck":
       return t("settingOn");
     case "newEntryScope":
       return t("scopeShared");
@@ -504,6 +506,10 @@ export function overviewSection(shell: Shell): Section {
     const parts: string[] = [];
     if (on) {
       parts.push(current.lastTick === null ? t("statusNeverChecked") : t("statusLastCheck", formatShortTime(current.lastTick, Date.now())));
+      if (!settings.periodicCheck) {
+        // Said because the time of the last check then stays old, and that is as it was set up.
+        parts.push(t("statusNoPeriodic"));
+      }
       if (today !== null) {
         parts.push(
           today.checked === 0

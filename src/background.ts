@@ -194,7 +194,7 @@ function need(): App {
 /** Set by Thunderbird's startup and by an installation or update: the next tick also sweeps the screening folders. */
 let sweepOnTick = false;
 
-function requestTick(startup = false): void {
+function requestTick(startup = false, periodic = false): void {
   if (startup) {
     sweepOnTick = true;
   }
@@ -203,6 +203,10 @@ function requestTick(startup = false): void {
       withKeepAlive(async () => {
         await ready;
         if (app === null) {
+          return;
+        }
+        if (periodic && !app.state.settings.periodicCheck) {
+          // An alarm that was still set when the check every 5 minutes was switched off.
           return;
         }
         mail.resetCache();
@@ -216,9 +220,17 @@ function requestTick(startup = false): void {
   );
 }
 
-async function ensureAlarm(): Promise<void> {
-  if ((await browser.alarms.get(TICK_ALARM)) === undefined) {
+/**
+ * The alarm is set exactly while the check every 5 minutes is wanted. While the stored data cannot be read,
+ * it is set, as the default says.
+ */
+async function syncAlarm(): Promise<void> {
+  const wanted = app === null || app.state.settings.periodicCheck;
+  const existing = await browser.alarms.get(TICK_ALARM);
+  if (wanted && existing === undefined) {
     await browser.alarms.create(TICK_ALARM, { periodInMinutes: TICK_MINUTES });
+  } else if (!wanted && existing !== undefined) {
+    await browser.alarms.clear(TICK_ALARM);
   }
 }
 
@@ -233,7 +245,7 @@ browser.runtime.onInstalled.addListener((details) => {
 
 browser.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === TICK_ALARM) {
-    requestTick();
+    requestTick(false, true);
   }
 });
 
@@ -255,7 +267,8 @@ browser.messages.onNewMailReceived.addListener((folder, list) => {
   );
 });
 
-void ensureAlarm().catch((error) => console.error("Block Spam: the alarm could not be created", error));
+// After the start: the setting is known only then. A start that follows a repair of stored data sets it again.
+void ready.then(syncAlarm).catch((error) => console.error("Block Spam: the alarm could not be set", error));
 
 // ---------------------------------------------------------------------------
 // Problems that change what happens to mail are visible without opening anything: a
@@ -1134,8 +1147,16 @@ const handlers: Handlers = {
         throw new ValidationError(`folders: not possible in this list: ${refused.map(folderKey).join(", ")}`, "folder-role");
       }
     }
+    const periodicChanged = settings.periodicCheck !== state.settings.periodicCheck;
     state.settings = settings;
     await state.saveSettings();
+    if (periodicChanged) {
+      await syncAlarm();
+      if (settings.periodicCheck) {
+        // Switched on again: what the time without it left unchecked is checked now, not in 5 minutes.
+        requestTick();
+      }
+    }
     if ("noVerdictAction" in asRecord(patch, "patch") && (wish.noVerdict !== null || wish.noVerdictOutcome !== null)) {
       // Chosen by hand: a choice that waited for the scan is settled by this, and what the last one came to is history.
       await saveWish({ ...wish, noVerdict: null, noVerdictOutcome: null });
@@ -1562,6 +1583,7 @@ const handlers: Handlers = {
     await store.clear();
     ready = start();
     await ready;
+    await syncAlarm();
     requestTick();
     return null;
   },
@@ -1632,6 +1654,7 @@ const handlers: Handlers = {
     await store.set({ [KEY_SETTINGS]: withDefaults(raw[KEY_SETTINGS], [name], Date.now()) });
     ready = start();
     await ready;
+    await syncAlarm();
     requestTick();
     return null;
   },

@@ -50,6 +50,7 @@ export function defaultSettings(now: number): Settings {
     newEntryScope: "shared",
     noVerdictAction: "leave",
     smart: true,
+    periodicCheck: true,
     cutoff: DEFAULT_CUTOFF,
     prompt: DEFAULT_PROMPT,
     publicDomainsAdded: [],
@@ -183,6 +184,8 @@ const SETTINGS_FIELDS: { [Name in keyof Settings]: (value: unknown, path: string
   newEntryScope: (value, path) => asOneOf<NewEntryScope>(value, ["shared", "account"], path),
   noVerdictAction: (value, path) => asOneOf<NoVerdictAction>(value, ["leave", "junk", "screening"], path),
   smart: asBoolean,
+  // Settings stored before this option existed have no value for it: the check runs, as it always did.
+  periodicCheck: (value, path) => (value === undefined ? true : asBoolean(value, path)),
   cutoff: validateCutoff,
   prompt: validatePrompt,
   publicDomainsAdded: (value, path) => asArray(value, path, asString),

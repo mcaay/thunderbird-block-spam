@@ -28,6 +28,7 @@ export interface SettingsPatch {
   newEntryScope?: NewEntryScope;
   noVerdictAction?: NoVerdictAction;
   smart?: boolean;
+  periodicCheck?: boolean;
   cutoff?: number;
   prompt?: string;
   publicDomainsAdded?: string[];
@@ -79,6 +80,9 @@ export function applySettingsPatch(current: Settings, patch: unknown): { setting
         break;
       case "smart":
         settings.smart = asBoolean(value, key);
+        break;
+      case "periodicCheck":
+        settings.periodicCheck = asBoolean(value, key);
         break;
       case "newEntryScope":
         settings.newEntryScope = asOneOf<NewEntryScope>(value, ["shared", "account"], key);

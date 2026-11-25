@@ -267,6 +267,7 @@
     alarms: {
       create: (name, info) => log("alarm created", name, JSON.stringify(info)),
       get: async () => undefined,
+      clear: async () => false,
       onAlarm,
     },
     notifications: {

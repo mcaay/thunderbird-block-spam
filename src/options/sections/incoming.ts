@@ -11,7 +11,7 @@ import type { Settings } from "../../core/types";
 import { t, tCode } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
 import { beforeScanText, noVerdictOutcomeText, whereText } from "../../tb/stateText";
-import { addressed, bar, button, byId, closeButton, description, dialog, errorText, guard, h, inlineStatus, option, reconcile, removedRows, replace, setUnavailable, whileBusy } from "../dom";
+import { addressed, bar, button, byId, checkRow, closeButton, description, dialog, errorText, guard, h, inlineStatus, option, reconcile, removedRows, replace, setUnavailable, whileBusy } from "../dom";
 import { icon } from "../icons";
 import { chosenIn, folderRef, folderView, forgetAccounts, hasFolder, monitoredFolders, withoutFolder } from "../model";
 import type { Model } from "../model";
@@ -90,11 +90,16 @@ export function incomingSection(shell: Shell): Section {
   const noAccounts = description(t("noAccounts"));
   /** The accounts whose folder is being created right now. */
   const creating = new Set<string>();
+  const periodic = checkRow("periodic-switch", t("periodicLabel"), (checked) => void guard(() => update({ periodicCheck: checked })));
+  periodic.input.setAttribute("aria-describedby", "periodic-hint");
 
   replace(
     root,
     h("h1", { text: t("catIncoming"), tabIndex: -1 }),
     h("p", { class: "lead", text: t("incomingHint") }),
+    // The third moment mail is checked at is an option, and its reason stands with it.
+    periodic.row,
+    h("div", { class: "description indent", id: "periodic-hint", text: t("periodicHint") }),
     // The choice every user makes stands first. The list that grows with the accounts follows it.
     h("h2", { text: t("noVerdictTitle") }),
     // First which mail this is, then the question, then what the chosen answer needs.
@@ -382,6 +387,7 @@ export function incomingSection(shell: Shell): Section {
         return;
       }
       noVerdict.value = settings.noVerdictAction;
+      periodic.input.checked = settings.periodicCheck;
       drawChoice(next);
       noAccounts.hidden = next.accounts.length > 0;
       // The folders belong to the one option that uses them. Without a mail account there is no folder to choose either.

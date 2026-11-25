@@ -48,6 +48,8 @@ export class FakeBrowser {
   /** All messages of a folder, by folder id, as messages.list returns them. */
   readonly folderMessages = new Map<string, tb.MessageHeader[]>();
   readonly moves: { ids: number[]; folderId: string }[] = [];
+  /** The names of the alarms that are set. */
+  readonly alarms = new Set<string>();
   readonly openedTabs: string[] = [];
   readonly closedTabs: number[] = [];
   readonly notifications: string[] = [];
@@ -191,7 +193,14 @@ export class FakeBrowser {
         },
       },
       windows: { openDefaultBrowser: async () => undefined, update: async () => undefined },
-      alarms: { create: () => undefined, get: async () => undefined, onAlarm: new FakeEvent() },
+      alarms: {
+        create: (name: string) => {
+          this.alarms.add(name);
+        },
+        get: async (name: string) => (this.alarms.has(name) ? { name } : undefined),
+        clear: async (name: string) => this.alarms.delete(name),
+        onAlarm: new FakeEvent(),
+      },
       menus: {
         create: (properties: { id?: string }) => {
           this.menuItems.push(properties);

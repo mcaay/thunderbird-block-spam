@@ -4,7 +4,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CHATGPT_MODELS_URL } from "../src/ai/chatgpt";
 import { CHATGPT_ORIGINS, DISCOVERY_URL, ISSUER, JWKS_URL, TOKEN_URL } from "../src/ai/chatgptAuth";
-import { KEY_ACCESS_POINTS, KEY_ATTENTION_NOTIFIED, KEY_ENTRIES, KEY_LAST_COMMAND, KEY_PROTECTION_WISH, KEY_SETTINGS } from "../src/core/keys";
+import { KEY_ACCESS_POINTS, KEY_ATTENTION_NOTIFIED, KEY_ENTRIES, KEY_LAST_COMMAND, KEY_META, KEY_PROTECTION_WISH, KEY_SETTINGS } from "../src/core/keys";
 import { defaultSettings } from "../src/core/settings";
 import type { AccessPoint } from "../src/core/types";
 import { FakeBrowser, loadBackground } from "./helpers/browser";
@@ -215,6 +215,47 @@ describe("scoring selected messages", () => {
     expect(await background.send("selection", { tabId: 1 })).toEqual({ ok: true, result: { count: 51, limit: 50, sender: null } });
     expect(await background.send("scoreSelected", { tabId: 1 })).toEqual({ ok: false, error: "popupScoreTooMany(50)" });
     expect(http.requests).toHaveLength(0);
+  });
+});
+
+describe("the check every 5 minutes", () => {
+  const alarm = (fake: FakeBrowser) => fake.api.alarms.onAlarm as unknown as FakeEvent;
+  /** A check writes its time: the stored time tells whether one ran since it was marked. */
+  const lastCheck = (fake: FakeBrowser) => (fake.storage[KEY_META] as { lastTick: number | null }).lastTick;
+  const mark = (fake: FakeBrowser) => {
+    fake.storage[KEY_META] = { ...(fake.storage[KEY_META] as object), lastTick: 1 };
+  };
+
+  it("has its alarm only while the option is on, and is still made when Thunderbird starts", async () => {
+    const fake = new FakeBrowser({ [KEY_SETTINGS]: defaultSettings(Date.now()) });
+    const background = await loadBackground(fake, fakeFetch({}).fetch);
+    await settle();
+    expect(fake.alarms.has("tick")).toBe(true);
+
+    expect(await background.send("updateSettings", { patch: { periodicCheck: false } })).toMatchObject({ ok: true });
+    expect(fake.alarms.has("tick")).toBe(false);
+    // An alarm that was still set does not check any more.
+    mark(fake);
+    background.fire(alarm(fake), { name: "tick" });
+    await settle();
+    expect(lastCheck(fake)).toBe(1);
+    background.fire(fake.api.runtime.onStartup as unknown as FakeEvent);
+    await settle();
+    expect(lastCheck(fake)).not.toBe(1);
+
+    // Switched on again: the alarm is back, and what was left is checked at once.
+    mark(fake);
+    expect(await background.send("updateSettings", { patch: { periodicCheck: true } })).toMatchObject({ ok: true });
+    await settle();
+    expect(fake.alarms.has("tick")).toBe(true);
+    expect(lastCheck(fake)).not.toBe(1);
+  });
+
+  it("sets no alarm when Thunderbird starts with the option off", async () => {
+    const fake = new FakeBrowser({ [KEY_SETTINGS]: { ...defaultSettings(Date.now()), periodicCheck: false } });
+    await loadBackground(fake, fakeFetch({}).fetch);
+    await settle();
+    expect(fake.alarms.has("tick")).toBe(false);
   });
 });
 
