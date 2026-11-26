@@ -51,6 +51,7 @@ export function defaultSettings(now: number): Settings {
     noVerdictAction: "leave",
     smart: true,
     periodicCheck: true,
+    markJunkRead: true,
     cutoff: DEFAULT_CUTOFF,
     prompt: DEFAULT_PROMPT,
     publicDomainsAdded: [],
@@ -186,6 +187,8 @@ const SETTINGS_FIELDS: { [Name in keyof Settings]: (value: unknown, path: string
   smart: asBoolean,
   // Settings stored before this option existed have no value for it: the check runs, as it always did.
   periodicCheck: (value, path) => (value === undefined ? true : asBoolean(value, path)),
+  // The same for marking mail moved to Junk as read: settings stored before it existed get the default.
+  markJunkRead: (value, path) => (value === undefined ? true : asBoolean(value, path)),
   cutoff: validateCutoff,
   prompt: validatePrompt,
   publicDomainsAdded: (value, path) => asArray(value, path, asString),

@@ -1310,6 +1310,12 @@
   "periodicHint": {
     "message": "This check is the safety net. Thunderbird’s signals for new and sent mail can miss a message, and they do not cover other devices: mail you already read on your phone is not reported as new, and mail you send from your phone is learned only from the Sent folder. The check makes sure that no new mail stays unchecked and that everyone you wrote to gets on the white list. It reads only what Thunderbird has already fetched. Switched off, all of this waits until Thunderbird starts again."
   },
+  "junkReadLabel": {
+    "message": "Mark mail moved to Spam as read"
+  },
+  "junkReadHint": {
+    "message": "Then the Spam folder does not show it as unread. When you undo the decision, with Undo or in the log, the message is unread again."
+  },
   "statusNoPeriodic": {
     "message": "The check every 5 minutes is switched off."
   },

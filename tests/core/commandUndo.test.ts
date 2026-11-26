@@ -17,7 +17,7 @@ describe("undoing a command", () => {
     expect(outcome.undo).toEqual({
       remove: [entryKey("address", "cold@outreach.example", "all")],
       restore: [],
-      moves: [{ accountId: "account1", messageId: msg.headerMessageId, from: INBOX1, to: JUNK1 }],
+      moves: [{ accountId: "account1", messageId: msg.headerMessageId, from: INBOX1, to: JUNK1, readBefore: false }],
     });
     // The outcome says where the message is again, so that the line after Undo can name the place.
     expect(await h.engine.undoCommand(outcome.undo)).toEqual({ moved: 1, notFound: 0, failures: [], back: [{ place: "inbox", folder: INBOX1 }] });

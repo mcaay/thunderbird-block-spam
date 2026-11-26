@@ -672,6 +672,8 @@ function asCommandUndo(value: unknown): CommandUndo {
         messageId: asString(move.messageId, `${path}.messageId`),
         from: asFolderRef(move.from, `${path}.from`),
         to: asFolderRef(move.to, `${path}.to`),
+        // Commands stored before the read state was kept have none: Undo leaves it as it is.
+        ...(move.readBefore === undefined ? {} : { readBefore: asBoolean(move.readBefore, `${path}.readBefore`) }),
       };
     }),
   };
@@ -1015,7 +1017,14 @@ function asLogActionUndo(value: unknown): LogActionUndo {
     messageId: asString(record.messageId, "undo.messageId"),
     remove: asArray(record.remove, "undo.remove", asString),
     restore: asArray(record.restore, "undo.restore", validateEntry),
-    move: move === null ? null : { from: asFolderRef(move.from, "undo.move.from"), to: asFolderRef(move.to, "undo.move.to") },
+    move:
+      move === null
+        ? null
+        : {
+            from: asFolderRef(move.from, "undo.move.from"),
+            to: asFolderRef(move.to, "undo.move.to"),
+            ...(move.readBefore === undefined ? {} : { readBefore: asBoolean(move.readBefore, "undo.move.readBefore") }),
+          },
   };
 }
 

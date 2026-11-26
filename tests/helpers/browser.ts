@@ -48,6 +48,8 @@ export class FakeBrowser {
   /** All messages of a folder, by folder id, as messages.list returns them. */
   readonly folderMessages = new Map<string, tb.MessageHeader[]>();
   readonly moves: { ids: number[]; folderId: string }[] = [];
+  /** Every messages.update, in order. */
+  readonly updates: { id: number; read?: boolean }[] = [];
   /** The names of the alarms that are set. */
   readonly alarms = new Set<string>();
   readonly openedTabs: string[] = [];
@@ -129,6 +131,15 @@ export class FakeBrowser {
         getHeaders: async () => ({}),
         listAttachments: async () => [],
         listInlineTextParts: async () => [{ contentType: "text/plain", content: "Hello" }],
+        update: async (id: number, properties: { read?: boolean }) => {
+          this.updates.push({ id, ...properties });
+          for (const [folderId, messages] of this.folderMessages) {
+            this.folderMessages.set(
+              folderId,
+              messages.map((item) => (item.id === id ? { ...item, ...properties } : item)),
+            );
+          }
+        },
         move: async (ids: number[], folderId: string) => {
           this.moves.push({ ids: [...ids], folderId });
           const target = FOLDERS.find((folder) => folder.id === folderId);

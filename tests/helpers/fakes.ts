@@ -49,6 +49,7 @@ export function message(partial: Partial<FakeMessage> & { accountId: string }): 
     subject: `Subject ${id}`,
     date: Date.UTC(2026, 10, 21, 12),
     size: 1000,
+    read: false,
     ...partial,
   };
 }
@@ -71,7 +72,11 @@ export class FakeMail implements MailPort {
   identityList: Identity[] = [];
   folders = new Map<string, FakeFolder>();
   moves: { ids: number[]; to: FolderRef }[] = [];
+  /** Every change of the read state, in order. */
+  readChanges: { ids: number[]; read: boolean }[] = [];
   failMoves = false;
+  /** Set for a server that refuses to mark messages read or unread. */
+  failSetRead = false;
   failBody = false;
   pageSize = 2;
   bodyReads = 0;
@@ -212,6 +217,17 @@ export class FakeMail implements MailPort {
       }
     }
     this.moves.push({ ids: [...messageIds], to: target });
+  }
+
+  async setRead(messageIds: number[], read: boolean): Promise<number[]> {
+    if (this.failSetRead) {
+      throw new Error("update refused");
+    }
+    for (const id of messageIds) {
+      this.find(id).read = read;
+    }
+    this.readChanges.push({ ids: [...messageIds], read });
+    return [...messageIds];
   }
 }
 

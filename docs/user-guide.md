@@ -48,6 +48,7 @@ Nothing is ever deleted. Every failure leaves mail where it is.
 	- with a button that scans the entire `sent` folder to prefill the WHITE LIST in one go (without using AI). This pretty much guarantees that AI will never read confidential emails from your customers. You can limit the scan with a `start date` and an `end date`.
 	- the correct `sent` folders are chosen automatically, and you can add or remove folders (e.g. if you have rules that split sent emails into different folders).
 - Incoming mail is checked when it arrives, at startup and every 5 minutes, also when it was read on another device first. The check every 5 minutes is the safety net for what Thunderbird's own signals miss; it can be switched off under Settings, Incoming mail.
+- Mail moved to Spam is marked read, so the Spam folder shows no unread mail. Undo, and undoing the decision in the log, mark it unread again. You can switch this off under Settings, Incoming mail.
 - Every account is protected until you untick it under Settings, Incoming mail. Block Spam then leaves the new mail of that account alone: it is never checked, sent to an AI service or moved.
 - Block and trust a sender in one step, see [Block and trust](#block-and-trust):
 	- with the buttons of the toolbar popup, for the selected messages,

@@ -28,6 +28,8 @@ export interface MailPort {
   findByMessageId(accountId: string, headerMessageId: string): Promise<MessageInfo[]>;
   /** Moves messages. Rejects when the move fails. */
   move(messageIds: number[], folder: FolderRef): Promise<void>;
+  /** Marks messages read or unread. Returns the ids it could change; the others are left out. */
+  setRead(messageIds: number[], read: boolean): Promise<number[]>;
 }
 
 export interface AiPort {

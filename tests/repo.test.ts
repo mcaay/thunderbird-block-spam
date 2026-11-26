@@ -281,7 +281,7 @@ describe("manifest of the main add-on", () => {
 
   it("requests exactly the permissions of the specification, and menus for the context menu of the message list", () => {
     expect([...(manifest.permissions as string[])].sort()).toEqual(
-      ["accountsRead", "messagesRead", "messagesMove", "compose", "storage", "alarms", "notifications", "menus"].sort(),
+      ["accountsRead", "messagesRead", "messagesMove", "messagesUpdate", "compose", "storage", "alarms", "notifications", "menus"].sort(),
     );
     expect([...(manifest.optional_permissions as string[])].sort()).toEqual(["accountsFolders", "webRequest"]);
     expect(manifest.host_permissions).toBeUndefined();

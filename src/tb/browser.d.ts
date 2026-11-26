@@ -47,6 +47,7 @@ declare namespace tb {
     date: Date;
     headerMessageId: string;
     size: number;
+    read?: boolean;
     external: boolean;
     folder?: MailFolder;
   }
@@ -155,6 +156,8 @@ declare namespace tb {
       listAttachments(messageId: number): Promise<MessageAttachment[]>;
       listInlineTextParts(messageId: number): Promise<InlineTextPart[]>;
       move(messageIds: number[], folderId: string): Promise<void>;
+      /** Needs the messagesUpdate permission. */
+      update(messageId: number, newProperties: { read?: boolean }): Promise<void>;
       onNewMailReceived: WebExtEvent<(folder: MailFolder, messages: MessageList) => void>;
     };
     messengerUtilities: {

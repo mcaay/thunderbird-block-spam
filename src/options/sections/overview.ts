@@ -40,6 +40,7 @@ const SETTING_LABELS: Partial<Record<SettingName, () => string>> = {
   noVerdictAction: () => t("noVerdictTitle"),
   smart: () => t("smartTitle"),
   periodicCheck: () => t("periodicLabel"),
+  markJunkRead: () => t("junkReadLabel"),
   cutoff: () => t("cutoffTitle"),
   prompt: () => t("promptTitle"),
   publicDomainsAdded: () => t("publicAddedTitle"),
@@ -69,6 +70,7 @@ function settingDefault(name: string): string {
       return t("settingOff");
     case "smart":
     case "periodicCheck":
+    case "markJunkRead":
       return t("settingOn");
     case "newEntryScope":
       return t("scopeShared");

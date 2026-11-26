@@ -1310,6 +1310,12 @@
   "periodicHint": {
     "message": "To sprawdzanie jest zabezpieczeniem. Sygnały programu Thunderbird o nowej i wysłanej poczcie bywają zawodne i nie obejmują innych urządzeń: poczta przeczytana już na telefonie nie jest zgłaszana jako nowa, a poczta wysłana z telefonu jest poznawana tylko z folderu wysłanych. Dzięki sprawdzaniu żadna nowa poczta nie zostaje pominięta, a każdy, do kogo piszesz, trafia na białą listę. Odczytywane jest tylko to, co Thunderbird już pobrał. Po wyłączeniu to wszystko czeka do następnego uruchomienia programu Thunderbird."
   },
+  "junkReadLabel": {
+    "message": "Oznaczaj pocztę przeniesioną do Niechcianych jako przeczytaną"
+  },
+  "junkReadHint": {
+    "message": "Wtedy folder Niechciane nie pokazuje jej jako nieprzeczytanej. Gdy cofniesz decyzję, przyciskiem Cofnij albo w dzienniku, wiadomość znów jest nieprzeczytana."
+  },
   "statusNoPeriodic": {
     "message": "Sprawdzanie co 5 minut jest wyłączone."
   },

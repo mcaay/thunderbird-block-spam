@@ -263,6 +263,12 @@ describe("log", () => {
     expect(validateLogEntry(logEntry(2), "log:0[1]").messageId).toBe("msg-2@test");
     expect(() => validateLogEntry({ ...logEntry(3), messageId: 7 }, "log:0[2]")).toThrowError(ValidationError);
   });
+
+  it("keeps whether Block Spam marked the message read, and loads entries logged before that without it", () => {
+    expect(validateLogEntry({ ...logEntry(1), markedRead: true }, "log:0[0]").markedRead).toBe(true);
+    expect("markedRead" in validateLogEntry(logEntry(2), "log:0[1]")).toBe(false);
+    expect(() => validateLogEntry({ ...logEntry(3), markedRead: "yes" }, "log:0[2]")).toThrowError(ValidationError);
+  });
 });
 
 describe("settings and state", () => {
@@ -316,8 +322,8 @@ describe("settings and state", () => {
   });
 
   it("gives the pages settings of an older version with the defaults of what was added since", () => {
-    const { accountSwitches, periodicCheck, ...older } = defaultSettings(NOW);
-    expect(storedSettings(older)).toEqual({ ...older, accountSwitches, periodicCheck });
+    const { accountSwitches, periodicCheck, markJunkRead, ...older } = defaultSettings(NOW);
+    expect(storedSettings(older)).toEqual({ ...older, accountSwitches, periodicCheck, markJunkRead });
     expect(storedSettings({ ...older, cutoff: 7 })).toBeNull();
     expect(storedSettings(undefined)).toBeNull();
   });
@@ -328,6 +334,14 @@ describe("settings and state", () => {
     expect(validateSettings(older).periodicCheck).toBe(true);
     expect(invalidSettings(older)).toEqual([]);
     expect(invalidSettings({ ...older, periodicCheck: "no" })).toEqual(["periodicCheck"]);
+  });
+
+  it("reads settings that were stored before mail moved to Junk was marked read: it is", () => {
+    const { markJunkRead, ...older } = defaultSettings(NOW);
+    expect(markJunkRead).toBe(true);
+    expect(validateSettings(older).markJunkRead).toBe(true);
+    expect(invalidSettings(older)).toEqual([]);
+    expect(invalidSettings({ ...older, markJunkRead: 1 })).toEqual(["markJunkRead"]);
   });
 
   it("names the settings whose stored value is not valid, each on its own", () => {

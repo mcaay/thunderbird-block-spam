@@ -28,6 +28,7 @@ export function toMessageInfo(header: tb.MessageHeader): MessageInfo | null {
     subject: header.subject ?? "",
     date: Number.isFinite(date) ? date : 0,
     size: header.size ?? 0,
+    read: header.read === true,
   };
 }
 
@@ -191,6 +192,11 @@ export class ThunderbirdMail implements MailPort {
 
   async move(messageIds: number[], folder: FolderRef): Promise<void> {
     await browser.messages.move(messageIds, await this.folderId(folder));
+  }
+
+  async setRead(messageIds: number[], read: boolean): Promise<number[]> {
+    const results = await Promise.allSettled(messageIds.map((id) => browser.messages.update(id, { read })));
+    return messageIds.filter((_, index) => results[index]?.status === "fulfilled");
   }
 }
 

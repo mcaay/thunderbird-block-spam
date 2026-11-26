@@ -6,6 +6,7 @@ import type { ChainResult } from "./chain";
 import { resolveEffectiveSender } from "./forward";
 import type { EffectiveSender } from "./forward";
 import { matchSender } from "./lists";
+import { moveMessages } from "./move";
 import { buildPayload, MAX_BODY_MESSAGE_SIZE, SAMPLE_PAYLOAD } from "./payload";
 import type { AiPort, MailPort } from "./ports";
 import { sameFolder } from "./ports";
@@ -185,7 +186,11 @@ export async function decideMessage(deps: DecisionDeps, message: MessageInfo): P
       return entry;
     }
     try {
-      await mail.move([message.id], target);
+      // Mail moved to Junk is marked read, when the user wants that.
+      const marked = await moveMessages(mail, [message], target, action === "junk" && state.settings.markJunkRead ? true : null);
+      if (marked.size > 0) {
+        entry.markedRead = true;
+      }
     } catch (error) {
       entry.action = "none";
       entry.reason = REASONS.moveFailed;

@@ -76,6 +76,7 @@ Where the documentation left a question open, the source code of Thunderbird (`t
 - **The log entry has two extra fields:** `via` (the forwarding mailbox of a wrapped forward) and `action` (what was done, or would have been done in observation mode).
 - **The AI payload's `From` line is the address only**, as the specification defines the effective sender, without the display name.
 - **One Junk folder per account:** the first folder with the junk special use.
+- **Mail is marked read before it is moved to Junk** (`moveMessages` in `src/core/move.ts`). Thunderbird keeps the read state when it moves a message, and `messages.move` does not return the ids of the moved copies, so the state is set first, as Thunderbird does with its own spam, and put back when the move fails. A read state that cannot be set does not stop the move. Only unread messages are changed, so that taking a decision back can restore exactly what Block Spam changed: Undo of a command or of a log action keeps `readBefore`, a log entry keeps `markedRead`, and trust from the log marks such a message unread again.
 
 ### AI
 

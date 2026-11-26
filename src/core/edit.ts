@@ -29,6 +29,7 @@ export interface SettingsPatch {
   noVerdictAction?: NoVerdictAction;
   smart?: boolean;
   periodicCheck?: boolean;
+  markJunkRead?: boolean;
   cutoff?: number;
   prompt?: string;
   publicDomainsAdded?: string[];
@@ -83,6 +84,9 @@ export function applySettingsPatch(current: Settings, patch: unknown): { setting
         break;
       case "periodicCheck":
         settings.periodicCheck = asBoolean(value, key);
+        break;
+      case "markJunkRead":
+        settings.markJunkRead = asBoolean(value, key);
         break;
       case "newEntryScope":
         settings.newEntryScope = asOneOf<NewEntryScope>(value, ["shared", "account"], key);

@@ -12,6 +12,7 @@ import { learnRecipients, syncIdentities } from "./learning";
 import { entryKey, matchSender } from "./lists";
 import { applyLogAction, expectsMove } from "./logAction";
 import type { LogAction, LogChange } from "./logAction";
+import { moveMessages } from "./move";
 import { SAMPLE_PAYLOAD } from "./payload";
 import type { AiPort, MailPort } from "./ports";
 import { folderKey, sameFolder } from "./ports";
@@ -75,6 +76,8 @@ export interface CommandMove {
   messageId: string;
   from: FolderRef;
   to: FolderRef;
+  /** The read state the message had before the command changed it. Missing when the command left it as it was. */
+  readBefore?: boolean;
 }
 
 /** Everything needed to take a command back: the lists exactly as they were, and the messages to where they were. */
@@ -162,8 +165,11 @@ export interface LogActionUndo {
   remove: string[];
   /** Entries to put back exactly as they were. */
   restore: Entry[];
-  /** Where the message came from and where the action put it. Null when it was not moved. */
-  move: { from: FolderRef; to: FolderRef } | null;
+  /**
+   * Where the message came from and where the action put it, and the read state it had when the
+   * action changed that. Null when it was not moved.
+   */
+  move: { from: FolderRef; to: FolderRef; readBefore?: boolean } | null;
 }
 
 export interface LogActionOutcome {
@@ -369,6 +375,7 @@ export class Engine {
       subject: "",
       date: 0,
       size: 0,
+      read: true,
     };
     if ((await this.learnMessage(message, context.own, "sent")) > 0) {
       state.whiteAdded = true;
@@ -674,6 +681,8 @@ export class Engine {
     }
 
     const outcome: CommandOutcome = { plan, moved: 0, failures: [], undo: { ...plan.undo, moves: [] } };
+    // Mail moved to Junk is marked read, when the user wants that.
+    const read = plan.list === "black" && state.settings.markJunkRead ? true : null;
     const byAccount = new Map<string, MessageInfo[]>();
     for (const message of plan.moves) {
       if (message.folder === null) {
@@ -693,16 +702,14 @@ export class Engine {
       for (let start = 0; start < moving.length; start += MOVE_BATCH) {
         const batch = moving.slice(start, start + MOVE_BATCH);
         // Noted before the move: where each message is now.
-        const origins = batch.map((message) => ({ messageId: message.headerMessageId, from: message.folder }));
+        const origins = batch.map((message) => ({ id: message.id, messageId: message.headerMessageId, from: message.folder }));
         try {
-          await mail.move(
-            batch.map((message) => message.id),
-            target,
-          );
+          const changed = await moveMessages(mail, batch, target, read);
           outcome.moved += batch.length;
           for (const origin of origins) {
             if (origin.from !== null) {
-              outcome.undo.moves.push({ accountId, messageId: origin.messageId, from: { ...origin.from }, to: target });
+              const readBefore = read !== null && changed.has(origin.id) ? { readBefore: !read } : {};
+              outcome.undo.moves.push({ accountId, messageId: origin.messageId, from: { ...origin.from }, to: target, ...readBefore });
             }
           }
         } catch (error) {
@@ -735,7 +742,7 @@ export class Engine {
     }
     const outcome: CommandUndoOutcome = { moved: 0, notFound: 0, failures: [], back: [] };
     for (const move of undo.moves) {
-      const result = await this.moveLogged(move.accountId, move.messageId, (folder) => sameFolder(folder, move.to), move.from);
+      const result = await this.moveLogged(move.accountId, move.messageId, (folder) => sameFolder(folder, move.to), move.from, move.readBefore ?? null);
       if (result.move === "moved") {
         outcome.moved += 1;
         outcome.back.push({ place: context.isJunk(move.from) ? "junk" : context.inboxes.some((inbox) => sameFolder(inbox, move.from)) ? "inbox" : "folder", folder: move.from });
@@ -810,38 +817,37 @@ export class Engine {
   }
 
   /**
-   * Moves the copies of a message that are in one of the expected folders. A message
-   * the user has filed or deleted since is left alone and reported as not found.
+   * Moves the copies of a message that are in one of the expected folders, with the read
+   * state given, if any. A message the user has filed or deleted since is left alone and
+   * reported as not found. `changed` says whether the read state of a copy was changed.
    */
   private async moveLogged(
     accountId: string,
     messageId: string,
     isSource: (folder: FolderRef) => boolean,
     target: FolderRef | null,
-  ): Promise<{ move: MoveResult; failure: string; from: FolderRef | null }> {
+    read: boolean | null = null,
+  ): Promise<{ move: MoveResult; failure: string; from: FolderRef | null; changed: boolean }> {
     const { mail } = this.deps;
     if (target === null) {
-      return { move: "no-folder", failure: "", from: null };
+      return { move: "no-folder", failure: "", from: null, changed: false };
     }
     let found: MessageInfo[] = [];
     try {
       found = messageId === "" ? [] : await mail.findByMessageId(accountId, messageId);
     } catch (error) {
-      return { move: "failed", failure: errorText(error), from: null };
+      return { move: "failed", failure: errorText(error), from: null, changed: false };
     }
     const sources = found.filter((message) => message.folder !== null && isSource(message.folder) && !sameFolder(message.folder, target));
     const from = sources[0]?.folder ?? null;
     if (from === null) {
-      return { move: "not-found", failure: "", from: null };
+      return { move: "not-found", failure: "", from: null, changed: false };
     }
     try {
-      await mail.move(
-        sources.map((message) => message.id),
-        target,
-      );
-      return { move: "moved", failure: "", from };
+      const changed = await moveMessages(mail, sources, target, read);
+      return { move: "moved", failure: "", from, changed: changed.size > 0 };
     } catch (error) {
-      return { move: "failed", failure: errorText(error), from: null };
+      return { move: "failed", failure: errorText(error), from: null, changed: false };
     }
   }
 
@@ -860,28 +866,35 @@ export class Engine {
     }
 
     const screening = new Set(state.settings.screeningFolders.map(folderKey));
-    let moved: { move: MoveResult; failure: string; from: FolderRef | null } = { move: "none", failure: "", from: null };
+    let moved: { move: MoveResult; failure: string; from: FolderRef | null; changed: boolean } = { move: "none", failure: "", from: null, changed: false };
     let target: FolderRef | null = null;
+    let read: boolean | null = null;
     if (expectsMove(entry, action)) {
       if (action === "trust") {
         target = context.inbox(entry.accountId);
+        // Mail that Block Spam marked read when it moved it to Junk is unread again.
+        read = entry.markedRead === true ? false : null;
         moved = await this.moveLogged(
           entry.accountId,
           entry.messageId,
           (folder) => context.isJunk(folder) || screening.has(folderKey(folder)),
           target,
+          read,
         );
       } else {
         const monitored = new Set(resolveMonitoredFolders(context.inboxes, state.settings).map(folderKey));
         target = context.junk(entry.accountId);
+        read = state.settings.markJunkRead ? true : null;
         moved = await this.moveLogged(
           entry.accountId,
           entry.messageId,
           (folder) => monitored.has(folderKey(folder)) || screening.has(folderKey(folder)),
           target,
+          read,
         );
       }
     }
+    const readBefore = read !== null && moved.changed ? { readBefore: !read } : {};
 
     if (state.whiteAdded) {
       await this.sweepScreening(context);
@@ -899,7 +912,7 @@ export class Engine {
         messageId: entry.messageId,
         remove: plan.undo.remove,
         restore: plan.undo.restore,
-        move: moved.move === "moved" && moved.from !== null && target !== null ? { from: moved.from, to: target } : null,
+        move: moved.move === "moved" && moved.from !== null && target !== null ? { from: moved.from, to: target, ...readBefore } : null,
       },
     };
   }
@@ -920,7 +933,7 @@ export class Engine {
     let moved: { move: MoveResult; failure: string } = { move: "none", failure: "" };
     const move = undo.move;
     if (move !== null) {
-      moved = await this.moveLogged(undo.accountId, undo.messageId, (folder) => sameFolder(folder, move.to), move.from);
+      moved = await this.moveLogged(undo.accountId, undo.messageId, (folder) => sameFolder(folder, move.to), move.from, move.readBefore ?? null);
     }
     if (state.whiteAdded) {
       await this.sweepScreening(context);

@@ -58,6 +58,8 @@ export interface Settings {
    * checked when it arrives and when Thunderbird starts.
    */
   periodicCheck: boolean;
+  /** Mail that Block Spam moves to Junk is marked read, so that Junk does not count it as unread. */
+  markJunkRead: boolean;
   cutoff: number;
   prompt: string;
   publicDomainsAdded: string[];
@@ -159,6 +161,8 @@ export interface LogEntry {
    * has none, and for entries logged before this field existed: such entries offer no action.
    */
   messageId: string;
+  /** Block Spam marked the message read when it moved it to Junk. Trust from the log marks it unread again. */
+  markedRead?: boolean;
 }
 
 /** Message metadata supplied by the mail layer. */
@@ -178,6 +182,7 @@ export interface MessageInfo {
   /** Epoch milliseconds, 0 when unknown. */
   date: number;
   size: number;
+  read: boolean;
 }
 
 export interface AccountInfo {

@@ -86,6 +86,7 @@ export function validateLogEntry(value: unknown, path: string): LogEntry {
     test: asBoolean(record.test, `${path}.test`),
     // Entries logged before the field existed have none. They load with an empty value.
     messageId: record.messageId === undefined ? "" : asString(record.messageId, `${path}.messageId`),
+    ...(record.markedRead === undefined ? {} : { markedRead: asBoolean(record.markedRead, `${path}.markedRead`) }),
   };
 }
 

@@ -1,4 +1,5 @@
-// Incoming mail: which accounts are protected, their monitored folders, and what happens to mail without an AI verdict. The
+// Incoming mail: how often mail is checked, whether mail moved to Spam is marked read, which accounts are protected, their
+// monitored folders, and what happens to mail without an AI verdict. The
 // screening folder of each account is the dependent part of the option that moves such
 // mail there: it stands under the menu, and only while that option is chosen. Under the
 // menu the pane says what the choice does right now, and guards it with "scan first".
@@ -92,6 +93,8 @@ export function incomingSection(shell: Shell): Section {
   const creating = new Set<string>();
   const periodic = checkRow("periodic-switch", t("periodicLabel"), (checked) => void guard(() => update({ periodicCheck: checked })));
   periodic.input.setAttribute("aria-describedby", "periodic-hint");
+  const junkRead = checkRow("junk-read-switch", t("junkReadLabel"), (checked) => void guard(() => update({ markJunkRead: checked })));
+  junkRead.input.setAttribute("aria-describedby", "junk-read-hint");
 
   replace(
     root,
@@ -100,6 +103,8 @@ export function incomingSection(shell: Shell): Section {
     // The third moment mail is checked at is an option, and its reason stands with it.
     periodic.row,
     h("div", { class: "description indent", id: "periodic-hint", text: t("periodicHint") }),
+    junkRead.row,
+    h("div", { class: "description indent", id: "junk-read-hint", text: t("junkReadHint") }),
     // The choice every user makes stands first. The list that grows with the accounts follows it.
     h("h2", { text: t("noVerdictTitle") }),
     // First which mail this is, then the question, then what the chosen answer needs.
@@ -388,6 +393,7 @@ export function incomingSection(shell: Shell): Section {
       }
       noVerdict.value = settings.noVerdictAction;
       periodic.input.checked = settings.periodicCheck;
+      junkRead.input.checked = settings.markJunkRead;
       drawChoice(next);
       noAccounts.hidden = next.accounts.length > 0;
       // The folders belong to the one option that uses them. Without a mail account there is no folder to choose either.

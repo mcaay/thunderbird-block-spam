@@ -439,6 +439,28 @@ describe("undoing a command made by hand", () => {
     expect(await restarted.send("undoCommand", { id: last.result.command.id })).toMatchObject({ ok: true, result: { failed: false } });
     expect(fake.storage[KEY_ENTRIES]).toEqual([]);
     expect(fake.moves.at(-1)).toEqual({ ids: [1], folderId: "f-inbox" });
+    // The message was marked read on its way to Junk, and Undo marked it unread again.
+    expect(fake.updates).toEqual([
+      { id: 1, read: true },
+      { id: 1, read: false },
+    ]);
+  });
+
+  it("takes back a command stored by the previous version, which kept no read state, and leaves the read state alone", async () => {
+    const { fake, background } = await setup();
+    const done = await background.send("runCommand", { command: "block-address", tabId: 1 });
+    if (!done.ok) {
+      throw new Error(done.error);
+    }
+    const stored = fake.storage[KEY_LAST_COMMAND] as { undo: { moves: Record<string, unknown>[] } };
+    expect(stored.undo.moves).toMatchObject([{ readBefore: false }]);
+    for (const move of stored.undo.moves) {
+      delete move.readBefore;
+    }
+    const restarted = await loadBackground(fake, fakeFetch({}).fetch);
+    expect(await restarted.send("undoCommand", { id: done.result.id })).toMatchObject({ ok: true, result: { failed: false } });
+    expect(fake.moves.at(-1)).toEqual({ ids: [1], folderId: "f-inbox" });
+    expect(fake.updates).toEqual([{ id: 1, read: true }]);
   });
 
   it("lets a command that changed nothing leave the one before it in place, and forgets a dismissed one", async () => {
