@@ -252,6 +252,7 @@ The settings page and the popup were rebuilt after a UX and UI review, and revis
 - The buttons that move and remove an AI service are icon buttons in the row, not a "More" menu: one click instead of two, and no menu to build that Thunderbird's Settings do not have either.
 - The remove buttons of tables are always visible, quiet icons. Shown only on hover they would not exist for touch and would jump for keyboard users.
 - A command that changed nothing does not replace the last command the popup offers to undo.
+- One green for success on the page (decided on 2026-11-28, after the owner saw two greens side by side on the Overview): the check of "Setup complete" and the marks of done steps take the green of the state "On" (`--success`). Only icons inside message bars, the popup's result line among them, keep the icon green of Thunderbird's bars (`--icon-success`), which belongs to their tinted fill.
 - The browser harness (`npm run harness`) was run again with the rebuilt pages: the scan, the panes and the popup work against the fake API.
 
 ### After review round 3

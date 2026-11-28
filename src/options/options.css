@@ -381,9 +381,10 @@ h2 > .state {
   content: counter(step);
 }
 
+/* One green for success on the page: the green of the state "On". Only icons inside message bars keep the icon green of Thunderbird's bars. */
 .step.done .step-mark {
-  color: var(--icon-success);
-  border-color: var(--icon-success);
+  color: var(--success);
+  border-color: var(--success);
 }
 
 /* While the scan of the step runs, a spinner stands in for the number. */
@@ -426,7 +427,7 @@ h2 > .state {
 
 .setup-complete > summary > .icon {
   margin: 0 4px 0 1px;
-  color: var(--icon-success);
+  color: var(--success);
 }
 
 .ways-short {
