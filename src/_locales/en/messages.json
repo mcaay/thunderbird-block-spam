@@ -1424,6 +1424,18 @@
   "aiSecretsHint": {
     "message": "API keys and sign\u2011ins are stored unencrypted in your Thunderbird profile. They are never written to the log and never exported."
   },
+  "privacyTitle": {
+    "message": "Privacy"
+  },
+  "overviewPrivacy": {
+    "message": "Your lists, settings and log stay in your Thunderbird profile. By itself, Block Spam sends only mail from unknown senders, those on neither list, and only to the AI services you added."
+  },
+  "privacyProvider": {
+    "message": "What an AI service does with the mail it receives is governed by its provider’s terms. With no AI service, or with one that runs on this computer, no mail leaves the computer at all."
+  },
+  "privacyAccess": {
+    "message": "Block Spam asks Thunderbird only for the permissions it needs, never for full access to Thunderbird or your computer."
+  },
   "privacyText": {
     "message": "Nothing else leaves this computer, apart from messages you score yourself as a test. Block Spam collects no usage data and makes no other network request."
   },

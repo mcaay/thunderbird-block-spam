@@ -1424,6 +1424,18 @@
   "aiSecretsHint": {
     "message": "Klucze API i dane logowania są przechowywane w profilu programu Thunderbird bez szyfrowania. Nigdy nie trafiają do dziennika ani do eksportu."
   },
+  "privacyTitle": {
+    "message": "Prywatność"
+  },
+  "overviewPrivacy": {
+    "message": "Listy, ustawienia i dziennik zostają w Twoim profilu programu Thunderbird. Block Spam samoczynnie wysyła wyłącznie pocztę od nieznanych nadawców, czyli tych spoza obu list, i tylko do dodanych przez Ciebie usług AI."
+  },
+  "privacyProvider": {
+    "message": "Co usługa AI robi z otrzymaną pocztą, określa regulamin jej dostawcy. Bez usługi AI albo z usługą działającą na tym komputerze poczta w ogóle nie opuszcza komputera."
+  },
+  "privacyAccess": {
+    "message": "Block Spam prosi program Thunderbird tylko o potrzebne uprawnienia, nigdy o pełny dostęp do programu Thunderbird i komputera."
+  },
   "privacyText": {
     "message": "Nic innego nie opuszcza tego komputera, poza wiadomościami, które samodzielnie oceniasz w ramach testu. Block Spam nie zbiera danych o użyciu i nie nawiązuje żadnych innych połączeń sieciowych."
   },

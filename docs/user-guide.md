@@ -198,8 +198,9 @@ Spam that reaches you through another mailbox's automatic forwarding or copy rul
 ## Privacy and permissions
 
 - What leaves the computer: the text shown under [What the AI receives](#what-the-ai-receives), only to AI services you added, only for unknown senders, plus messages you explicitly score as a test. A message whose From field cannot be read has no sender to look up, so it counts as mail from an unknown sender, also when it comes from someone on your white list. There is no telemetry and no other network request.
+- The Overview says this in short under "Privacy", with the details under "Learn more".
 - Lists, settings and the log are stored locally in the Thunderbird profile. API keys and sign-in tokens are stored there unencrypted. They are never written to the log and never exported.
-- Required permissions: see your accounts and folders, read messages, move messages, the compose window (to learn recipients when you send), storage, alarms, notifications, and the context menu entry.
+- Required permissions: see your accounts and folders, read messages, move messages, mark messages read (for mail moved to Spam), the compose window (to learn recipients when you send), storage, alarms, notifications, and the context menu entry.
 - Optional permissions, asked for when a feature is first used: creating a screening folder, the host of each AI service, and reading the sign-in redirect for the ChatGPT plan.
 - The add-on does not check SPF, DKIM or DMARC, does not look at attachments, does not set Thunderbird's junk flag and does not process mail that arrived before protection was switched on.
 

@@ -1,6 +1,6 @@
 // Overview: what the add-on does, the protection switch with its state, observation
 // mode as its option, a status line and warnings (one per cause), the three setup
-// steps, and the ways to block and trust by hand.
+// steps, the ways to block and trust by hand, and what stays on this computer.
 
 import { accountProtected } from "../../core/folders";
 import { DEFAULT_FORWARD_LABELS } from "../../core/forward";
@@ -14,7 +14,7 @@ import { stringsLocale, t, tCode, tn } from "../../tb/i18n";
 import { send } from "../../tb/protocol";
 import { beforeScanText, noVerdictOutcomeText, scanFirstReason, scanWaitReason, servicesOutcomeText, wishOutcomeText } from "../../tb/stateText";
 import { refreshGrants } from "../aiState";
-import { announce, bar, button, byId, checkRow, closeButton, description, dialog, download, guard, h, iconButton, learnMore, named, notice, paneLink, reconcile, replace, setUnavailable, tNodes, whileBusy } from "../dom";
+import { announce, bar, button, byId, checkRow, closeButton, description, dialog, download, guard, h, iconButton, learnMore, named, notice, paneLink, reconcile, replace, setUnavailable, tNodes, whileBusy, withMore } from "../dom";
 import type { Child, Keyed } from "../dom";
 import { formatLogTime, formatScore, formatShortTime } from "../format";
 import { icon } from "../icons";
@@ -174,6 +174,13 @@ export function overviewSection(shell: Shell): Section {
     ),
     h("h2", { text: t("byHandTitle") }),
     byHand,
+    // An add-on that reads mail is asked first what leaves the computer: the answer stands on the first pane, the details under "Learn more".
+    h("h2", { text: t("privacyTitle") }),
+    h(
+      "p",
+      {},
+      ...withMore(t("overviewPrivacy"), learnMore(t("privacyTitle"), t("aiHint"), t("privacyText"), t("privacyProvider"), t("aiSecretsHint"), t("privacyAccess"))),
+    ),
   );
   replace(root, h("h1", { text: t("catOverview"), tabIndex: -1 }), h("p", { class: "lead", text: t("overviewLead") }), fatalBox, body);
   // The third outcome of a scan that something waited for stands directly after the second, wherever that stands.
